@@ -1,0 +1,71 @@
+name: driver
+description: "Lenny Driver App - App per driver di consegna"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # HTTP requests
+  http: ^1.2.0
+  
+  # Local storage
+  shared_preferences: ^2.2.2
+  
+  # Routing
+  go_router: ^14.0.2
+  
+  # Image picker
+  image_picker: ^1.0.7
+  
+  # Firebase
+  firebase_core: ^3.8.1
+  firebase_storage: ^12.3.8
+  firebase_messaging: ^15.1.6
+  flutter_local_notifications: ^18.0.1
+  
+  # Google Fonts
+  google_fonts: ^6.2.1
+  
+  # Date formatting
+  intl: ^0.20.2
+  
+  # Geolocation
+  geolocator: ^11.0.0
+  
+  # Maps (OpenStreetMap)
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  
+  # URL launcher
+  url_launcher: ^6.2.2
+  
+  # WebView
+  webview_flutter: ^4.10.0
+  
+  # Audio alerts
+  audioplayers: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  # Assets
+  assets:
+    - assets/sounds/
+    - assets/images/
+    - assets/icons/

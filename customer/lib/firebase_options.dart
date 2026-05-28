@@ -1,0 +1,75 @@
+// ignore_for_file: type=lint
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+/// Firebase options per il progetto LennyV2 — App Customer
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    if (kIsWeb) {
+      return web;
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return android;
+      case TargetPlatform.iOS:
+        return ios;
+      case TargetPlatform.macOS:
+        return macos;
+      case TargetPlatform.windows:
+        return windows;
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux.',
+        );
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
+    }
+  }
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE',
+    appId: '1:215648872015:android:f91ae2f559bce8b33a6c3a',
+    messagingSenderId: '215648872015',
+    projectId: 'lennyv2-7d4c4',
+    storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAPwGh6c-aq3J7oVCNEeFcbM2fim35k5Dg',
+    appId: '1:215648872015:web:b66d02abe5108cd23a6c3a',
+    messagingSenderId: '215648872015',
+    projectId: 'lennyv2-7d4c4',
+    authDomain: 'lennyv2-7d4c4.firebaseapp.com',
+    storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
+    measurementId: 'G-3MCCC4L6R9',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE',
+    appId: '1:215648872015:ios:f91ae2f559bce8b33a6c3a',
+    messagingSenderId: '215648872015',
+    projectId: 'lennyv2-7d4c4',
+    storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
+    iosBundleId: 'com.lenny.customer',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE',
+    appId: '1:215648872015:ios:f91ae2f559bce8b33a6c3a',
+    messagingSenderId: '215648872015',
+    projectId: 'lennyv2-7d4c4',
+    storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
+    iosBundleId: 'com.lenny.customer',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyAPwGh6c-aq3J7oVCNEeFcbM2fim35k5Dg',
+    appId: '1:215648872015:web:b66d02abe5108cd23a6c3a',
+    messagingSenderId: '215648872015',
+    projectId: 'lennyv2-7d4c4',
+    storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
+  );
+}

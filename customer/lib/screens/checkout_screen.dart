@@ -1,0 +1,3779 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../config/app_constants.dart';
+import '../models/restaurant.dart';
+import '../models/cart_item.dart';
+import '../models/delivery_data.dart';
+import '../models/address_model.dart';
+import '../services/order_service.dart';
+import '../services/availability_service.dart';
+import '../services/delivery_fee_service.dart';
+import '../services/nominatim_service.dart';
+import '../services/wallet_service.dart';
+import '../providers/cart_provider.dart';
+import '../providers/location_provider.dart';
+import '../widgets/order_type_dialog.dart';
+import '../widgets/address_selector_bottom_sheet.dart';
+import 'nexi_build_payment_screen.dart';
+import 'restaurant_menu_screen.dart';
+import 'order_completed_screen.dart';
+
+/// Checkout Screen - Basato sul prototipo 9-checkout.html
+class CheckoutScreen extends StatefulWidget {
+  final Restaurant restaurant;
+  final List<CartItem> cartItems;
+  final double subtotal;
+
+  const CheckoutScreen({
+    super.key,
+    required this.restaurant,
+    required this.cartItems,
+    required this.subtotal,
+  });
+
+  @override
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  // Colori identici al prototipo
+  static const Color primaryColor = Color(0xFFFF7566);
+  static const Color primaryLight = Color(0xFFFFB5A7);
+  static const Color primaryDark = Color(0xFFFF5A5F);
+  static const Color successColor = Color(0xFF4CAF50);
+  static const Color darkColor = Color(0xFF212121);
+  static const Color grayColor = Color(0xFF9E9E9E);
+  static const Color lightGrayColor = Color(0xFFEEEEEE);
+
+  // Colori badge tipo ordine (stessi della home)
+  static const Color badgeDeliveryColor = Color(0xFFFF7566); // Rosso consegna
+  static const Color badgePickupColor = Color(0xFFF6E644); // Giallo ritiro
+
+  // Dati caricati dall'API
+  List<Map<String, dynamic>> _paymentMethods = [];
+  List<Map<String, dynamic>> _availableSlots = [];
+  // Toggle per mostrare/nascondere indirizzi
+  bool _isLoading = true;
+  bool _isLoadingSlots = false;
+  int? _customerId;
+
+  // Opzioni di consegna
+  String _deliveryType = 'delivery'; // 'delivery' o 'pickup'
+
+  // Delivery mode: 'current_position', 'saved_address', 'quick_save'
+  String _deliveryMode = 'current_position';
+  AddressModel? _selectedSavedAddress;
+  final bool _shouldSaveAddress = false; // Quick save checkbox
+
+  // Metodo di pagamento
+  String? _selectedPaymentId;
+  bool _hasSavedCard = false;
+  List<Map<String, dynamic>> _savedCards = []; // Array di carte salvate
+  String? _selectedCardAlias; // Carta selezionata per OneClick
+  bool _useOneClick = false; // Flag per usare OneClick
+
+  // Ordine pending da aggiornare (se pagamento fallisce)
+  int? _pendingOrderId;
+
+  // Data e ora selezionate
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  String? _selectedTimeSlotLabel; // Es: "14:00 - 14:15"
+
+  // Coupon
+  final TextEditingController _couponController = TextEditingController();
+  bool _couponApplied = false;
+  double _couponDiscount = 0.0;
+
+  // Istruzioni consegna
+  final TextEditingController _instructionsController = TextEditingController();
+
+  // Crediti Lenny (sistema wallet)
+  bool _useAppCredits = false;
+  double _availableCredits = 0.0;
+
+  // Costi - valori caricati dinamicamente dal backend
+  double _serviceFeePercent = 3.5; // Default, verrà sovrascritto
+
+  // 🆕 Delivery fee dinamico basato su delivery_zone_roles
+  DeliveryFeeResult? _deliveryFeeResult;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inizializza tipo ordine dal LocationProvider
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    _deliveryType = locationProvider.orderType; // 'delivery' o 'pickup'
+    _loadCheckoutData();
+  }
+
+  Future<void> _loadCheckoutData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _customerId = prefs.getInt(AppConstants.keyUserId);
+
+      if (_customerId == null) {
+        _showToast('Errore: utente non autenticato');
+        return;
+      }
+
+      final orderService = OrderService();
+
+      // 🆕 CARICA CONFIGURAZIONI CHECKOUT DAL BACKEND
+      await _loadCheckoutConfig();
+
+      // Carica indirizzi salvati del cliente
+
+      // Carica metodi di pagamento dall'API
+      _paymentMethods = await orderService.getPaymentMethods();
+
+      // NON selezionare ancora - aspetta _checkSavedCard
+      // Se ha carte salvate → seleziona carta
+      // Se NON ha carte salvate → seleziona contanti
+
+      // 🆕 CONTROLLA SE IL CLIENTE HA UNA CARTA SALVATA (OneClick)
+      await _checkSavedCard();
+
+      // 🆕 CARICA CREDITI DISPONIBILI
+      await _loadAvailableCredits();
+
+      // 🔑 DEFAULT: Se NON ha carte salvate, seleziona "contanti" (cash)
+      if (!_hasSavedCard && _paymentMethods.isNotEmpty) {
+        final cashMethod = _paymentMethods.firstWhere(
+          (m) => m['slug'] == 'cash',
+          orElse: () => _paymentMethods[0],
+        );
+        _selectedPaymentId = cashMethod['id'].toString();
+        print(
+          '💵 [CHECKOUT] Contanti selezionato di default (no carte salvate)',
+        );
+      }
+
+      // Default: usa posizione corrente (no indirizzo salvato necessario)
+      _deliveryMode = 'current_position';
+
+      // 🆕 CARICA COSTO CONSEGNA DINAMICO (dopo aver caricato indirizzi)
+      await _loadDeliveryFee();
+    } catch (e) {
+      print('Errore caricamento dati checkout: $e');
+      _showToast('Errore nel caricamento dei dati');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// Carica configurazioni checkout dal backend (service fee)
+  Future<void> _loadCheckoutConfig() async {
+    try {
+      print('🔄 [CHECKOUT] Chiamata API config...');
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/api/config/checkout'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-API-Token': token ?? '',
+        },
+      );
+
+      print('📡 [CHECKOUT] Response status: ${response.statusCode}');
+      print('📡 [CHECKOUT] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final newValue = (data['data']['service_fee_percent'] ?? 3.5)
+              .toDouble();
+          print('✅ [CHECKOUT] Service fee ricevuto dal server: $newValue%');
+          setState(() {
+            _serviceFeePercent = newValue;
+          });
+          print('✅ [CHECKOUT] Service fee impostato a: $_serviceFeePercent%');
+        } else {
+          print('⚠️ [CHECKOUT] Risposta non valida: $data');
+        }
+      } else {
+        print('⚠️ [CHECKOUT] Errore HTTP: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [CHECKOUT] Errore caricamento config: $e');
+      // Usa valore di default in caso di errore
+    }
+  }
+
+  /// 🆕 Carica costo consegna dinamico basato su delivery_zone_roles
+  Future<void> _loadDeliveryFee() async {
+    if (_deliveryType != 'delivery') {
+      print('🚫 [DELIVERY_FEE] Modalità ritiro - nessuna consegna necessaria');
+      setState(() {
+        _deliveryFeeResult = null;
+      });
+      return;
+    }
+
+    try {
+      if (!mounted) return;
+
+      final locationProvider = Provider.of<LocationProvider>(
+        context,
+        listen: false,
+      );
+
+      // Determina postal_code e coordinate dalla modalità selezionata
+      String? postalCode;
+      double? latitude;
+      double? longitude;
+
+      if (_deliveryMode == 'saved_address' && _selectedSavedAddress != null) {
+        // Usa indirizzo salvato
+        postalCode = _selectedSavedAddress!.postalCode;
+        latitude = _selectedSavedAddress!.latitude;
+        longitude = _selectedSavedAddress!.longitude;
+        print(
+          '📍 [DELIVERY_FEE] Indirizzo salvato: CAP $postalCode, GPS ($latitude, $longitude)',
+        );
+      } else {
+        // Usa posizione corrente dal LocationProvider
+        postalCode = locationProvider.activePostalCode;
+        latitude = locationProvider.activeLatitude;
+        longitude = locationProvider.activeLongitude;
+
+        // Se non abbiamo il CAP, attendi il reverse geocoding con retry
+        if (postalCode == null && latitude != null && longitude != null) {
+          print(
+            '⏳ [DELIVERY_FEE] CAP non disponibile, eseguo reverse geocoding...',
+          );
+
+          try {
+            final nominatimService = NominatimService();
+            final addressData = await nominatimService.reverseGeocode(
+              latitude,
+              longitude,
+            );
+
+            if (addressData != null) {
+              postalCode = addressData.postcode;
+              print('✅ [DELIVERY_FEE] CAP ottenuto: $postalCode');
+            } else {
+              print('❌ [DELIVERY_FEE] Nominatim non ha restituito dati');
+            }
+          } catch (e) {
+            print('❌ [DELIVERY_FEE] Errore reverse geocoding: $e');
+          }
+        }
+
+        print(
+          '📍 [DELIVERY_FEE] Posizione corrente: CAP $postalCode, GPS ($latitude, $longitude)',
+        );
+      }
+
+      // Chiama API per calcolare il costo
+      final deliveryFeeService = DeliveryFeeService();
+      final result = await deliveryFeeService.calculateDeliveryFee(
+        restaurantId: widget.restaurant.id,
+        postalCode: postalCode,
+        latitude: latitude,
+        longitude: longitude,
+        subtotal: _currentSubtotal,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _deliveryFeeResult = result;
+      });
+
+      if (!result.isDeliverable) {
+        print('❌ [DELIVERY_FEE] Zona NON servita: ${result.matchedRule}');
+        if (mounted) _showZoneNotServicedDialog();
+      } else {
+        print('✅ [DELIVERY_FEE] Costo calcolato: €${result.finalDeliveryFee}');
+        print('   - Base fee: €${result.deliveryFee}');
+        print('   - Min order: €${result.minOrder}');
+        print('   - Free over: €${result.freeOver}');
+        print('   - Free delivery: ${result.freeDelivery}');
+        print('   - Min order met: ${result.minOrderMet}');
+      }
+    } catch (e) {
+      print('❌ [DELIVERY_FEE] Errore calcolo: $e');
+      if (!mounted) return;
+      setState(() {
+        _deliveryFeeResult = null;
+      });
+      if (mounted) _showToast('Errore nel calcolo del costo di consegna');
+    }
+  }
+
+  void _showZoneNotServicedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icona
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_off,
+                  size: 48,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Titolo
+              const Text(
+                'Zona non servita',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              // Messaggio
+              Text(
+                'Siamo spiacenti, ma questo ristorante non effettua consegne nella tua zona.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: grayColor,
+                  fontFamily: 'Segoe UI',
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (_deliveryFeeResult?.matchedRule != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _deliveryFeeResult!.matchedRule!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: grayColor,
+                    fontFamily: 'Segoe UI',
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 24),
+              // Pulsante
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Ho capito',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMinOrderNotMetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        // 🔥 RICALCOLA VALORI IN TEMPO REALE (così si aggiornano se cambi quantità)
+        final minOrder = _deliveryFeeResult?.minOrder ?? 0;
+        final current = _currentSubtotal; // Usa getter che legge CartProvider
+        final missing = (minOrder - current).clamp(0.0, double.infinity);
+
+        // 🐛 DEBUG DIALOG
+        print(
+          '🔍 [DIALOG] minOrder: €$minOrder, current: €$current, missing: €$missing',
+        );
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icona
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 48,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Titolo
+                const Text(
+                  'Ordine minimo non raggiunto',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor,
+                    fontFamily: 'Segoe UI',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                // Messaggio
+                Text(
+                  'Per la consegna nella tua zona è richiesto un ordine minimo di:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: grayColor,
+                    fontFamily: 'Segoe UI',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                // Box importi
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: lightGrayColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Minimo richiesto:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: darkColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          Text(
+                            '€${minOrder.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: darkColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Importo attuale:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: grayColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          Text(
+                            '€${current.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: grayColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Mancano ancora:',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          Text(
+                            '€${missing.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Pulsante
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Aggiungi altri prodotti',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Segoe UI',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    _instructionsController.dispose();
+    super.dispose();
+  }
+
+  // Calcola subtotale dinamicamente dai cartItems
+  double get _currentSubtotal {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    return cartProvider.items.fold(
+      0.0,
+      (sum, item) => sum + (item.menuItem.price * item.quantity),
+    );
+  }
+
+  double get _totalBeforeDiscount {
+    // Calcola il service fee come percentuale del subtotale
+    double serviceFeeAmount = _currentSubtotal * (_serviceFeePercent / 100);
+
+    double total = _currentSubtotal + serviceFeeAmount;
+    if (_deliveryType == 'delivery') {
+      // 🆕 Usa delivery fee dinamico
+      double deliveryFee = _deliveryFeeResult?.finalDeliveryFee ?? 0.0;
+      total += deliveryFee;
+    }
+    return total;
+  }
+
+  // Getter per il costo servizio calcolato
+  double get _serviceFeeAmount {
+    return _currentSubtotal * (_serviceFeePercent / 100);
+  }
+
+  // 🆕 Getter per il costo consegna (gestisce consegna gratuita)
+  double get _deliveryFeeAmount {
+    if (_deliveryType != 'delivery') return 0.0;
+    return _deliveryFeeResult?.finalDeliveryFee ?? 0.0;
+  }
+
+  // 🆕 Verifica se la consegna è gratuita per ordine >= soglia
+  bool get _isFreeDelivery {
+    return _deliveryFeeResult?.freeDelivery ?? false;
+  }
+
+  /// Calcola i crediti che verranno effettivamente usati
+  double get _calculatedCreditsToUse {
+    if (!_useAppCredits || _availableCredits <= 0) return 0.0;
+
+    // Calcola il totale prima dei crediti
+    final totalBeforeCredits = _totalBeforeDiscount - _couponDiscount;
+
+    // Usa il minimo tra crediti disponibili e totale ordine
+    return totalBeforeCredits > _availableCredits
+        ? _availableCredits
+        : totalBeforeCredits;
+  }
+
+  double get _finalTotal {
+    double total = _totalBeforeDiscount - _couponDiscount;
+
+    // Applica crediti Lenny se attivi
+    if (_useAppCredits) {
+      total = (total - _calculatedCreditsToUse).clamp(0.0, double.infinity);
+    }
+
+    return total;
+  }
+
+  /// 🆕 CONTROLLA SE IL CLIENTE HA UNA CARTA SALVATA (OneClick)
+  Future<void> _checkSavedCard() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+
+      print(
+        '🔍 [ONECLICK] Token recuperato: ${token != null ? "SI (${token.substring(0, 10)}...)" : "NO"}',
+      );
+
+      if (token == null) {
+        print('❌ [ONECLICK] Token non trovato, utente non autenticato');
+        return;
+      }
+
+      print('🔍 [ONECLICK] Checking for saved card...');
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/api/nexi/check-saved-card'),
+        headers: {'Content-Type': 'application/json', 'X-API-Token': token},
+      );
+
+      print('🔍 [ONECLICK] Response status: ${response.statusCode}');
+      print('🔍 [ONECLICK] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data']['has_saved_card'] == true) {
+          final cards = data['data']['cards'] as List<dynamic>? ?? [];
+          setState(() {
+            _hasSavedCard = cards.isNotEmpty;
+            _savedCards = cards.cast<Map<String, dynamic>>();
+            // 🔑 DEFAULT: Se ha carte salvate, seleziona la carta di default
+            if (_savedCards.isNotEmpty) {
+              final defaultCard = _savedCards.firstWhere(
+                (c) => c['is_default'] == true,
+                orElse: () => _savedCards[0],
+              );
+              _selectedCardAlias = defaultCard['numeroContratto'] as String?;
+              _useOneClick = true; // ✅ Attiva OneClick di default
+              _selectedPaymentId = null; // ✅ Deseleziona altri metodi
+            }
+          });
+          print(
+            '✅ [ONECLICK] ${_savedCards.length} carte trovate - Carta selezionata di default',
+          );
+        } else {
+          print('⚠️ [ONECLICK] No saved card found');
+        }
+      }
+    } catch (e) {
+      print('⚠️ [ONECLICK] Errore controllo carta salvata: $e');
+    }
+  }
+
+  /// Carica crediti disponibili dal wallet
+  Future<void> _loadAvailableCredits() async {
+    try {
+      print('💰 [CREDITS] Caricamento crediti disponibili...');
+
+      final walletService = WalletService();
+      final data = await walletService.getWalletCredits();
+
+      setState(() {
+        _availableCredits = data['total_credits'] as double;
+      });
+
+      print(
+        '✅ [CREDITS] Crediti disponibili: €${_availableCredits.toStringAsFixed(2)}',
+      );
+    } catch (e) {
+      print('⚠️ [CREDITS] Errore caricamento crediti: $e');
+      setState(() {
+        _availableCredits = 0.0;
+      });
+    }
+  }
+
+  /// 🔄 Gestisce cambio tipo ordine dal checkout
+  Future<void> _handleChangeOrderType() async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+
+    // Salva tipo ordine attuale
+    final wasPickup = _deliveryType == 'pickup';
+    debugPrint('🔄 [CHANGE ORDER TYPE] wasPickup: $wasPickup');
+
+    // Mostra dialog selezione tipo ordine
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => OrderTypeDialog(),
+      ),
+    );
+
+    // Dopo chiusura dialog, controlla se è cambiato
+    final newIsPickup = locationProvider.isPickup;
+    final didChangeType = wasPickup != newIsPickup;
+    debugPrint(
+      '🔄 [CHANGE ORDER TYPE] newIsPickup: $newIsPickup, didChangeType: $didChangeType',
+    );
+
+    if (didChangeType) {
+      // Aggiorna delivery type locale
+      setState(() {
+        _deliveryType = newIsPickup ? 'pickup' : 'delivery';
+      });
+
+      // Se passa da RITIRO a CONSEGNA, valida che ristorante consegni
+      if (!newIsPickup) {
+        debugPrint('✅ [CHANGE ORDER TYPE] Passaggio a CONSEGNA - valido zona');
+        await _validateRestaurantDelivery();
+      } else {
+        debugPrint(
+          '✅ [CHANGE ORDER TYPE] Passaggio a RITIRO - pulisco delivery fee',
+        );
+        // Passaggio da CONSEGNA a RITIRO - pulisci delivery fee
+        setState(() {
+          _deliveryFeeResult = null;
+        });
+      }
+    } else {
+      debugPrint('⚠️ [CHANGE ORDER TYPE] Nessun cambio tipo ordine');
+    }
+  }
+
+  /// \u2705 Valida che il ristorante consegni nella zona scelta
+  Future<void> _validateRestaurantDelivery() async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+
+    final postalCode = locationProvider.activePostalCode;
+    final latitude = locationProvider.activeLatitude;
+    final longitude = locationProvider.activeLongitude;
+
+    debugPrint(
+      '🔍 [VALIDATE DELIVERY] CAP: $postalCode, LAT: $latitude, LNG: $longitude',
+    );
+
+    if (postalCode == null && (latitude == null || longitude == null)) {
+      debugPrint('⚠️ [VALIDATE DELIVERY] Nessuna posizione disponibile');
+      _showToast('Seleziona un indirizzo di consegna');
+      return;
+    }
+
+    try {
+      final url =
+          '${AppConstants.baseUrl}/api/restaurants/${widget.restaurant.id}/check-delivery-zone';
+      debugPrint('📡 [VALIDATE DELIVERY] URL: $url');
+      debugPrint(
+        '📡 [VALIDATE DELIVERY] Body: postal_code=$postalCode, lat=$latitude, lng=$longitude, subtotal=$_currentSubtotal',
+      );
+
+      // Controlla se il ristorante consegna in questa zona
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'restaurant_id': widget.restaurant.id,
+          'postal_code': postalCode,
+          'latitude': latitude,
+          'longitude': longitude,
+          'subtotal': _currentSubtotal,
+        }),
+      );
+
+      debugPrint('📡 [VALIDATE DELIVERY] Status: ${response.statusCode}');
+      debugPrint('📡 [VALIDATE DELIVERY] Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final isDeliverable = data['data']?['is_deliverable'] as bool? ?? false;
+
+        debugPrint('📦 [VALIDATE DELIVERY] is_deliverable: $isDeliverable');
+
+        if (!isDeliverable) {
+          debugPrint(
+            '❌ [VALIDATE DELIVERY] Ristorante NON consegna - mostro dialog',
+          );
+          // Ristorante NON consegna in questa zona
+          _showRestaurantNotDeliverableDialog();
+        } else {
+          debugPrint(
+            '✅ [VALIDATE DELIVERY] Ristorante consegna - ricarico fee',
+          );
+          // OK - ricarica delivery fee
+          await _loadDeliveryFee();
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [VALIDATE DELIVERY] Errore: $e');
+      print('❌ Errore validazione zona consegna: $e');
+      _showToast('Errore verifica disponibilità consegna');
+    }
+  }
+
+  /// \u26a0\ufe0f Dialog: ristorante non consegna nella zona
+  void _showRestaurantNotDeliverableDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icona grande centrata
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_off_rounded,
+                  size: 56,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Titolo
+              const Text(
+                'Zona non coperta',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Segoe UI',
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Messaggio
+              Text(
+                '${widget.restaurant.name} non effettua consegne nella tua zona.',
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: grayColor,
+                  fontFamily: 'Segoe UI',
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+
+              // Bottone primario: Ritiro di persona
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _switchBackToPickup();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.store_rounded, size: 22),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Ritira tu',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          Text(
+                            'Di persona al ristorante',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              fontFamily: 'Segoe UI',
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Bottone secondario: Torna alla home
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    // Svuota il carrello
+                    final cartProvider = Provider.of<CartProvider>(
+                      context,
+                      listen: false,
+                    );
+                    cartProvider.clearCart();
+
+                    Navigator.pop(context); // Chiudi dialog
+                    Navigator.pop(context); // Chiudi checkout
+                    Navigator.pop(context); // Chiudi cart
+                    // Il tipo ordine rimane CONSEGNA, quindi vedrà i ristoranti filtrati
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryDark,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
+                    side: const BorderSide(color: primaryDark, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.home_rounded, size: 22),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Torna alla home',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          Text(
+                            'Scegli un altro ristorante',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              fontFamily: 'Segoe UI',
+                              color: primaryDark.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// \ud83d\udd19 Torna a modalit\u00e0 RITIRO
+  void _switchBackToPickup() {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+
+    locationProvider.setOrderType('pickup');
+    setState(() {
+      _deliveryType = 'pickup';
+      _deliveryFeeResult = null;
+    });
+  }
+
+  void _showToast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  /// Aumenta la quantità di un prodotto nel carrello
+  void _increaseItemQuantity(CartItem item) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final index = cartProvider.items.indexOf(item);
+    if (index >= 0) {
+      cartProvider.updateQuantity(index, item.quantity + 1);
+      setState(() {}); // Aggiorna UI
+    }
+  }
+
+  /// Diminuisce la quantità di un prodotto nel carrello
+  void _decreaseItemQuantity(CartItem item) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final index = cartProvider.items.indexOf(item);
+    if (index >= 0) {
+      if (item.quantity > 1) {
+        cartProvider.updateQuantity(index, item.quantity - 1);
+        setState(() {}); // Aggiorna UI
+      } else {
+        // Se quantità è 1, rimuovi completamente
+        cartProvider.removeItem(index);
+        // Se il carrello diventa vuoto, torna al menu del ristorante
+        if (cartProvider.items.isEmpty) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  RestaurantMenuScreen(restaurant: widget.restaurant),
+            ),
+          );
+        } else {
+          setState(() {}); // Aggiorna UI
+        }
+      }
+    }
+  }
+
+  Future<void> _selectDateTime() async {
+    // Selezione data con calendario italiano migliorato
+    final DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      locale: const Locale('it', 'IT'),
+      helpText: 'Seleziona data di consegna',
+      cancelText: 'Annulla',
+      confirmText: 'Conferma',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: darkColor,
+              surfaceContainerHighest: lightGrayColor,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: primaryColor,
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            datePickerTheme: DatePickerThemeData(
+              backgroundColor: Colors.white,
+              headerBackgroundColor: primaryColor,
+              headerForegroundColor: Colors.white,
+              dayStyle: const TextStyle(fontSize: 14),
+              yearStyle: const TextStyle(fontSize: 16),
+              todayForegroundColor: WidgetStatePropertyAll(primaryColor),
+              todayBackgroundColor: WidgetStatePropertyAll(
+                primaryLight.withOpacity(0.2),
+              ),
+              dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                if (states.contains(WidgetState.disabled)) {
+                  return grayColor;
+                }
+                return darkColor;
+              }),
+              dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return primaryColor;
+                }
+                return Colors.transparent;
+              }),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (date != null && mounted) {
+      // Carica slot disponibili per questa data
+      await _loadAvailableSlots(date);
+
+      if (_availableSlots.isNotEmpty && mounted) {
+        // Mostra bottom sheet con slot disponibili
+        await _selectTimeSlot(date);
+      } else if (mounted) {
+        _showToast('Nessuno slot disponibile per questa data');
+      }
+    }
+  }
+
+  Future<void> _loadAvailableSlots(DateTime date) async {
+    setState(() => _isLoadingSlots = true);
+
+    try {
+      final orderService = OrderService();
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+
+      _availableSlots = await orderService.getAvailableSlots(
+        restaurantId: widget.restaurant.id,
+        date: dateStr,
+      );
+
+      print('📅 Caricati ${_availableSlots.length} slot per $dateStr');
+    } catch (e) {
+      print('❌ Errore caricamento slot: $e');
+      _showToast('Errore nel caricamento degli orari disponibili');
+      _availableSlots = [];
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingSlots = false);
+      }
+    }
+  }
+
+  Future<void> _selectTimeSlot(DateTime date) async {
+    if (_isLoadingSlots) {
+      return;
+    }
+
+    // Raggruppa gli slot per periodo
+    final Map<String, List<dynamic>> slotsByPeriod = {};
+    final Map<String, String> periodLabels = {};
+
+    for (var slot in _availableSlots) {
+      if (slot.containsKey('period')) {
+        // Nuovo formato con periodi
+        final period = slot['period'] as String;
+        final label = slot['label'] as String;
+        final slots = slot['slots'] as List;
+
+        slotsByPeriod[period] = slots;
+        periodLabels[period] = label;
+      }
+    }
+
+    // Se i dati sono nel vecchio formato o non ci sono periodi, usa la vecchia logica
+    if (slotsByPeriod.isEmpty) {
+      await _showSlotsDirectly(date);
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle drag
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Seleziona fascia oraria',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            if (slotsByPeriod.isEmpty)
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Nessuno slot disponibile',
+                    style: TextStyle(color: grayColor, fontFamily: 'Segoe UI'),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: slotsByPeriod.length,
+                  itemBuilder: (context, index) {
+                    final period = slotsByPeriod.keys.elementAt(index);
+                    final label = periodLabels[period]!;
+                    final slots = slotsByPeriod[period]!;
+                    return _buildPeriodOption(period, label, slots, date);
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Metodo per mostrare direttamente gli slot (fallback per vecchio formato)
+  Future<void> _showSlotsDirectly(DateTime date) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle drag
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Seleziona orario',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            if (_availableSlots.isEmpty)
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Nessuno slot disponibile',
+                    style: TextStyle(color: grayColor, fontFamily: 'Segoe UI'),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: _availableSlots.length,
+                  itemBuilder: (context, index) {
+                    final slot = _availableSlots[index];
+                    return _buildTimeSlotOption(slot, date);
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget per mostrare una fascia oraria (es: Pranzo)
+  Widget _buildPeriodOption(
+    String period,
+    String label,
+    List<dynamic> slots,
+    DateTime date,
+  ) {
+    // Icone personalizzate per ogni fascia
+    final Map<String, String> periodIconPaths = {
+      'colazione': 'assets/icons/icons8-cornetto-32.png',
+      'pranzo': 'assets/icons/icons8-sala-da-pranzo-32.png',
+      'merenda': 'assets/icons/icons8-bread-32.png',
+      'cena': 'assets/icons/icons8-dinner-32.png',
+    };
+
+    // Colori distintivi per ogni fascia
+    final Map<String, Color> periodColors = {
+      'colazione': const Color(0xFFFFB74D), // Arancione caldo per la colazione
+      'pranzo': const Color(0xFFEF5350), // Rosso per il pranzo
+      'merenda': const Color(0xFF66BB6A), // Verde per la merenda
+      'cena': const Color(0xFF5C6BC0), // Blu/indaco per la cena
+    };
+
+    final backgroundColor = periodColors[period] ?? primaryColor;
+    final iconPath = periodIconPaths[period];
+
+    return Container(
+      decoration: BoxDecoration(color: backgroundColor.withOpacity(0.15)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+            _showPeriodSlots(period, label, slots, date);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: backgroundColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: iconPath != null
+                      ? Image.asset(
+                          iconPath,
+                          width: 28,
+                          height: 28,
+                          color: backgroundColor,
+                        )
+                      : Icon(Icons.schedule, color: backgroundColor, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: backgroundColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${slots.length} slot disponibili',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: grayColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, color: backgroundColor, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Mostra gli slot di una specifica fascia
+  Future<void> _showPeriodSlots(
+    String period,
+    String label,
+    List<dynamic> slots,
+    DateTime date,
+  ) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle drag
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Title con back button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.arrow_back, size: 20),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _selectTimeSlot(date);
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: slots.length,
+                itemBuilder: (context, index) {
+                  final slot = slots[index];
+                  return _buildTimeSlotOption(
+                    slot,
+                    date,
+                    period: period,
+                    slotIndex: index,
+                    totalSlots: slots.length,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeSlotOption(
+    Map<String, dynamic> slot,
+    DateTime date, {
+    String? period,
+    int? slotIndex,
+    int? totalSlots,
+  }) {
+    final startTime = slot['start_time'] as String;
+    // final endTime = slot['end_time'] as String; // Non usato
+    final label = slot['label'] as String; // es: "10:00 - 10:15"
+    final availableSpots = slot['available_spots'] as int;
+
+    final isSelected =
+        _selectedTime != null &&
+        _selectedTime!.hour == int.parse(startTime.split(':')[0]) &&
+        _selectedTime!.minute == int.parse(startTime.split(':')[1]);
+
+    // Colori per il gradiente in base al periodo
+    final Map<String, Color> periodColors = {
+      'colazione': const Color(0xFFFFB74D),
+      'pranzo': const Color(0xFFEF5350),
+      'merenda': const Color(0xFF66BB6A),
+      'cena': const Color(0xFF5C6BC0),
+    };
+
+    Color slotColor = lightGrayColor;
+    if (period != null &&
+        slotIndex != null &&
+        totalSlots != null &&
+        totalSlots > 0) {
+      final baseColor = periodColors[period] ?? primaryColor;
+      // Calcola l'opacità in base all'indice (gradiente dal chiaro allo scuro)
+      final opacity = 0.08 + (slotIndex / (totalSlots - 1)) * 0.25;
+      slotColor = baseColor.withOpacity(opacity);
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedDate = date;
+          _selectedTime = TimeOfDay(
+            hour: int.parse(startTime.split(':')[0]),
+            minute: int.parse(startTime.split(':')[1]),
+          );
+          _selectedTimeSlotLabel = label; // Salva il label completo
+        });
+        Navigator.pop(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryLight : slotColor,
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? primaryDark : darkColor,
+                    fontFamily: 'Segoe UI',
+                  ),
+                ),
+                if (availableSpots <= 3)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Solo $availableSpots ${availableSpots == 1 ? 'posto' : 'posti'} disponibile',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange,
+                        fontFamily: 'Segoe UI',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: primaryColor, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _applyCoupon() {
+    final couponCode = _couponController.text.trim().toUpperCase();
+    if (couponCode.isEmpty) {
+      _showToast('Inserisci un codice coupon');
+      return;
+    }
+
+    // Simulazione validazione coupon
+    if (couponCode == 'SCONTO10') {
+      setState(() {
+        _couponApplied = true;
+        _couponDiscount = _currentSubtotal * 0.10;
+      });
+    } else if (couponCode == 'BENVENUTO') {
+      setState(() {
+        _couponApplied = true;
+        _couponDiscount = 5.0;
+      });
+    } else {
+      _showToast('Codice coupon non valido');
+    }
+  }
+
+  /// 🆕 Gestisce il pagamento tramite Nexi Build (UI Custom)
+  Future<void> _handleNexiPayment(int orderId) async {
+    // Determina se salvare carta (solo se non ha carte salvate)
+    final saveCard = !_hasSavedCard;
+
+    // Determina num_contratto da passare allo SDK
+    String? numContratto;
+    if (_useOneClick && _selectedCardAlias != null) {
+      // Pagamento successivo: passa il contratto salvato
+      // L'SDK mostrerà Payment Buttons invece del form carta
+      numContratto = _selectedCardAlias;
+    }
+
+    // Apri XPay Build SDK (gestisce sia primo che successivi pagamenti)
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => NexiBuildPaymentScreen(
+          orderId: orderId,
+          saveCard: saveCard,
+          numContratto: numContratto, // Se != null, mostra Payment Buttons
+        ),
+      ),
+    );
+  }
+
+  void _placeOrder() async {
+    if (_selectedDate == null || _selectedTime == null) {
+      _showToast('Seleziona data e orario di consegna');
+      return;
+    }
+
+    if (_deliveryType == 'delivery' &&
+        _deliveryMode != 'current_position' &&
+        _deliveryMode != 'saved_address') {
+      _showToast('Seleziona un indirizzo di consegna');
+      return;
+    }
+
+    // 🆕 VALIDA ORDINE MINIMO (se consegna a domicilio)
+    if (_deliveryType == 'delivery' && _deliveryFeeResult != null) {
+      // 🔥 RICALCOLA in tempo reale per avere valore aggiornato
+      final minOrder = _deliveryFeeResult!.minOrder;
+      final currentSubtotal = _currentSubtotal; // Usa getter aggiornato
+      final minOrderMet = currentSubtotal >= minOrder;
+
+      // 🐛 DEBUG
+      print('🔍 [MIN_ORDER_CHECK]');
+      print('   Min Order: €$minOrder');
+      print('   Current Subtotal: €$currentSubtotal');
+      print('   Min Order Met: $minOrderMet');
+      print(
+        '   CartProvider items: ${Provider.of<CartProvider>(context, listen: false).items.length}',
+      );
+
+      if (!minOrderMet) {
+        print('   ❌ SHOWING DIALOG - Order minimum not met');
+        _showMinOrderNotMetDialog();
+        return;
+      } else {
+        print('   ✅ MIN ORDER MET - Proceeding');
+      }
+    }
+
+    // 🆕 VERIFICA ZONA SERVITA
+    if (_deliveryType == 'delivery' &&
+        (_deliveryFeeResult == null || !_deliveryFeeResult!.isDeliverable)) {
+      _showZoneNotServicedDialog();
+      return;
+    }
+
+    // 🆕 VERIFICA DISPONIBILITÀ DI TUTTI I PIATTI
+    final unavailableDishes = await _checkDishesAvailability();
+    if (unavailableDishes.isNotEmpty) {
+      _showUnavailableDishesDialog(unavailableDishes);
+      return; // Non procedere se piatti non disponibili
+    }
+
+    // 🆕 ONECLICK: Valida metodo di pagamento (o OneClick o standard)
+    if (!_useOneClick &&
+        (_selectedPaymentId == null || _selectedPaymentId!.isEmpty)) {
+      _showToast('Seleziona un metodo di pagamento');
+      return;
+    }
+
+    // Mostra loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: primaryColor)),
+    );
+
+    try {
+      // Prepara items per API
+      final items = widget.cartItems.map((item) {
+        // Estrai gli extra dal customizationData
+        final extras = <Map<String, dynamic>>[];
+        if (item.customizationData.isNotEmpty) {
+          // Se customizationData contiene 'extras', estraili
+          if (item.customizationData.containsKey('extras')) {
+            final extrasData = item.customizationData['extras'];
+            if (extrasData != null && extrasData is List) {
+              for (var extra in extrasData) {
+                if (extra is Map) {
+                  // Gestisci sia Map<String, dynamic> che Map<dynamic, dynamic>
+                  final extraMap = Map<String, dynamic>.from(extra);
+                  extras.add({
+                    'extra_id': extraMap['id'] ?? 0,
+                    'price': (extraMap['price'] as num?)?.toDouble() ?? 0.0,
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        return {
+          'food_id': item.menuItem.id,
+          'quantity': item.quantity,
+          'price': item.menuItem.price,
+          'discount_amount': 0.0,
+          'extras': extras,
+        };
+      }).toList();
+
+      // Calcola time_slot_id (es: 12:00 = slot 48 = 12 * 4)
+      final timeSlotId =
+          (_selectedTime!.hour * 4) + (_selectedTime!.minute ~/ 15);
+
+      // Formatta data
+      final dateOrder = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+      // Ottieni customer data
+      final prefs = await SharedPreferences.getInstance();
+      final customerPhone = prefs.getString('user_phone') ?? '';
+
+      // Prepara DeliveryData in base alla modalità selezionata
+      DeliveryData? deliveryData;
+      final locationProvider = Provider.of<LocationProvider>(
+        context,
+        listen: false,
+      );
+
+      if (_deliveryType == 'delivery') {
+        if (_deliveryMode == 'current_position') {
+          // Usa posizione corrente
+          if (locationProvider.activeLatitude != null &&
+              locationProvider.activeLongitude != null) {
+            deliveryData = DeliveryData.fromCurrentPosition(
+              latitude: locationProvider.activeLatitude!,
+              longitude: locationProvider.activeLongitude!,
+              address: locationProvider.displayAddress,
+              notes: _instructionsController.text.isNotEmpty
+                  ? _instructionsController.text
+                  : null,
+              saveAddress: _shouldSaveAddress,
+            );
+          } else {
+            throw Exception('Posizione corrente non disponibile');
+          }
+        } else if (_deliveryMode == 'saved_address' &&
+            _selectedSavedAddress != null) {
+          // Usa indirizzo salvato
+          final addressId = _selectedSavedAddress!.id;
+          if (addressId == null) {
+            throw Exception('ID indirizzo non valido');
+          }
+          deliveryData = DeliveryData.fromSavedAddress(
+            savedAddressId: addressId,
+          );
+        } else {
+          throw Exception('Seleziona un indirizzo di consegna');
+        }
+      }
+
+      // 🆕 ONECLICK: Determina payment method ID
+      int paymentMethodId;
+      if (_useOneClick) {
+        // OneClick: usa metodo Nexi (trovalo dinamicamente)
+        final nexiMethod = _paymentMethods.firstWhere(
+          (m) => m['slug'] == 'nexi',
+          orElse: () => throw Exception('Metodo Nexi non trovato'),
+        );
+        paymentMethodId = int.tryParse(nexiMethod['id'].toString()) ?? 0;
+      } else {
+        paymentMethodId = int.tryParse(_selectedPaymentId!) ?? 0;
+      }
+
+      if (paymentMethodId == 0) {
+        throw Exception('Metodo di pagamento non valido');
+      }
+
+      // Calcola delivery fee
+      final deliveryFee = _deliveryType == 'delivery' ? 2.50 : 0.0;
+      final total = _currentSubtotal + deliveryFee - _couponDiscount;
+
+      // Verifica se esiste un ordine pending da aggiornare
+      int orderId;
+      if (_pendingOrderId != null) {
+        // Aggiorna ordine esistente con nuovo metodo di pagamento
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString(AppConstants.keyApiToken);
+
+        final updateUrl =
+            '${AppConstants.baseUrl}/api/orders/$_pendingOrderId/payment-method';
+        print('🔵 [UPDATE ORDER] URL: $updateUrl');
+        print('🔵 [UPDATE ORDER] Payment Method ID: $paymentMethodId');
+        print('🔵 [UPDATE ORDER] Token: ${token?.substring(0, 20)}...');
+
+        final response = await http.put(
+          Uri.parse(updateUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Token': token ?? '',
+          },
+          body: json.encode({'payment_method_id': paymentMethodId}),
+        );
+
+        print('🔵 [UPDATE ORDER] Response status: ${response.statusCode}');
+        print('🔵 [UPDATE ORDER] Response body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['success'] == true) {
+            orderId = _pendingOrderId!;
+            _pendingOrderId = null; // Reset
+          } else {
+            throw Exception(data['error'] ?? 'Errore aggiornamento ordine');
+          }
+        } else {
+          throw Exception('Errore server (${response.statusCode})');
+        }
+      } else {
+        // Crea nuovo ordine
+        print('📦 [ORDER] Creating NEW order...');
+        print('📦 [ORDER] Payment Method ID: $paymentMethodId');
+        print('📦 [ORDER] UseOneClick: $_useOneClick');
+        print('📦 [ORDER] Selected Card: $_selectedCardAlias');
+
+        final orderService = OrderService();
+        final result = await orderService.createOrder(
+          restaurantId: widget.restaurant.id,
+          dateOrder: dateOrder,
+          timeSlotId: timeSlotId,
+          durationSlot: '15',
+          pickupDelivery: _deliveryType,
+          phone: customerPhone,
+          items: items,
+          paymentMethodId: paymentMethodId,
+          subtotal: _currentSubtotal,
+          deliveryFee: deliveryFee,
+          total: total,
+          discountAmount: _couponDiscount,
+          appCreditsUsed: _useAppCredits ? _calculatedCreditsToUse : 0.0,
+          note: _instructionsController.text.isNotEmpty
+              ? _instructionsController.text
+              : null,
+          delivery: deliveryData, // Nuovo parametro con coordinate
+        );
+
+        orderId = result['data']['order_id'];
+      }
+
+      // Chiudi loading
+      Navigator.of(context).pop();
+
+      // 🆕 ONECLICK: Determina se usare Nexi (OneClick o Build)
+      bool isNexiPayment = _useOneClick;
+      if (!isNexiPayment && _selectedPaymentId != null) {
+        final selectedMethod = _paymentMethods.firstWhere(
+          (method) => method['id'].toString() == _selectedPaymentId,
+          orElse: () => {},
+        );
+        isNexiPayment = selectedMethod['slug'] == 'nexi';
+      }
+
+      if (isNexiPayment) {
+        // 🆕 Pagamento Nexi: OneClick o XPay Build
+        await _handleNexiPayment(orderId);
+      } else {
+        // Pagamento offline (contanti, POS, ecc.) - mostra conferma diretta
+        _showOrderConfirmation(orderId);
+      }
+    } catch (e) {
+      // Chiudi loading
+      Navigator.of(context).pop();
+
+      // Mostra errore
+      _showToast('Errore: ${e.toString()}');
+      print('❌ [CHECKOUT] Errore creazione ordine: $e');
+    }
+  }
+
+  /// Verifica la disponibilità di tutti i piatti nel carrello
+  /// Restituisce una lista di piatti non disponibili
+  Future<List<Map<String, dynamic>>> _checkDishesAvailability() async {
+    try {
+      final availabilityService = AvailabilityService();
+      final dateStr = DateFormat(
+        'yyyy-MM-dd',
+      ).format(_selectedDate ?? DateTime.now());
+
+      final unavailableDishes = <Map<String, dynamic>>[];
+
+      for (final cartItem in widget.cartItems) {
+        final isAvailable = await availabilityService.isDishAvailable(
+          date: dateStr,
+          restaurantId: widget.restaurant.id,
+          dishId: cartItem.menuItem.id,
+          time: _selectedTime,
+        );
+
+        if (!isAvailable) {
+          final reason = await availabilityService.getDishUnavailabilityReason(
+            date: dateStr,
+            restaurantId: widget.restaurant.id,
+            dishId: cartItem.menuItem.id,
+          );
+
+          unavailableDishes.add({
+            'id': cartItem.menuItem.id,
+            'name': cartItem.menuItem.name,
+            'reason': reason ?? 'Non disponibile',
+          });
+        }
+      }
+
+      return unavailableDishes;
+    } catch (e) {
+      print('❌ Errore verifica disponibilità piatti: $e');
+      // In caso di errore, permetti di procedere
+      // (il backend gestirà eventuali errori di disponibilità)
+      return [];
+    }
+  }
+
+  /// Mostra dialog con lista di piatti non disponibili
+  void _showUnavailableDishesDialog(List<Map<String, dynamic>> dishes) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Row(
+          children: [
+            Icon(Icons.warning_outlined, color: Color(0xFFF44336)),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Piatti non disponibili',
+                style: TextStyle(
+                  color: Color(0xFF212121),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'I seguenti piatti non sono disponibili per la data/orario selezionato:',
+                style: TextStyle(
+                  color: Color(0xFF666666),
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...dishes.map(
+                (dish) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.circle,
+                        size: 6,
+                        color: Color(0xFFF44336),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dish['name'] as String? ?? 'Piatto sconosciuto',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF212121),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              dish['reason'] as String? ?? 'Non disponibile',
+                              style: const TextStyle(
+                                color: Color(0xFF999999),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Torna al carrello',
+              style: TextStyle(
+                color: Color(0xFFFF7566),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOrderConfirmation(int orderId) async {
+    // Svuota il carrello dopo l'ordine confermato
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    await cartProvider.clearCart();
+
+    // Naviga al nuovo screen spettacolare
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) =>
+            OrderCompletedScreen(orderId: orderId, deliveryType: _deliveryType),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPickup = _deliveryType == 'pickup';
+    final headerColor = isPickup ? badgePickupColor : badgeDeliveryColor;
+    final orderTypeText = isPickup ? 'RITIRO' : 'CONSEGNA';
+    final textColor = isPickup ? darkColor : Colors.white;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 🆕 Header sottile con tipo ordine e colore dinamico
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: headerColor),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Freccia indietro a sinistra
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: Icon(Icons.arrow_back, color: textColor, size: 22),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+                  // Tipo ordine centrato
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isPickup ? Icons.storefront : Icons.delivery_dining,
+                        color: textColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        orderTypeText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 🎯 SEZIONE TIPO ORDINE (RITIRO/CONSEGNA) + QUANDO
+                    _buildOrderTypeHeader(),
+
+                    const SizedBox(height: 4),
+
+                    // 🍕 RIEPILOGO PRODOTTI
+                    _buildProductsList(),
+
+                    // 💳 PAGAMENTO (include coupon)
+                    _buildPaymentMethodSection(),
+
+                    // 💰 SUMMARY FINALE
+                    _buildFinalSummary(),
+                  ],
+                ),
+              ),
+            ),
+            _buildOrderButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 🎯 SEZIONE TIPO ORDINE - Header principale con RITIRO/CONSEGNA
+  Widget _buildOrderTypeHeader() {
+    final isPickup = _deliveryType == 'pickup';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.05),
+        border: Border(bottom: BorderSide(color: lightGrayColor, width: 1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tipo ordine con icona
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.85),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: isPickup
+                      ? const Icon(Icons.store, color: Colors.white, size: 20)
+                      : Image.asset(
+                          'assets/icons/icons8-in-transito-32.png',
+                          width: 20,
+                          height: 20,
+                          color: Colors.white,
+                          fit: BoxFit.contain,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isPickup ? 'Ritira presso' : 'Consegna a',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Indirizzo (ristorante o consegna) con mappa
+          if (isPickup) ...[
+            // RITIRO: mostra indirizzo ristorante + mappa
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.restaurant.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: darkColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.restaurant.address,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: grayColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Mappa cliccabile
+                InkWell(
+                  onTap: () => _openMapForRestaurant(),
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: primaryColor, width: 1.5),
+                    ),
+                    child: const Icon(Icons.map, color: primaryColor, size: 28),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            // CONSEGNA: mostra indirizzo consegna con freccia per cambio
+            InkWell(
+              onTap: _showAddressSelectionDialog,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Consumer<LocationProvider>(
+                      builder: (context, locationProvider, child) {
+                        return Text(
+                          locationProvider.displayAddress,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: darkColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Image.asset(
+                    'assets/icons/icons8-piu-di-32.png',
+                    width: 16,
+                    height: 16,
+                    color: primaryColor,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 14),
+
+          // "Hai cambiato idea?"
+          InkWell(
+            onTap: _handleChangeOrderType,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/icons/icons8-ripeti-32.png',
+                    width: 14,
+                    height: 14,
+                    color: primaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Hai cambiato idea? Clicca qui',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ⏰ QUANDO - su riga unica
+          Row(
+            children: [
+              const Text(
+                'Quando?',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap: _selectDateTime,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _selectedDate != null
+                            ? primaryColor
+                            : primaryColor.withOpacity(0.5),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          color: _selectedDate != null
+                              ? primaryColor
+                              : grayColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _selectedDate != null && _selectedTime != null
+                                ? '${DateFormat('dd/MM/yyyy').format(_selectedDate!)} - ${_selectedTimeSlotLabel ?? _selectedTime!.format(context)}'
+                                : 'Seleziona data e orario',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _selectedDate != null
+                                  ? darkColor
+                                  : grayColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: grayColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🗺️ Apre la mappa per mostrare l'indirizzo del ristorante
+  void _openMapForRestaurant() {
+    // TODO: Implementare apertura mappa con coordinate ristorante
+    // Puoi usare url_launcher per aprire Google Maps o Apple Maps
+    _showToast('Apertura mappa in sviluppo...');
+  }
+
+  /// 📍 Mostra modale per selezionare indirizzo di consegna
+  Future<void> _showAddressSelectionDialog() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.65,
+        child: const AddressSelectorBottomSheet(),
+      ),
+    );
+
+    // Dopo la chiusura del bottom sheet, ricalcola delivery fee
+    // perché l'utente potrebbe aver cambiato indirizzo
+    await _loadDeliveryFee();
+  }
+
+  /// 🍕 SEZIONE PRODOTTI - Riepilogo carrello
+  Widget _buildProductsList() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Nome ristorante con freccia
+          InkWell(
+            onTap: () => Navigator.pop(context),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.restaurant.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: darkColor,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+                Image.asset(
+                  'assets/icons/icons8-piu-di-32.png',
+                  width: 16,
+                  height: 16,
+                  color: primaryColor,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Lista prodotti (usa Consumer per aggiornamento dinamico)
+          Consumer<CartProvider>(
+            builder: (context, cart, child) {
+              return Column(
+                children: cart.items
+                    .map((item) => _buildProductItem(item))
+                    .toList(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          // Badge dinamico: minimo ordine O consegna gratuita (mai entrambi)
+          if (_deliveryType == 'delivery' && _deliveryFeeResult != null) ...[
+            // Caso 1: Minimo ordine NON ancora raggiunto
+            if (_currentSubtotal < (_deliveryFeeResult!.minOrder))
+              _buildMinOrderBadge()
+            // Caso 2: Minimo ordine raggiunto, mostra badge consegna gratuita (se disponibile)
+            else if ((_deliveryFeeResult!.freeOver ?? 0) > 0)
+              _buildFreeDeliveryBadge(),
+          ],
+
+          const SizedBox(height: 8),
+
+          // Pulsante "Hai dimenticato qualcosa?"
+          InkWell(
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      RestaurantMenuScreen(restaurant: widget.restaurant),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2196F3).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_circle_outline,
+                    size: 14,
+                    color: const Color(0xFF2196F3),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Hai dimenticato qualcosa?',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2196F3),
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Item singolo prodotto
+  Widget _buildProductItem(CartItem item) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Immagine piccola del prodotto
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child:
+                item.menuItem.imageUrl != null &&
+                    item.menuItem.imageUrl!.isNotEmpty
+                ? Image.network(
+                    item.menuItem.imageUrl!,
+                    width: 45,
+                    height: 45,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 45,
+                      height: 45,
+                      color: lightGrayColor,
+                      child: const Icon(
+                        Icons.restaurant,
+                        color: grayColor,
+                        size: 22,
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: 45,
+                    height: 45,
+                    color: lightGrayColor,
+                    child: const Icon(
+                      Icons.restaurant,
+                      color: grayColor,
+                      size: 22,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 12),
+
+          // Nome, extras e prezzo
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.menuItem.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: darkColor,
+                    fontFamily: 'Segoe UI',
+                  ),
+                ),
+                // Mostra customizations (extra e note)
+                if (item.customizations.isNotEmpty)
+                  ...item.customizations.map((customization) {
+                    // Salta le note (mostrate separatamente)
+                    if (customization.startsWith('Note:')) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        '+ $customization',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: grayColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+
+          // Selettori +/-
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: lightGrayColor),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Pulsante -
+                InkWell(
+                  onTap: () => _decreaseItemQuantity(item),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    child: const Icon(Icons.remove, size: 16, color: darkColor),
+                  ),
+                ),
+                // Quantità
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    '${item.quantity}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: darkColor,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+                // Pulsante +
+                InkWell(
+                  onTap: () => _increaseItemQuantity(item),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    child: const Icon(Icons.add, size: 16, color: darkColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 💳 SEZIONE METODO PAGAMENTO
+  Widget _buildPaymentMethodSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pagamento',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: darkColor,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Lista metodi di pagamento senza contenitori
+          ..._buildPaymentOptions(),
+
+          const SizedBox(height: 20),
+
+          // 💰 Sezione Crediti Lenny - COMPATTA
+          if (_availableCredits > 0) ...[
+            Row(
+              children: [
+                Image.asset(
+                  'assets/icons/icons8-ottieni-denaro-32.png',
+                  width: 18,
+                  height: 18,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Crediti Lenny',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: darkColor,
+                    fontFamily: 'Segoe UI',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _useAppCredits = !_useAppCredits;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _useAppCredits
+                      ? primaryColor.withOpacity(0.1)
+                      : lightGrayColor,
+                  border: Border.all(
+                    color: _useAppCredits ? primaryColor : lightGrayColor,
+                    width: _useAppCredits ? 2 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Disponibili: €${_availableCredits.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _useAppCredits ? primaryColor : darkColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          if (_useAppCredits &&
+                              _calculatedCreditsToUse > 0) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Usati: €${_calculatedCreditsToUse.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: successColor,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Segoe UI',
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _useAppCredits,
+                      onChanged: (value) {
+                        setState(() {
+                          _useAppCredits = value;
+                        });
+                      },
+                      activeThumbColor: primaryColor,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Sezione coupon integrata
+          const Text(
+            'Coupon',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: darkColor,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          if (!_couponApplied) ...[
+            // Campo inserimento manuale coupon
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _couponController,
+                    decoration: InputDecoration(
+                      hintText: 'Inserisci codice coupon',
+                      hintStyle: const TextStyle(
+                        fontSize: 12,
+                        color: grayColor,
+                        fontFamily: 'Segoe UI',
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: lightGrayColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: lightGrayColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: primaryColor, width: 1.5),
+                      ),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _applyCoupon,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    minimumSize: const Size(70, 36),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: const Text(
+                    'Applica',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              childAspectRatio: 2.8,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              children: [
+                _buildSimpleCouponRow(
+                  code: 'SCONTO10',
+                  description: '10% di sconto sul totale',
+                ),
+                _buildSimpleCouponRow(
+                  code: 'BENVENUTO',
+                  description: '€5 di sconto sul tuo ordine',
+                ),
+              ],
+            ),
+          ] else ...[
+            // Coupon applicato
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: successColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: successColor, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: successColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _couponController.text.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: successColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                        const Text(
+                          'Coupon applicato!',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: grayColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _couponApplied = false;
+                        _couponDiscount = 0.0;
+                        _couponController.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.close, size: 16, color: grayColor),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Riga coupon semplice senza contenitore
+  Widget _buildSimpleCouponRow({
+    required String code,
+    required String description,
+  }) {
+    return InkWell(
+      onTap: () {
+        _couponController.text = code;
+        _applyCoupon();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: lightGrayColor, width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Image.asset(
+                  'assets/icons/icons8-copia-32.png',
+                  width: 14,
+                  height: 14,
+                  color: primaryColor,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: primaryColor,
+                      fontFamily: 'Segoe UI',
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 10,
+                color: grayColor,
+                fontFamily: 'Segoe UI',
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 💰 SUMMARY FINALE
+  Widget _buildFinalSummary() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Riepilogo',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: primaryColor,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          _buildSummaryRow('Subtotale', _currentSubtotal),
+
+          _buildSummaryRow('Costo servizio', _serviceFeeAmount),
+
+          if (_deliveryType == 'delivery') _buildDeliveryFeeRow(),
+
+          if (_deliveryType == 'delivery' &&
+              _deliveryFeeResult != null &&
+              !_isFreeDelivery &&
+              _deliveryFeeResult!.freeOver != null &&
+              _currentSubtotal < _deliveryFeeResult!.freeOver!)
+            _buildFreeDeliveryIncentive(),
+
+          if (_couponDiscount > 0)
+            _buildSummaryRow(
+              'Sconto coupon',
+              -_couponDiscount,
+              isDiscount: true,
+            ),
+
+          if (_useAppCredits && _calculatedCreditsToUse > 0)
+            _buildSummaryRow(
+              'Crediti Lenny',
+              -_calculatedCreditsToUse,
+              isDiscount: true,
+            ),
+
+          const Divider(height: 24, thickness: 1.5, color: lightGrayColor),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'TOTALE',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+              ),
+              Text(
+                '€${_finalTotal.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: primaryColor,
+                  fontFamily: 'Segoe UI',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Metodi di supporto per il riepilogo
+  Widget _buildSummaryRow(
+    String label,
+    double amount, {
+    bool isDiscount = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: grayColor,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          Text(
+            '€${amount.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDiscount ? successColor : darkColor,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Badge avviso minimo ordine (sempre visibile se non raggiunto)
+  Widget _buildMinOrderBadge() {
+    final minOrder = _deliveryFeeResult?.minOrder ?? 0;
+    final missing = minOrder - _currentSubtotal;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.orange,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+                children: [
+                  const TextSpan(text: 'Ti mancano '),
+                  TextSpan(
+                    text: '€${missing.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const TextSpan(text: ' per l\'ordine minimo'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Badge consegna gratuita (incentivo opzionale)
+  Widget _buildFreeDeliveryBadge() {
+    final freeOver = _deliveryFeeResult?.freeOver ?? 0;
+    final freeDelivery = _currentSubtotal >= freeOver;
+
+    if (freeDelivery) {
+      // Consegna gratuita raggiunta
+      return Container(
+        margin: const EdgeInsets.only(top: 4, bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: successColor.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: successColor, width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, color: successColor, size: 16),
+            const SizedBox(width: 6),
+            const Expanded(
+              child: Text(
+                'Consegna gratuita raggiunta!',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: successColor,
+                  fontFamily: 'Segoe UI',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Ancora da raggiungere
+      final missing = freeOver - _currentSubtotal;
+      return Container(
+        margin: const EdgeInsets.only(top: 4, bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: successColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: successColor.withOpacity(0.3), width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.local_shipping_outlined,
+              color: successColor,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: darkColor,
+                    fontFamily: 'Segoe UI',
+                  ),
+                  children: [
+                    const TextSpan(text: 'Ti mancano '),
+                    TextSpan(
+                      text: '€${missing.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: successColor,
+                      ),
+                    ),
+                    const TextSpan(text: ' per la consegna gratuita!'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildFreeDeliveryIncentive() {
+    final freeOver = _deliveryFeeResult?.freeOver ?? 0;
+    final missing = freeOver - _currentSubtotal;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: successColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: successColor.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.local_shipping_outlined,
+            color: successColor,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+                children: [
+                  const TextSpan(text: 'Ti mancano '),
+                  TextSpan(
+                    text: '€${missing.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: successColor,
+                    ),
+                  ),
+                  const TextSpan(text: ' per la consegna gratuita!'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliveryFeeRow() {
+    final baseFee = _deliveryFeeResult?.deliveryFee ?? 0.0;
+    final finalFee = _deliveryFeeAmount;
+    final isFree = _isFreeDelivery;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Costo consegna',
+            style: TextStyle(
+              fontSize: 13,
+              color: grayColor,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          if (isFree)
+            Row(
+              children: [
+                Text(
+                  '€${baseFee.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: grayColor,
+                    fontWeight: FontWeight.w400,
+                    fontFamily: 'Segoe UI',
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: successColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'GRATIS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Text(
+              '€${finalFee.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: darkColor,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Segoe UI',
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildPaymentOptions() {
+    if (_isLoading) {
+      return [const Center(child: CircularProgressIndicator())];
+    }
+
+    if (_paymentMethods.isEmpty) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: lightGrayColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'Nessun metodo di pagamento disponibile',
+            style: TextStyle(color: grayColor),
+          ),
+        ),
+      ];
+    }
+
+    List<Widget> widgets = [];
+
+    // OneClick: Mostra carta salvata se disponibile
+    final nexiMethod = _paymentMethods.firstWhere(
+      (m) => m['slug'] == 'nexi',
+      orElse: () => {},
+    );
+    final hasNexiMethod = nexiMethod.isNotEmpty;
+
+    if (_hasSavedCard && hasNexiMethod) {
+      widgets.add(_buildOneClickCard());
+      widgets.add(const SizedBox(height: 12));
+      widgets.add(
+        const Row(
+          children: [
+            Expanded(child: Divider(color: grayColor)),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'Altri metodi',
+                style: TextStyle(color: grayColor, fontSize: 11),
+              ),
+            ),
+            Expanded(child: Divider(color: grayColor)),
+          ],
+        ),
+      );
+      widgets.add(const SizedBox(height: 12));
+    }
+
+    // Metodi di pagamento standard - GRIGLIA 2 COLONNE
+    final gridChildren = <Widget>[];
+
+    for (final method in _paymentMethods) {
+      String icon;
+      switch (method['slug']) {
+        case 'stripe':
+        case 'nexi':
+        case 'pos':
+        case 'smac':
+          icon = 'assets/icons/icons8-card-32.png';
+          break;
+        case 'cash':
+          icon = 'assets/icons/icons8-soldi-32.png';
+          break;
+        default:
+          icon = 'assets/icons/icons8-card-32.png';
+      }
+
+      gridChildren.add(
+        _buildPaymentOption(
+          icon: icon,
+          name: method['description'] ?? 'Pagamento',
+          value: method['id'].toString(),
+        ),
+      );
+    }
+
+    widgets.add(
+      GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 3.5,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        children: gridChildren,
+      ),
+    );
+
+    return widgets;
+  }
+
+  Widget _buildPaymentOption({
+    required String icon,
+    required String name,
+    required String value,
+  }) {
+    final isSelected = _selectedPaymentId == value;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedPaymentId = value;
+          _useOneClick = false;
+          _selectedCardAlias = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor.withOpacity(0.1) : lightGrayColor,
+          border: Border.all(
+            color: isSelected ? primaryColor : lightGrayColor,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              icon,
+              width: 18,
+              height: 18,
+              color: isSelected ? primaryColor : grayColor,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? primaryColor : darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOneClickCard() {
+    if (_savedCards.isEmpty) return const SizedBox.shrink();
+
+    if (_savedCards.length == 1) {
+      return _buildSingleCardCheckbox(_savedCards[0]);
+    }
+
+    return _buildMultipleCardsRadio();
+  }
+
+  Widget _buildSingleCardCheckbox(Map<String, dynamic> card) {
+    final brand = card['brand'] as String? ?? 'CARD';
+    final last4 = card['last4'] as String? ?? '****';
+    final expiry = card['expiry'] as String?;
+    final cardInfo = '$brand •••• $last4${expiry != null ? ' ($expiry)' : ''}';
+    final isSelected = _useOneClick;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _useOneClick = !_useOneClick;
+          if (_useOneClick) {
+            _selectedPaymentId = null;
+            _selectedCardAlias = card['numeroContratto'] as String?;
+          } else {
+            _selectedCardAlias = null;
+            if (_paymentMethods.isNotEmpty) {
+              _selectedPaymentId = _paymentMethods[0]['id'].toString();
+            }
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor.withOpacity(0.08)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/icons/icons8-card-32.png',
+              width: 20,
+              height: 20,
+              color: isSelected ? primaryColor : grayColor,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                cardInfo,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? primaryColor : darkColor,
+                  fontFamily: 'Segoe UI',
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: successColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'OneClick',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: successColor,
+                  fontFamily: 'Segoe UI',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMultipleCardsRadio() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 3.0,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: _savedCards.length,
+      itemBuilder: (context, index) {
+        final card = _savedCards[index];
+        final brand = card['brand'] as String? ?? 'CARD';
+        final last4 = card['last4'] as String? ?? '****';
+        final cardInfo = '$brand •••• $last4';
+        final cardAlias = card['numeroContratto'] as String?;
+        final isSelected = _useOneClick && _selectedCardAlias == cardAlias;
+        final isDefault = card['is_default'] == true;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _useOneClick = true;
+              _selectedCardAlias = cardAlias;
+              _selectedPaymentId = null;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor.withOpacity(0.08) : Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isSelected ? primaryColor : lightGrayColor,
+                width: isSelected ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/icons/icons8-card-32.png',
+                      width: 16,
+                      height: 16,
+                      color: isSelected ? primaryColor : grayColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        cardInfo,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: isSelected ? primaryColor : darkColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (isDefault)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: successColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Default',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w600,
+                          color: successColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOrderButton() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: ElevatedButton(
+          onPressed: _placeOrder,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            minimumSize: const Size(double.infinity, 54),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'CONFERMA ORDINE',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  fontFamily: 'Segoe UI',
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '€${_finalTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    fontFamily: 'Segoe UI',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

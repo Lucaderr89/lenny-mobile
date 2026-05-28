@@ -1,0 +1,383 @@
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+/// Screen esplosivo per ordine completato con effetti festivi
+class OrderCompletedScreen extends StatefulWidget {
+  final int orderId;
+  final String deliveryType;
+
+  const OrderCompletedScreen({
+    super.key,
+    required this.orderId,
+    required this.deliveryType,
+  });
+
+  @override
+  State<OrderCompletedScreen> createState() => _OrderCompletedScreenState();
+}
+
+class _OrderCompletedScreenState extends State<OrderCompletedScreen>
+    with TickerProviderStateMixin {
+  static const Color primaryColor = Color(0xFFFF7566);
+
+  late AnimationController _scaleController;
+  late AnimationController _fadeController;
+  late AnimationController _bounceController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _bounceAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Animazione di scala per il logo
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _scaleAnimation = CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    );
+
+    // Animazione fade per il testo
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    );
+
+    // Animazione bounce per il bottone
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _bounceAnimation = CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.bounceOut,
+    );
+
+    // Avvia le animazioni in sequenza
+    _scaleController.forward();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _fadeController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 600), () {
+      _bounceController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    _fadeController.dispose();
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Sfondo con immagine e overlay velato
+          Positioned.fill(
+            child: Stack(
+              children: [
+                // Immagine di sfondo
+                Image.asset(
+                  'assets/images/order_background.png',
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+                // Overlay velato per attenuare i colori forti
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withOpacity(0.7),
+                        Colors.white.withOpacity(0.5),
+                        Colors.white.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Coriandoli animati
+          ...List.generate(
+            20,
+            (index) => _Confetti(
+              delay: index * 50,
+              left: (index % 5) * (MediaQuery.of(context).size.width / 5),
+            ),
+          ),
+
+          // Contenuto principale
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+
+                // Logo "ordine confermato" con animazione
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    child: Image.asset(
+                      'assets/images/ordine confermato.png',
+                      width: MediaQuery.of(context).size.width * 0.75,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Testo con fade animation in card glassmorphism
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.6),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 25,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            '🎉 Fantastico! 🎉',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Ordine #${widget.orderId}',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                              fontFamily: 'Segoe UI',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            widget.deliveryType == 'delivery'
+                                ? '🚀 Il tuo cibo sta arrivando!\nRelax, pensiamo a tutto noi! 😋'
+                                : '🎯 Perfetto! Passa a ritirarlo !\nTi aspettiamo con il tuo ordine pronto! 🍕',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                              fontFamily: 'Segoe UI',
+                              height: 1.4,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green[200]!,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green[600],
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    widget.deliveryType == 'delivery'
+                                        ? 'In arrivo all\'orario scelto'
+                                        : 'Pronto all\'orario scelto',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green[700],
+                                      fontFamily: 'Segoe UI',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Bottone con bounce animation
+                ScaleTransition(
+                  scale: _bounceAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Torna alla home (chiude tutti gli screen)
+                          Navigator.of(
+                            context,
+                          ).popUntil((route) => route.isFirst);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 8,
+                          shadowColor: primaryColor.withOpacity(0.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Torna alla Home',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Widget per i coriandoli animati
+class _Confetti extends StatefulWidget {
+  final int delay;
+  final double left;
+
+  const _Confetti({required this.delay, required this.left});
+
+  @override
+  State<_Confetti> createState() => _ConfettiState();
+}
+
+class _ConfettiState extends State<_Confetti>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  final _random = math.Random();
+  late Color _color;
+  late double _rotation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Colori casuali festivi
+    final colors = [
+      const Color(0xFFFF7566),
+      const Color(0xFFFFB74D),
+      const Color(0xFF66BB6A),
+      const Color(0xFF5C6BC0),
+      const Color(0xFFEF5350),
+      const Color(0xFFFFD700),
+    ];
+    _color = colors[_random.nextInt(colors.length)];
+    _rotation = _random.nextDouble() * 360;
+
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 2000 + _random.nextInt(1000)),
+      vsync: this,
+    );
+
+    _animation = Tween<double>(
+      begin: -50,
+      end: 800,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
+
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Positioned(
+          left: widget.left + _random.nextDouble() * 50 - 25,
+          top: _animation.value,
+          child: Transform.rotate(
+            angle: _rotation * (_animation.value / 800),
+            child: Container(
+              width: 8,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

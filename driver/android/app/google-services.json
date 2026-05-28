@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "215648872015",
+    "project_id": "lennyv2-7d4c4",
+    "storage_bucket": "lennyv2-7d4c4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:215648872015:android:f91ae2f559bce8b33a6c3a",
+        "android_client_info": {
+          "package_name": "com.lenny.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:215648872015:android:2c33491b1614cb3d3a6c3a",
+        "android_client_info": {
+          "package_name": "com.lenny.drivers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:215648872015:android:6f0e9ea3d8d5c6963a6c3a",
+        "android_client_info": {
+          "package_name": "com.lenny.partner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
