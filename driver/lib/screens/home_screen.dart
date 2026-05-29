@@ -679,10 +679,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Se già processata questa batch, salta
       if (processedBatches.contains(order.batchId)) continue;
 
-      // Trova tutti gli ordini della stessa batch
-      final batchOrders = _orders
-          .where((o) => o.batchId == order.batchId)
-          .toList();
+      // Trova tutti gli ordini della stessa batch, ordinati nearest-first dal ristorante
+      final batchOrders =
+          _orders.where((o) => o.batchId == order.batchId).toList()
+            ..sort((a, b) {
+              final restLat = a.restaurantLat;
+              final restLng = a.restaurantLng;
+              final dA =
+                  (a.deliveryLat - restLat) * (a.deliveryLat - restLat) +
+                  (a.deliveryLng - restLng) * (a.deliveryLng - restLng);
+              final dB =
+                  (b.deliveryLat - restLat) * (b.deliveryLat - restLat) +
+                  (b.deliveryLng - restLng) * (b.deliveryLng - restLng);
+              return dA.compareTo(dB);
+            });
 
       if (batchOrders.length > 1) {
         // BATCH: mostra card unica con più consegne
