@@ -44,25 +44,25 @@ class LocationPermissionDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Per iniziare il turno abbiamo bisogno della tua posizione per:',
+            'Ci serve la tua posizione solo mentre hai una consegna in corso, per:',
             style: TextStyle(fontSize: 15),
           ),
           const SizedBox(height: 20),
           _buildBenefit(
-            Icons.route_rounded,
-            'Calcolare le distanze verso i ristoranti',
+            Icons.sync_rounded,
+            'Aggiornare da solo lo stato dell\'ordine quando arrivi al ritiro e quando consegni',
             AppColors.primary,
           ),
           const SizedBox(height: 14),
           _buildBenefit(
-            Icons.navigation_rounded,
-            'Tracciare il tuo percorso in tempo reale',
+            Icons.local_shipping_rounded,
+            'Tenere aggiornato il cliente sull\'avanzamento della consegna',
             AppColors.success,
           ),
           const SizedBox(height: 14),
           _buildBenefit(
-            Icons.assignment_rounded,
-            'Assegnarti gli ordini più vicini',
+            Icons.lock_outline,
+            'Si attiva solo con un ordine attivo e si spegne a consegna conclusa',
             AppColors.accent,
           ),
           const SizedBox(height: 20),
@@ -78,7 +78,7 @@ class LocationPermissionDialog extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Il GPS verrà usato solo durante il turno',
+                    'Mai tracciato quando sei libero o fuori servizio',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.warning,
