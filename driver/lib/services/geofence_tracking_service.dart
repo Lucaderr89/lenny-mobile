@@ -29,6 +29,7 @@ class GeofenceTrackingService {
 
   final DriverLocationService _locationService = DriverLocationService();
   StreamSubscription<LocationPoint>? _subscription;
+  Timer? _heartbeat;
   bool _isTracking = false;
 
   bool get isTracking => _isTracking;
@@ -67,6 +68,19 @@ class GeofenceTrackingService {
         cancelOnError: false,
       );
       _isTracking = true;
+
+      // Heartbeat a tempo: invia un punto anche da FERMO (il filtro a 15m da solo
+      // non manda nulla se il driver è immobile). Serve a misurare la permanenza
+      // al ristorante (dwell anti drive-by) e a tenere fresca la posizione.
+      _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) async {
+        try {
+          final loc = await _locationService.getCurrentLocation();
+          await _sendLocation(loc);
+        } catch (e) {
+          print('⚠️ [TRACKING] Heartbeat fallito: $e');
+        }
+      });
+
       print('✅ [TRACKING] Avviato (ordine attivo presente)');
     } catch (e) {
       print('❌ [TRACKING] Errore avvio tracking: $e');
@@ -76,6 +90,8 @@ class GeofenceTrackingService {
 
   Future<void> _stop() async {
     try {
+      _heartbeat?.cancel();
+      _heartbeat = null;
       await _subscription?.cancel();
       _subscription = null;
       await _locationService.stopTracking();
