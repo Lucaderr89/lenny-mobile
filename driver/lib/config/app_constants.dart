@@ -11,6 +11,8 @@ class AppConstants {
   static const String meEndpoint = '$apiUrl/driver/me';
   static const String ordersEndpoint = '$apiUrl/driver/orders';
   static const String updateLocationEndpoint = '$apiUrl/driver/location';
+  // Tracking GPS leggero (no sessione): attivo solo quando il driver ha ordini attivi
+  static const String trackLocationEndpoint = '$apiUrl/driver/track-location';
 
   // App Info
   static const String appName = 'Lenny Driver';
@@ -26,6 +28,8 @@ class AppConstants {
   static const String keyDriverEmail = 'driver_email';
   static const String keyDriverPhone = 'driver_phone';
   static const String keyRememberMe = 'driver_remember_me';
+  static const String keyLocationPermissionAsked =
+      'driver_location_permission_asked';
 
   // Validation
   static const int minPasswordLength = 6;

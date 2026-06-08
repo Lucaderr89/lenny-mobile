@@ -8,9 +8,13 @@ import '../models/driver_shift_info.dart';
 import '../models/order.dart';
 import '../services/driver_session_service.dart';
 import '../services/driver_service.dart';
+import '../services/driver_location_service.dart';
+import '../services/geofence_tracking_service.dart';
 import '../services/shift_service.dart';
 import '../services/fcm_service.dart';
 import '../services/notification_store.dart';
+import '../widgets/location_permission_dialog.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
 import 'delivery_history_screen.dart';
@@ -50,6 +54,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadData();
+
+    // Permesso GPS richiesto UNA SOLA VOLTA (al primo login). Dopo, il tracking
+    // controlla in silenzio se è già concesso: nessun popup ad ogni avvio.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureLocationPermissionOnce();
+    });
 
     // Carica notifiche salvate e ascolta il badge
     NotificationStore().load().then((_) {
@@ -95,6 +105,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _audioPlayer.dispose();
     _reminderPlayer.dispose();
     _sessionService.dispose();
+    // Ferma il tracking GPS quando si lascia la home (es. logout).
+    GeofenceTrackingService().shutdown();
     super.dispose();
   }
 
@@ -104,6 +116,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _loadData();
     }
+  }
+
+  /// Chiede il permesso di localizzazione UNA SOLA VOLTA (al primo login).
+  /// Una volta concesso a livello di sistema, non viene più richiesto — esattamente
+  /// come Google Maps. Il tracking vero parte poi solo quando c'è un ordine attivo.
+  Future<void> _ensureLocationPermissionOnce() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(AppConstants.keyLocationPermissionAsked) ?? false) {
+      return; // già chiesto in passato
+    }
+
+    final locService = DriverLocationService();
+
+    // Se è già concesso (es. reinstallazione con permesso residuo), segna e basta.
+    final current = await locService.checkPermission();
+    if (current == LocationPermission.always ||
+        current == LocationPermission.whileInUse) {
+      await prefs.setBool(AppConstants.keyLocationPermissionAsked, true);
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Dialog esplicativo (una tantum), poi richiesta permesso di sistema.
+    final accept = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => LocationPermissionDialog(
+        onAccept: () => Navigator.of(ctx).pop(true),
+        onDecline: () => Navigator.of(ctx).pop(false),
+      ),
+    );
+
+    if (accept == true) {
+      await locService.requestPermission();
+    }
+
+    // In ogni caso non riproporre il dialog ad ogni avvio: l'OS gestisce il resto.
+    await prefs.setBool(AppConstants.keyLocationPermissionAsked, true);
   }
 
   Future<void> _loadData() async {
@@ -172,6 +223,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
 
         setState(() => _orders = orders);
+
+        // Tracking GPS legato alla presenza di ordini attivi (food o partner):
+        // la lista contiene SOLO ordini attivi, quindi isNotEmpty = "ha un ordine".
+        // Parte all'assegnazione, si ferma quando l'ultimo è consegnato.
+        GeofenceTrackingService().sync(hasActiveOrders: orders.isNotEmpty);
       }
     } catch (e) {
       print('❌ Errore caricamento ordini: $e');
