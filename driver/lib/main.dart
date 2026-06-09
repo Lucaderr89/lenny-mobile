@@ -12,7 +12,7 @@ import 'services/fcm_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inizializza Firebase
+  // Inizializza Firebase (necessario prima di usare FCM; veloce, no rete)
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -20,9 +20,6 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase già inizializzato: $e');
   }
-
-  // Inizializza FCM push notifications
-  await FcmService().initialize();
 
   // Configurazione globale per gestire correttamente le barre di sistema
   SystemChrome.setSystemUIOverlayStyle(
@@ -37,7 +34,14 @@ void main() async {
   // Abilita edge-to-edge per gestire correttamente SafeArea
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
+  // Avvia SUBITO la UI: NON blocchiamo l'apertura dell'app sulle chiamate di
+  // rete FCM (getToken + registrazione token sul backend). Era la causa del
+  // "devo cliccare più volte la push": ad app chiusa il primo frame restava
+  // in attesa di quelle chiamate, dando l'impressione che il tap non aprisse.
   runApp(const LennyDriverApp());
+
+  // Inizializza FCM DOPO, in background (non-bloccante).
+  FcmService().initialize();
 }
 
 class LennyDriverApp extends StatelessWidget {
