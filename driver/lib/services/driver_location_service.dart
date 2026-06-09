@@ -1,4 +1,6 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:geolocator_android/geolocator_android.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
 import '../models/location_point.dart';
 
@@ -126,14 +128,29 @@ class DriverLocationService {
       );
     }
 
-    // Configura le impostazioni di tracking
-    // IMPORTANTE: NO timeLimit per evitare che lo stream si chiuda
-    // Il GPS deve rimanere sempre attivo per il geofencing
-    const LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 15, // Aggiorna ogni 15 metri (risparmio batteria)
-      // timeLimit rimosso: lo stream rimane attivo anche senza aggiornamenti
-    );
+    // Configura le impostazioni di tracking.
+    // Su ANDROID usiamo un FOREGROUND SERVICE (notifica persistente): senza, il
+    // sistema taglia il GPS quando l'app è in background (driver che usa il
+    // navigatore o col telefono in tasca) e il geofencing non riceve più punti.
+    // La notifica compare solo durante il tracking (= solo con un ordine attivo).
+    final LocationSettings locationSettings;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      locationSettings = AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 15, // Aggiorna ogni 15 metri
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'Lenny Driver',
+          notificationText: 'Tracciamento consegna attivo',
+          enableWakeLock: true,
+          setOngoing: true,
+        ),
+      );
+    } else {
+      locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 15,
+      );
+    }
 
     // Avvia lo stream
     _positionStreamSubscription =
