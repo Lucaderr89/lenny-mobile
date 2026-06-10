@@ -840,14 +840,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final doneCount = steps.where(stepDone).length;
 
-    // Prossimo ordine da consegnare ORA (in consegna) → pulsante CONFERMA CONSEGNA
-    Order? deliverable;
+    // Ordini attualmente IN CONSEGNA: anche più d'uno se il driver ha stravolto il
+    // giro (es. ha messo in consegna entrambi prima di confermare). Un pulsante per
+    // ciascuno, in ordine di giro, così quando ha un minuto conferma tutte.
+    final deliverables = <Order>[];
     for (final st in steps) {
       if (st.isDelivery && !stepDone(st)) {
         final o = orderById[st.orderId];
         if (o != null && o.isInDelivery) {
-          deliverable = o;
-          break;
+          deliverables.add(o);
         }
       }
     }
@@ -942,10 +943,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     stepInProgress(st),
                   );
                 }),
-                if (deliverable != null) ...[
-                  const SizedBox(height: 6),
-                  _buildGiroDeliverButton(deliverable),
-                ],
+                ...deliverables.map(
+                  (o) => Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: _buildGiroDeliverButton(o),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1141,23 +1144,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.success,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          minimumSize: const Size(0, 0),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          elevation: 2,
+          elevation: 1,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.done_all, size: 20),
+            const Icon(Icons.done_all, size: 18),
             const SizedBox(width: 8),
             Text(
               'CONFERMA CONSEGNA #${order.id}',
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 13.5,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+                letterSpacing: 0.3,
               ),
             ),
           ],
