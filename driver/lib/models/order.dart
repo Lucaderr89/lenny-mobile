@@ -192,6 +192,12 @@ class Order {
   /// Indica se l'ordine è in consegna
   bool get isInDelivery => status == 'in_delivery';
 
+  /// PAGATO = pagato online (Stripe/Nexi, payment_method_id 4-5). NON PAGATO =
+  /// pagamento offline da incassare alla consegna (Contanti/POS/Smac, id 1-3).
+  /// Stessa condizione della guardia in _confirmOrderDelivered: per gli online
+  /// (isPaid == true) la conferma consegna NON chiede il metodo di pagamento.
+  bool get isPaid => !(paymentMethodId >= 1 && paymentMethodId <= 3);
+
   /// Indica se è un ordine partner (non food)
   bool get isPartnerOrder => orderSource == 'partner';
 
