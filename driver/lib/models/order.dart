@@ -1,3 +1,35 @@
+import 'dart:convert';
+
+/// Una tappa del giro ottimizzato (ritiro o consegna di un ordine).
+class RouteStop {
+  final String type; // 'pickup' | 'delivery'
+  final int orderId;
+  final double lat;
+  final double lng;
+  final double cumTime; // minuti cumulati dall'inizio del giro
+
+  RouteStop({
+    required this.type,
+    required this.orderId,
+    required this.lat,
+    required this.lng,
+    required this.cumTime,
+  });
+
+  bool get isPickup => type == 'pickup';
+  bool get isDelivery => type == 'delivery';
+
+  factory RouteStop.fromJson(Map<String, dynamic> json) {
+    return RouteStop(
+      type: json['type']?.toString() ?? '',
+      orderId: int.tryParse(json['order_id']?.toString() ?? '0') ?? 0,
+      lat: double.tryParse(json['lat']?.toString() ?? '0') ?? 0.0,
+      lng: double.tryParse(json['lng']?.toString() ?? '0') ?? 0.0,
+      cumTime: double.tryParse(json['cumtime']?.toString() ?? '0') ?? 0.0,
+    );
+  }
+}
+
 /// Model per un ordine assegnato al driver
 class Order {
   final int id;
@@ -29,6 +61,10 @@ class Order {
   final String orderSource; // 'food' | 'partner'
   final String?
   partnerType; // 'supermarket' | 'shop' | 'wareshop' | 'other' | null
+  // ── Giro ottimizzato (multi-ritiro da ristoranti diversi) ───────────────────
+  final int? deliverySequence; // posizione di consegna nel giro (1..N)
+  final String? routePlanRaw; // JSON grezzo del giro: chiave di raggruppamento
+  final List<RouteStop> routeSteps; // sequenza ritiro/consegna del giro completo
 
   Order({
     required this.id,
@@ -59,6 +95,9 @@ class Order {
     this.products = const [],
     this.orderSource = 'food',
     this.partnerType,
+    this.deliverySequence,
+    this.routePlanRaw,
+    this.routeSteps = const [],
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -67,6 +106,29 @@ class Order {
       productsList = (json['products'] as List)
           .map((p) => OrderProduct.fromJson(p))
           .toList();
+    }
+
+    // Giro ottimizzato: route_plan arriva come stringa JSON {"sequence":[...]}
+    String? routePlanRaw;
+    List<RouteStop> steps = [];
+    final rawRoutePlan = json['route_plan'];
+    if (rawRoutePlan != null && rawRoutePlan.toString().isNotEmpty) {
+      try {
+        final decoded = rawRoutePlan is String
+            ? jsonDecode(rawRoutePlan)
+            : rawRoutePlan;
+        if (decoded is Map && decoded['sequence'] is List) {
+          routePlanRaw = rawRoutePlan is String
+              ? rawRoutePlan
+              : jsonEncode(rawRoutePlan);
+          steps = (decoded['sequence'] as List)
+              .whereType<Map>()
+              .map((s) => RouteStop.fromJson(Map<String, dynamic>.from(s)))
+              .toList();
+        }
+      } catch (_) {
+        /* route_plan malformato: ignora, l'ordine resta singolo */
+      }
     }
 
     return Order(
@@ -103,6 +165,11 @@ class Order {
       products: productsList,
       orderSource: json['order_source'] ?? 'food',
       partnerType: json['partner_type'],
+      deliverySequence: int.tryParse(
+        json['delivery_sequence']?.toString() ?? '',
+      ),
+      routePlanRaw: routePlanRaw,
+      routeSteps: steps,
     );
   }
 

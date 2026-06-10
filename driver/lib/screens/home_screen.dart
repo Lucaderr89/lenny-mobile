@@ -727,17 +727,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Un giro multi-ristorante = ordini che condividono lo stesso route_plan con
+  /// almeno 2 punti di ritiro distinti (i ritiri/consegne si alternano tra ristoranti
+  /// diversi). I batch dallo STESSO ristorante restano gestiti da _buildBatchCard.
+  bool _isMultiRestaurantRoute(List<RouteStop> steps) {
+    final pickups = steps
+        .where((s) => s.isPickup)
+        .map((s) => '${s.lat.toStringAsFixed(5)},${s.lng.toStringAsFixed(5)}')
+        .toSet();
+    return pickups.length >= 2;
+  }
+
   List<Widget> _buildOrdersOrBatches() {
     final widgets = <Widget>[];
-    final processedBatches = <String>{};
+    final processedOrderIds = <int>{};
 
+    // ── 1) GIRI multi-ristorante (route_plan condiviso, ≥2 ritiri) ──────────────
+    final giroGroups = <String, List<Order>>{};
+    for (final o in _orders) {
+      if (o.routePlanRaw != null && _isMultiRestaurantRoute(o.routeSteps)) {
+        giroGroups.putIfAbsent(o.routePlanRaw!, () => []).add(o);
+      }
+    }
+    for (final giroOrders in giroGroups.values) {
+      // Ordina nell'ordine del giro (sequenza di consegna)
+      giroOrders.sort(
+        (a, b) =>
+            (a.deliverySequence ?? 9999).compareTo(b.deliverySequence ?? 9999),
+      );
+      final allConfirmed = giroOrders.every((o) => o.confirmedAt != null);
+      if (allConfirmed) {
+        // FASE 2: card unica del giro ottimizzato
+        widgets.add(_buildGiroCard(giroOrders));
+      } else {
+        // FASE 1: il driver conferma ancora la ricezione di ogni ordine →
+        // card singole, nell'ordine del giro
+        for (final o in giroOrders) {
+          widgets.add(_buildOrderCard(o));
+        }
+      }
+      for (final o in giroOrders) {
+        processedOrderIds.add(o.id);
+      }
+    }
+
+    // ── 2) Resto: batch stesso ristorante e ordini singoli (come prima) ─────────
+    final processedBatches = <String>{};
     for (final order in _orders) {
-      // Se già processata questa batch, salta
+      if (processedOrderIds.contains(order.id)) continue;
       if (processedBatches.contains(order.batchId)) continue;
 
       // Trova tutti gli ordini della stessa batch, ordinati nearest-first dal ristorante
       final batchOrders =
-          _orders.where((o) => o.batchId == order.batchId).toList()
+          _orders
+              .where(
+                (o) =>
+                    o.batchId == order.batchId &&
+                    !processedOrderIds.contains(o.id),
+              )
+              .toList()
             ..sort((a, b) {
               final restLat = a.restaurantLat;
               final restLng = a.restaurantLng;
@@ -762,6 +810,359 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     return widgets;
+  }
+
+  /// FASE 2 — Card del giro ottimizzato (multi-ritiro da ristoranti diversi).
+  /// Mostra le tappe ritiro/consegna nell'ordine suggerito dal backend; lo stato di
+  /// ogni tappa è DEDOTTO dallo stato (geofencing) del relativo ordine, senza una
+  /// macchina a stati propria. Tap su una tappa → dettaglio ordine (prodotti). La
+  /// conferma consegna avviene qui, un ordine alla volta (quello in consegna).
+  Widget _buildGiroCard(List<Order> giroOrders) {
+    final steps = giroOrders.first.routeSteps;
+    final orderById = {for (final o in giroOrders) o.id: o};
+    final slot = giroOrders.first.timeSlot;
+    final total = giroOrders.fold<double>(0, (s, o) => s + o.total);
+
+    bool stepDone(RouteStop st) {
+      final o = orderById[st.orderId];
+      if (o == null) return true; // ordine non più tra gli attivi → consegnato
+      if (st.isPickup) {
+        return o.pickedUpAt != null || o.isInDelivery || o.status == 'delivered';
+      }
+      return o.status == 'delivered';
+    }
+
+    bool stepInProgress(RouteStop st) {
+      final o = orderById[st.orderId];
+      if (o == null) return false;
+      return st.isPickup ? o.isPickingUp : o.isInDelivery;
+    }
+
+    final doneCount = steps.where(stepDone).length;
+
+    // Prossimo ordine da consegnare ORA (in consegna) → pulsante CONFERMA CONSEGNA
+    Order? deliverable;
+    for (final st in steps) {
+      if (st.isDelivery && !stepDone(st)) {
+        final o = orderById[st.orderId];
+        if (o != null && o.isInDelivery) {
+          deliverable = o;
+          break;
+        }
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: SLOT in evidenza + progresso tappe + totale
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                topRight: Radius.circular(15),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.route, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  slot,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.dark,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$doneCount/${steps.length}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '€${total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.dark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Tappe del giro
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Column(
+              children: [
+                ...steps.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final st = entry.value;
+                  return _buildGiroStepRow(
+                    i,
+                    st,
+                    orderById[st.orderId],
+                    stepDone(st),
+                    stepInProgress(st),
+                  );
+                }),
+                if (deliverable != null) ...[
+                  const SizedBox(height: 6),
+                  _buildGiroDeliverButton(deliverable),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Una riga-tappa della card giro.
+  Widget _buildGiroStepRow(
+    int i,
+    RouteStop st,
+    Order? o,
+    bool done,
+    bool inProg,
+  ) {
+    final isPickup = st.isPickup;
+    final String title = isPickup
+        ? (o?.restaurantName ?? 'Ritiro #${st.orderId}')
+        : (o?.customerName ?? 'Consegna #${st.orderId}');
+    final String subtitle = isPickup
+        ? (o?.restaurantAddress ?? '')
+        : (o?.deliveryAddress ?? '');
+
+    // Indicatore di stato: cerchio numerato (verde+spunta se fatto, pieno se in corso)
+    final Widget indicator = Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: done
+            ? AppColors.success
+            : (inProg
+                  ? AppColors.primary
+                  : AppColors.lightGray.withValues(alpha: 0.5)),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: done
+            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            : Text(
+                '${i + 1}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: inProg ? Colors.white : AppColors.gray,
+                ),
+              ),
+      ),
+    );
+
+    return InkWell(
+      onTap: o != null ? () => _showOrderDetailsModal(o) : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          color: inProg
+              ? AppColors.primary.withValues(alpha: 0.05)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            indicator,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isPickup ? Icons.restaurant : Icons.location_on,
+                        size: 13,
+                        color: isPickup ? AppColors.primary : AppColors.success,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isPickup ? 'RITIRO' : 'CONSEGNA',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '#${st.orderId}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.gray,
+                        ),
+                      ),
+                      if (inProg) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isPickup ? 'IN RITIRO' : 'IN CONSEGNA',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: done ? AppColors.gray : AppColors.dark,
+                      decoration: done ? TextDecoration.lineThrough : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.gray.withValues(alpha: 0.8),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            if (o != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isPickup || o.restaurantPhone != null)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.phone,
+                        size: 19,
+                        color: isPickup
+                            ? AppColors.primary
+                            : AppColors.success,
+                      ),
+                      onPressed: () => _makePhoneCall(
+                        isPickup ? o.restaurantPhone! : o.customerPhone,
+                      ),
+                    ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      Icons.navigation,
+                      size: 19,
+                      color: isPickup ? AppColors.primary : AppColors.success,
+                    ),
+                    onPressed: () => _openMaps(
+                      isPickup ? o.restaurantLat : o.deliveryLat,
+                      isPickup ? o.restaurantLng : o.deliveryLng,
+                      title,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Pulsante CONFERMA CONSEGNA per l'ordine attualmente in consegna nel giro
+  /// (riusa il flusso esistente con scelta metodo di pagamento).
+  Widget _buildGiroDeliverButton(Order order) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () => _confirmOrderDelivered(order),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.success,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 2,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.done_all, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'CONFERMA CONSEGNA #${order.id}',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState({
