@@ -39,10 +39,11 @@ class LocationPermissionDialog extends StatelessWidget {
           ),
         ],
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           const Text(
             'Ci serve la tua posizione solo mentre hai una consegna in corso, per:',
             style: TextStyle(fontSize: 15),
@@ -89,7 +90,8 @@ class LocationPermissionDialog extends StatelessWidget {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       actions: [
