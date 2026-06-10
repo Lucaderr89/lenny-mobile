@@ -1228,6 +1228,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Badge di stato dell'ordine (NUOVO / ASSEGNATO / IN RITIRO / IN CONSEGNA),
+  /// usato inline sulla riga del ristorante (stile card giro).
+  Widget _buildOrderStatusBadge(Order order) {
+    String label;
+    Color color;
+    if (order.confirmedAt == null) {
+      label = '🔔 NUOVO';
+      color = AppColors.warning;
+    } else if (order.isInDelivery) {
+      label = '🚚 IN CONSEGNA';
+      color = AppColors.success;
+    } else if (order.isPickingUp) {
+      label = '📦 IN RITIRO';
+      color = AppColors.primary;
+    } else {
+      label = '✓ ASSEGNATO';
+      color = AppColors.primary;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildOrderCard(Order order) {
     if (order.isPartnerOrder) return _buildPartnerOrderCard(order);
     return InkWell(
@@ -1269,114 +1304,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               child: Row(
                 children: [
-                  if (order.confirmedAt == null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        '🔔 NUOVO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  Icon(
+                    Icons.access_time,
+                    size: 18,
+                    color: order.confirmedAt == null
+                        ? AppColors.warning
+                        : AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  // Fascia in evidenza (come la card del giro)
+                  Text(
+                    order.timeSlot,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: order.confirmedAt == null
+                          ? AppColors.warning
+                          : AppColors.dark,
                     ),
-                    const SizedBox(width: 6),
-                  ] else if (order.status == 'assigned' &&
-                      order.confirmedAt != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        '✓ ASSEGNATO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ] else if (order.isPickingUp) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        '📦 IN RITIRO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ] else if (order.isInDelivery) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        '🚚 IN CONSEGNA',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  // ID Ordine
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     '#${order.id}',
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: AppColors.gray,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.access_time,
-                    size: 14,
-                    color: order.confirmedAt == null
-                        ? AppColors.warning
-                        : AppColors.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    order.timeSlot,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: order.confirmedAt == null
-                          ? AppColors.warning
-                          : AppColors.primary,
                     ),
                   ),
                   const Spacer(),
@@ -1418,13 +1371,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'RITIRO DA',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.gray,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Row(
+                              children: [
+                                const Text(
+                                  'RITIRO DA',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.gray,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildOrderStatusBadge(order),
+                              ],
                             ),
                             const SizedBox(height: 2),
                             Text(
