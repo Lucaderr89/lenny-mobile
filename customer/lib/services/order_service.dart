@@ -30,6 +30,7 @@ class OrderService {
     required String dateOrder,
     required int timeSlotId,
     required String durationSlot,
+    String? slotStartTime, // "HH:MM:SS" esatto scelto dal cliente (necessario per fasce da 20 min)
     required String pickupDelivery,
     DeliveryData? delivery, // NUOVO: oggetto delivery con coordinate
     @Deprecated('Usa delivery invece') int? deliveryAddressId,
@@ -59,6 +60,9 @@ class OrderService {
         'date_order': dateOrder,
         'time_slot_id': timeSlotId,
         'duration_slot': durationSlot,
+        // Orario esatto scelto: il server lo preferisce a time_slot_id (indice a 15 min,
+        // impreciso per le fasce da 20 min). Retro-compatibile: se assente si usa time_slot_id.
+        if (slotStartTime != null) 'slot_start_time': slotStartTime,
         'pickup_delivery': pickupDelivery,
 
         // NUOVO: delivery con coordinate (se fornito)

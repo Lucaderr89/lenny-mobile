@@ -44,8 +44,12 @@ class Order {
   }
 
   String get timeSlot {
-    final start = timeSlotStart.substring(0, 5); // HH:MM
-    final end = timeSlotEnd.substring(0, 5); // HH:MM
+    // Difensivo: lo slot può essere assente (es. vecchi ordini import senza
+    // fascia denormalizzata) → evita RangeError su substring di stringa vuota.
+    String hhmm(String t) => t.length >= 5 ? t.substring(0, 5) : t;
+    final start = hhmm(timeSlotStart); // HH:MM
+    final end = hhmm(timeSlotEnd); // HH:MM
+    if (start.isEmpty && end.isEmpty) return '';
     return '$start-$end';
   }
 

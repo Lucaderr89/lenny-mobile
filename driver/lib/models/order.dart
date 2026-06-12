@@ -173,10 +173,14 @@ class Order {
     );
   }
 
-  /// Restituisce il time slot formattato (es: "18:00 - 18:15")
+  /// Inizio fascia "HH:MM". La fonte affidabile è `timeSlot` (stringa completa
+  /// "HH:MM - HH:MM" già calcolata dall'API dalle colonne denormalizzate).
+  /// Il decode da timeSlotId è solo un fallback ed è sulla griglia a 5 minuti
+  /// (time_slot_id = ora*12 + min/5), coerente col nuovo sistema fasce.
   String get formattedTimeSlot {
-    final hour = (timeSlotId ~/ 4).toString().padLeft(2, '0');
-    final minute = ((timeSlotId % 4) * 15).toString().padLeft(2, '0');
+    if (timeSlot.isNotEmpty) return timeSlot.split(' ').first;
+    final hour = (timeSlotId ~/ 12).toString().padLeft(2, '0');
+    final minute = ((timeSlotId % 12) * 5).toString().padLeft(2, '0');
     return '$hour:$minute';
   }
 

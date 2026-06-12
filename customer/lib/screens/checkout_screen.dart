@@ -1802,9 +1802,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         };
       }).toList();
 
-      // Calcola time_slot_id (es: 12:00 = slot 48 = 12 * 4)
+      // Calcola time_slot_id (es: 12:00 = slot 48 = 12 * 4) — LEGACY, indice a 15 min.
+      // Mantenuto per retrocompatibilità col server, ma è impreciso per le fasce da 20 min.
       final timeSlotId =
           (_selectedTime!.hour * 4) + (_selectedTime!.minute ~/ 15);
+      // Orario esatto scelto dal cliente: il server lo preferisce a time_slot_id.
+      final slotStartTime =
+          '${_selectedTime!.hour.toString().padLeft(2, '0')}:'
+          '${_selectedTime!.minute.toString().padLeft(2, '0')}:00';
 
       // Formatta data
       final dateOrder = DateFormat('yyyy-MM-dd').format(_selectedDate!);
@@ -1922,6 +1927,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           dateOrder: dateOrder,
           timeSlotId: timeSlotId,
           durationSlot: '15',
+          slotStartTime: slotStartTime,
           pickupDelivery: _deliveryType,
           phone: customerPhone,
           items: items,
