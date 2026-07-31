@@ -113,11 +113,16 @@ class OrderService {
         print('✅ [ORDER] Ordine creato con successo!');
         return jsonResponse;
       } else {
-        print(
-          '❌ [ORDER] Errore: ${jsonResponse['message'] ?? 'Errore sconosciuto'}',
-        );
+        // Il backend risponde {"success":false,"error":{"message":...}};
+        // alcuni endpoint usano ancora "message" a livello root.
+        final error = jsonResponse['error'];
+        final serverMessage =
+            (error is Map<String, dynamic> ? error['message'] : null) ??
+            jsonResponse['message'];
+
+        print('❌ [ORDER] Errore: ${serverMessage ?? 'Errore sconosciuto'}');
         throw Exception(
-          jsonResponse['message'] ?? 'Errore nella creazione dell\'ordine',
+          serverMessage ?? 'Errore nella creazione dell\'ordine',
         );
       }
     } catch (e) {
