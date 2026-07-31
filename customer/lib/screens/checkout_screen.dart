@@ -88,6 +88,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _couponController = TextEditingController();
   bool _couponApplied = false;
   double _couponDiscount = 0.0;
+  bool _couponLoading = false;
 
   // Istruzioni consegna
   final TextEditingController _instructionsController = TextEditingController();
@@ -591,10 +592,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Calcola subtotale dinamicamente dai cartItems
   double get _currentSubtotal {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    return cartProvider.items.fold(
-      0.0,
-      (sum, item) => sum + (item.menuItem.price * item.quantity),
-    );
+    // item.totalPrice include gli extra e le scelte a pagamento: usarlo qui
+    // allinea il subtotale del checkout a quello del carrello e a quello che
+    // ricalcola il server.
+    return cartProvider.items.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
 
   double get _totalBeforeDiscount {
@@ -1654,27 +1655,113 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _applyCoupon() {
+  /// Valida il coupon sul server e applica lo sconto che il server ha calcolato.
+  /// Il client non decide piu' l'importo: chiede un preventivo e mostra quello.
+  Future<void> _applyCoupon() async {
     final couponCode = _couponController.text.trim().toUpperCase();
     if (couponCode.isEmpty) {
       _showToast('Inserisci un codice coupon');
       return;
     }
 
-    // Simulazione validazione coupon
-    if (couponCode == 'SCONTO10') {
+    // Letto PRIMA di qualsiasi await: il context non va usato dopo un async gap.
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+
+    setState(() => _couponLoading = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+
+      final body = <String, dynamic>{
+        'restaurant_id': widget.restaurant.id,
+        'pickup_delivery': _deliveryType,
+        'items': _buildItemsPayload(),
+        'coupon_code': couponCode,
+      };
+
+      if (_deliveryType == 'delivery') {
+        if (_deliveryMode == 'saved_address' && _selectedSavedAddress?.id != null) {
+          body['delivery'] = {
+            'source': 'saved_address',
+            'saved_address_id': _selectedSavedAddress!.id,
+          };
+        } else {
+          body['delivery'] = {
+            'source': 'current_position',
+            'latitude': locationProvider.activeLatitude,
+            'longitude': locationProvider.activeLongitude,
+            'postal_code': locationProvider.activePostalCode,
+          };
+        }
+      }
+
+      final response = await http
+          .post(
+            Uri.parse('${AppConstants.apiUrl}/customer/order/quote'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Token': token ?? '',
+            },
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      final data = decoded['data'] as Map<String, dynamic>?;
+
+      if (response.statusCode == 200 && data != null && data['coupon_valid'] == true) {
+        setState(() {
+          _couponApplied = true;
+          _couponDiscount = (data['discount_amount'] as num).toDouble();
+        });
+        _showToast('Coupon applicato');
+      } else {
+        final message = data?['coupon_error'] as String? ??
+            (decoded['error'] is Map ? decoded['error']['message'] as String? : null) ??
+            'Codice coupon non valido';
+        setState(() {
+          _couponApplied = false;
+          _couponDiscount = 0.0;
+        });
+        _showToast(message);
+      }
+    } catch (e) {
       setState(() {
-        _couponApplied = true;
-        _couponDiscount = _currentSubtotal * 0.10;
+        _couponApplied = false;
+        _couponDiscount = 0.0;
       });
-    } else if (couponCode == 'BENVENUTO') {
-      setState(() {
-        _couponApplied = true;
-        _couponDiscount = 5.0;
-      });
-    } else {
-      _showToast('Codice coupon non valido');
+      _showToast('Impossibile verificare il coupon, riprova');
+    } finally {
+      if (mounted) setState(() => _couponLoading = false);
     }
+  }
+
+  /// Righe carrello nel formato atteso dalle API (preventivo e creazione ordine).
+  List<Map<String, dynamic>> _buildItemsPayload() {
+    return widget.cartItems.map((item) {
+      final extras = <Map<String, dynamic>>[];
+      final extrasData = item.customizationData['extras'];
+      if (extrasData is List) {
+        for (final extra in extrasData) {
+          if (extra is Map) {
+            final extraMap = Map<String, dynamic>.from(extra);
+            extras.add({
+              'extra_id': extraMap['id'] ?? 0,
+              'price': (extraMap['price'] as num?)?.toDouble() ?? 0.0,
+            });
+          }
+        }
+      }
+
+      return {
+        'food_id': item.menuItem.id,
+        'quantity': item.quantity,
+        'price': item.menuItem.price,
+        'discount_amount': 0.0,
+        'extras': extras,
+      };
+    }).toList();
   }
 
   /// 🆕 Gestisce il pagamento tramite Nexi Build (UI Custom)
@@ -1770,37 +1857,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     try {
-      // Prepara items per API
-      final items = widget.cartItems.map((item) {
-        // Estrai gli extra dal customizationData
-        final extras = <Map<String, dynamic>>[];
-        if (item.customizationData.isNotEmpty) {
-          // Se customizationData contiene 'extras', estraili
-          if (item.customizationData.containsKey('extras')) {
-            final extrasData = item.customizationData['extras'];
-            if (extrasData != null && extrasData is List) {
-              for (var extra in extrasData) {
-                if (extra is Map) {
-                  // Gestisci sia Map<String, dynamic> che Map<dynamic, dynamic>
-                  final extraMap = Map<String, dynamic>.from(extra);
-                  extras.add({
-                    'extra_id': extraMap['id'] ?? 0,
-                    'price': (extraMap['price'] as num?)?.toDouble() ?? 0.0,
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        return {
-          'food_id': item.menuItem.id,
-          'quantity': item.quantity,
-          'price': item.menuItem.price,
-          'discount_amount': 0.0,
-          'extras': extras,
-        };
-      }).toList();
+      // Prepara items per API (stesso formato usato dal preventivo)
+      final items = _buildItemsPayload();
 
       // Calcola time_slot_id (es: 12:00 = slot 48 = 12 * 4) — LEGACY, indice a 15 min.
       // Mantenuto per retrocompatibilità col server, ma è impreciso per le fasce da 20 min.
@@ -1834,6 +1892,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               latitude: locationProvider.activeLatitude!,
               longitude: locationProvider.activeLongitude!,
               address: locationProvider.displayAddress,
+              // CAP e citta' vanno inviati: senza CAP il controllo di zona lato
+              // server perde il riferimento principale, e l'ordine arriva al
+              // dispatch senza il CAP di consegna.
+              city: locationProvider.currentCity,
+              postalCode: locationProvider.activePostalCode,
               notes: _instructionsController.text.isNotEmpty
                   ? _instructionsController.text
                   : null,
@@ -1874,9 +1937,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw Exception('Metodo di pagamento non valido');
       }
 
-      // Calcola delivery fee
-      final deliveryFee = _deliveryType == 'delivery' ? 2.50 : 0.0;
-      final total = _currentSubtotal + deliveryFee - _couponDiscount;
+      // Importi: gli STESSI mostrati nel riepilogo. Il server li ricalcola e
+      // decide lui il valore definitivo (tariffa di zona, costo servizio,
+      // coupon, crediti): qui si invia quello che il cliente ha visto.
+      final deliveryFee = _deliveryFeeAmount;
+      final serviceFee = _serviceFeeAmount;
+      final total = _finalTotal;
 
       // Verifica se esiste un ordine pending da aggiornare
       int orderId;
@@ -1934,8 +2000,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           paymentMethodId: paymentMethodId,
           subtotal: _currentSubtotal,
           deliveryFee: deliveryFee,
+          orderFee: serviceFee,
           total: total,
           discountAmount: _couponDiscount,
+          couponCode: _couponApplied ? _couponController.text.trim().toUpperCase() : null,
           appCreditsUsed: _useAppCredits ? _calculatedCreditsToUse : 0.0,
           note: _instructionsController.text.isNotEmpty
               ? _instructionsController.text
@@ -2875,7 +2943,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _applyCoupon,
+                  // Disabilitato durante la verifica sul server: evita doppi invii
+                  onPressed: _couponLoading ? null : _applyCoupon,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -2888,14 +2957,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  child: const Text(
-                    'Applica',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Segoe UI',
-                    ),
-                  ),
+                  child: _couponLoading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Applica',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
                 ),
               ],
             ),

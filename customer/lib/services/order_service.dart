@@ -46,6 +46,7 @@ class OrderService {
     double discountAmount = 0,
     double appCreditsUsed = 0,
     double extraFee = 0,
+    String? couponCode,
     String? note,
   }) async {
     try {
@@ -86,6 +87,9 @@ class OrderService {
         'discount_amount': discountAmount,
         'app_credits_used': appCreditsUsed,
         'extra_fee': extraFee,
+        // Lo sconto lo calcola e lo valida il server a partire dal codice:
+        // il client non decide piu' l'importo scontato.
+        if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
         if (note != null && note.isNotEmpty) 'note': note,
       };
 

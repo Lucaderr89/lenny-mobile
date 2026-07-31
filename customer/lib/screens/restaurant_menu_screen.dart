@@ -50,7 +50,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   static const Color dangerColor = Color(0xFFF44336);
   static const Color darkColor = Color(0xFF212121);
   static const Color grayColor = Color(0xFF9E9E9E);
-  static const Color lightGrayColor = Color(0xffeeeeeee);
+  static const Color lightGrayColor = Color(0xffeeeeee);
 
   // Dynamic categories from API
   List<String> get _categories {
@@ -380,25 +380,46 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     double priceModifier,
     CartProvider cartProvider,
   ) {
-    // Prepara la lista degli extra selezionati
+    // Prepara la lista delle scelte selezionate.
+    // Devono entrarci SIA le opzioni a scelta singola (customizations['options'],
+    // mappa gruppo -> opzione: taglia, numero di pezzi, peso...) SIA gli extra
+    // multi-selezione. Entrambe hanno un prezzo e vanno addebitate, ed entrambe
+    // servono al ristorante per sapere cosa preparare.
     final List<Map<String, dynamic>> selectedExtras = [];
 
-    if (customizations['extras'] != null) {
-      for (var extraId in customizations['extras']) {
-        // Trova l'extra corrispondente nei gruppi di customizzazione
-        for (var group in item.customizations) {
-          final option = group.options.firstWhere(
-            (o) => o.id == extraId,
-            orElse: () => group.options.first,
-          );
-          if (option.id == extraId) {
-            selectedExtras.add({
-              'id': option.id,
-              'name': option.label,
-              'price': option.priceModifier,
-            });
+    bool addOptionFromGroup(CustomizationGroup group, String optionId) {
+      for (final option in group.options) {
+        if (option.id == optionId) {
+          selectedExtras.add({
+            'id': option.id,
+            'name': option.label,
+            'price': option.priceModifier,
+          });
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Scelte singole: mappa {groupId: optionId}
+    final singleChoices = customizations['options'];
+    if (singleChoices is Map) {
+      singleChoices.forEach((groupId, optionId) {
+        for (final group in item.customizations) {
+          if (group.id == groupId.toString()) {
+            addOptionFromGroup(group, optionId.toString());
             break;
           }
+        }
+      });
+    }
+
+    // Extra multi-selezione: lista di optionId
+    if (customizations['extras'] != null) {
+      for (final extraId in customizations['extras']) {
+        for (final group in item.customizations) {
+          if (!group.isMultiSelect) continue;
+          if (addOptionFromGroup(group, extraId.toString())) break;
         }
       }
     }
