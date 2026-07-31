@@ -39,9 +39,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       if (response.success) {
         _showToast('Email inviata! Controlla la tua casella', isError: false);
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(milliseconds: 900));
         if (mounted) {
-          context.pop();
+          // Secondo passo: inserimento del codice e della nuova password
+          context.push('/reset-password', extra: _emailController.text.trim());
         }
       } else {
         _showToast(response.message, isError: true);

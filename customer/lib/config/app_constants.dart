@@ -5,6 +5,10 @@ class AppConstants {
   static const String baseUrl = 'https://lenny-staging.com';
   static const String apiUrl = '$baseUrl/api';
 
+  // Informative legali pubblicate sul sito Lenny (GDPR + Legge RSM 171/2018)
+  static const String privacyPolicyUrl = 'https://www.lenny.sm/privacy/';
+  static const String termsUrl = 'https://www.lenny.sm/privacy/';
+
   // API Endpoints
   static const String loginEndpoint = '$apiUrl/customer/login';
   static const String registerEndpoint = '$apiUrl/customer/register';

@@ -6,6 +6,7 @@ import '../screens/onboarding_screen_v5.dart';
 import '../screens/login_screen.dart';
 import '../screens/registration_screen.dart';
 import '../screens/forgot_password_screen.dart';
+import '../screens/reset_password_screen.dart';
 import '../screens/category_selection_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/cart_screen.dart';
@@ -40,6 +41,12 @@ class AppRouter {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => ResetPasswordScreen(
+          email: (state.extra as String?) ?? '',
+        ),
       ),
       GoRoute(
         path: '/categories',

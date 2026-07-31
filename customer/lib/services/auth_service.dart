@@ -185,6 +185,37 @@ class AuthService {
     }
   }
 
+  /// Conferma il recupero password: codice ricevuto via email + nuova password.
+  Future<AuthResponse> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${AppConstants.apiUrl}/auth/reset-password'),
+            headers: _headers,
+            body: jsonEncode({
+              'email': email,
+              'code': code,
+              'password': password,
+            }),
+          )
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+
+      return AuthResponse.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: 'Errore di connessione: ${e.toString()}',
+        error: e.toString(),
+      );
+    }
+  }
+
   /// Salva i dati di autenticazione in locale
   Future<void> _saveAuthData(AuthData data, {String? password}) async {
     final prefs = await SharedPreferences.getInstance();

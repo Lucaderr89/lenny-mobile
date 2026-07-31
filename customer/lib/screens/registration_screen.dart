@@ -1,6 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
@@ -84,6 +86,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  /// Apre un'informativa legale nel browser. Se non si riesce, l'utente deve
+  /// saperlo: un tap che non fa nulla e' peggio di un errore.
+  Future<void> _apriLink(String url) async {
+    final uri = Uri.parse(url);
+    final aperto = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!aperto && mounted) {
+      _showToast('Impossibile aprire $url', isError: true);
     }
   }
 
@@ -657,13 +669,40 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Accetto i Termini e Condizioni',
-                  style: TextStyle(
-                    color: AppColors.dark,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+              Expanded(
+                // Il testo dei termini deve essere raggiungibile: e' un requisito
+                // del Play Store e, prima, un obbligo verso l'utente che li accetta.
+                child: Text.rich(
+                  TextSpan(
+                    style: const TextStyle(
+                      color: AppColors.dark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Accetto i '),
+                      TextSpan(
+                        text: 'Termini e Condizioni',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => _apriLink(AppConstants.termsUrl),
+                      ),
+                      const TextSpan(text: ' e la '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => _apriLink(AppConstants.privacyPolicyUrl),
+                      ),
+                    ],
                   ),
                 ),
               ),
