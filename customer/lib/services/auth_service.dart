@@ -191,9 +191,11 @@ class AuthService {
 
     await prefs.setBool(AppConstants.keyIsLoggedIn, true);
 
-    if (password != null) {
-      await prefs.setString(AppConstants.keyUserPassword, password);
-    }
+    // La password NON viene piu' salvata sul dispositivo: SharedPreferences e' un
+    // file XML in chiaro, incluso nell'Auto Backup di Google. La sessione la tiene
+    // l'api_token, che basta e si puo' revocare. Rimuoviamo anche eventuali password
+    // salvate dalle versioni precedenti.
+    await prefs.remove(AppConstants.keyUserPassword);
 
     if (data.sessionId != null) {
       print('💾 [AUTH] Salvo session_id: ${data.sessionId}');

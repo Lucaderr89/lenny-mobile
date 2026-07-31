@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../config/app_colors.dart';
@@ -39,13 +39,37 @@ class _ExternalWebViewScreenState extends State<ExternalWebViewScreen> {
     _initWebView();
   }
 
-  /// Calcola il magicHash SSO identico al vecchio sistema Lenny:
-  ///   substr( md5( email + "LennY2022" ), 8, 6 )
-  static String _computeMagicHash(String email) {
-    const secret = 'LennY2022';
-    final bytes = utf8.encode(email + secret);
-    final digest = md5.convert(bytes);
-    return digest.toString().substring(8, 14);
+  /// Chiede al SERVER i parametri SSO del cliente autenticato.
+  ///
+  /// Il magicHash non viene piu' calcolato qui: il segreto condiviso non deve
+  /// stare nell'app, altrimenti chi decompila l'APK puo' generare l'hash di
+  /// qualunque email e impersonare altri utenti.
+  static Future<Map<String, String>?> _fetchSsoParams() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+      if (token == null || token.isEmpty) return null;
+
+      final response = await http
+          .get(
+            Uri.parse('${AppConstants.apiUrl}/customer/sso/spesa'),
+            headers: {'X-API-Token': token},
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) return null;
+
+      final data =
+          (json.decode(response.body) as Map<String, dynamic>)['data']
+              as Map<String, dynamic>?;
+      final email = data?['email'] as String?;
+      final hash = data?['magic_hash'] as String?;
+      if (email == null || hash == null) return null;
+
+      return {'email': email, 'magicHash': hash};
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Costruisce l'URL finale, aggiungendo i parametri SSO se richiesto.
@@ -57,17 +81,11 @@ class _ExternalWebViewScreenState extends State<ExternalWebViewScreen> {
 
     if (!widget.useLennySso) return finalUrl;
 
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString(AppConstants.keyUserEmail);
-    if (email == null || email.isEmpty) return finalUrl;
+    final sso = await _fetchSsoParams();
+    if (sso == null) return finalUrl;
 
-    // Usa il magicHash salvato oppure lo ricalcola al volo (es. utenti già loggati)
-    String? magicHash = prefs.getString(AppConstants.keySpesaMagicHash);
-    if (magicHash == null || magicHash.isEmpty) {
-      magicHash = _computeMagicHash(email);
-      // Salva per le prossime aperture
-      await prefs.setString(AppConstants.keySpesaMagicHash, magicHash);
-    }
+    final email = sso['email']!;
+    final magicHash = sso['magicHash']!;
 
     final uri = Uri.parse(finalUrl);
     final updatedUri = uri.replace(
