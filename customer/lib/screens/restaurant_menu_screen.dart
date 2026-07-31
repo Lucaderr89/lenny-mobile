@@ -1366,6 +1366,42 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  // Vincolo orario dal pannello (es. "Disponibile dalle 18:00"):
+                  // il piatto resta ordinabile per una fascia serale, ma il cliente
+                  // sa subito che a pranzo non glielo portiamo.
+                  if (item.availabilityLabel != null) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF4E5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFFFD9A0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.schedule,
+                            size: 12,
+                            color: Color(0xFF9A6400),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.availabilityLabel!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF9A6400),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   if (item.hasDiscount)
                     Column(

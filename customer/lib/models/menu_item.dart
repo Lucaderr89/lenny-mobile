@@ -12,6 +12,10 @@ class MenuItem {
   final List<InfoItem> allergens;
   final List<InfoItem> dietaryOptions;
 
+  /// Vincolo orario impostato dal pannello, es. "Disponibile dalle 18:00".
+  /// Null = ordinabile in qualunque fascia di apertura.
+  final String? availabilityLabel;
+
   MenuItem({
     required this.id,
     required this.name,
@@ -25,6 +29,7 @@ class MenuItem {
     this.customizations = const [],
     this.allergens = const [],
     this.dietaryOptions = const [],
+    this.availabilityLabel,
   });
 
   bool get hasDiscount => originalPrice != null && originalPrice! > price;
@@ -77,6 +82,9 @@ class MenuItem {
       badges: badges,
       hasAR: json['has_ar'] as bool? ?? false,
       originalPrice: originalPrice,
+      availabilityLabel: json['availability'] is Map
+          ? (json['availability'] as Map)['label'] as String?
+          : null,
       customizations:
           (json['customizations'] as List<dynamic>?)
               ?.map(
