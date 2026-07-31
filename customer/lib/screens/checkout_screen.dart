@@ -48,6 +48,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   static const Color darkColor = Color(0xFF212121);
   static const Color grayColor = Color(0xFF9E9E9E);
   static const Color lightGrayColor = Color(0xFFEEEEEE);
+  // Usato per le fasce non ordinabili (bloccate dal pannello o al completo)
+  static const Color dangerColor = Color(0xFFD32F2F);
 
   // Colori badge tipo ordine (stessi della home)
   static const Color badgeDeliveryColor = Color(0xFFFF7566); // Rosso consegna
@@ -1174,9 +1176,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final orderService = OrderService();
       final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
+      // Indirizzo scelto: senza, il server non puo' applicare i blocchi per zona
+      final locationProvider = Provider.of<LocationProvider>(
+        context,
+        listen: false,
+      );
+      final usaIndirizzoSalvato =
+          _deliveryType == 'delivery' &&
+          _deliveryMode == 'saved_address' &&
+          _selectedSavedAddress?.id != null;
+
       _availableSlots = await orderService.getAvailableSlots(
         restaurantId: widget.restaurant.id,
         date: dateStr,
+        // Un blocco "solo consegna" non deve disabilitare le fasce del ritiro
+        service: _deliveryType == 'delivery' ? 'delivery' : 'pickup',
+        savedAddressId: usaIndirizzoSalvato ? _selectedSavedAddress!.id : null,
+        latitude: usaIndirizzoSalvato ? null : locationProvider.activeLatitude,
+        longitude: usaIndirizzoSalvato ? null : locationProvider.activeLongitude,
+        postalCode: usaIndirizzoSalvato ? null : locationProvider.activePostalCode,
       );
 
       print('📅 Caricati ${_availableSlots.length} slot per $dateStr');
@@ -1446,13 +1464,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${slots.length} slot disponibili',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: grayColor,
-                          fontFamily: 'Segoe UI',
-                        ),
+                      Builder(
+                        builder: (context) {
+                          // Conta solo le fasce realmente prenotabili: quelle bloccate
+                          // dal pannello o al completo non vanno promesse all'utente.
+                          final ordinabili = slots
+                              .where(
+                                (s) =>
+                                    s['is_blocked'] != true &&
+                                    (((s['available_spots'] as num?)?.toInt() ??
+                                            0) >
+                                        0),
+                              )
+                              .length;
+                          return Text(
+                            ordinabili == 0
+                                ? 'Nessuna fascia prenotabile'
+                                : '$ordinabili ${ordinabili == 1 ? 'fascia disponibile' : 'fasce disponibili'}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: ordinabili == 0 ? dangerColor : grayColor,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1571,7 +1606,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final startTime = slot['start_time'] as String;
     // final endTime = slot['end_time'] as String; // Non usato
     final label = slot['label'] as String; // es: "10:00 - 10:15"
-    final availableSpots = slot['available_spots'] as int;
+    final availableSpots = (slot['available_spots'] as num?)?.toInt() ?? 0;
+
+    // Fascia non ordinabile: il server la marca bloccata (blocco ordini attivo)
+    // oppure non ha piu' posti. In entrambi i casi NON deve essere selezionabile:
+    // altrimenti il cliente compila tutto il checkout per poi ricevere un rifiuto.
+    final isBlocked = slot['is_blocked'] == true;
+    final isFull = availableSpots <= 0;
+    final isDisabled = isBlocked || isFull;
+    final blockReason = slot['block_reason'] as String?;
 
     final isSelected =
         _selectedTime != null &&
@@ -1598,58 +1641,111 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedDate = date;
-          _selectedTime = TimeOfDay(
-            hour: int.parse(startTime.split(':')[0]),
-            minute: int.parse(startTime.split(':')[1]),
-          );
-          _selectedTimeSlotLabel = label; // Salva il label completo
-        });
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryLight : slotColor,
-          border: Border.all(
-            color: isSelected ? primaryColor : Colors.transparent,
-            width: 2,
+      // Fascia bloccata o piena: nessuna selezione possibile.
+      onTap: isDisabled
+          ? () => _showToast(
+              blockReason != null && blockReason.isNotEmpty
+                  ? 'Fascia non disponibile: $blockReason'
+                  : 'Questa fascia oraria non è più disponibile',
+            )
+          : () {
+              setState(() {
+                _selectedDate = date;
+                _selectedTime = TimeOfDay(
+                  hour: int.parse(startTime.split(':')[0]),
+                  minute: int.parse(startTime.split(':')[1]),
+                );
+                _selectedTimeSlotLabel = label; // Salva il label completo
+              });
+              Navigator.pop(context);
+            },
+      child: Opacity(
+        opacity: isDisabled ? 0.55 : 1.0,
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: isDisabled
+                ? const Color(0xFFF2F2F2)
+                : (isSelected ? primaryLight : slotColor),
+            border: Border.all(
+              color: isSelected && !isDisabled
+                  ? primaryColor
+                  : Colors.transparent,
+              width: 2,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? primaryDark : darkColor,
-                    fontFamily: 'Segoe UI',
-                  ),
-                ),
-                if (availableSpots <= 3)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Solo $availableSpots ${availableSpots == 1 ? 'posto' : 'posti'} disponibile',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: isDisabled
+                            ? grayColor
+                            : (isSelected ? primaryDark : darkColor),
+                        decoration: isDisabled
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
                         fontFamily: 'Segoe UI',
                       ),
                     ),
-                  ),
-              ],
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: primaryColor, size: 20),
-          ],
+                    // Motivo del blocco deciso dal pannello, oppure fascia esaurita,
+                    // oppure l'avviso "ultimi posti" gia' previsto.
+                    if (isBlocked)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          blockReason != null && blockReason.isNotEmpty
+                              ? blockReason
+                              : 'Ordini sospesi in questa fascia',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: dangerColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                      )
+                    else if (isFull)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Fascia al completo',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: dangerColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                      )
+                    else if (availableSpots <= 3)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Solo $availableSpots ${availableSpots == 1 ? 'posto' : 'posti'} disponibile',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (isDisabled)
+                const Icon(Icons.lock_outline, color: grayColor, size: 18)
+              else if (isSelected)
+                const Icon(Icons.check_circle, color: primaryColor, size: 20),
+            ],
+          ),
         ),
       ),
     );

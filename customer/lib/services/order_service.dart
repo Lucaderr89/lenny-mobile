@@ -236,15 +236,36 @@ class OrderService {
   Future<List<Map<String, dynamic>>> getAvailableSlots({
     required int restaurantId,
     required String date,
+    // 'delivery' | 'pickup': i blocchi possono valere solo per la consegna,
+    // quindi il server deve sapere per quale servizio stiamo chiedendo le fasce.
+    String service = 'delivery',
+    // Indirizzo di consegna: serve al server per applicare i blocchi per ZONA
+    // (es. "niente consegne a Montegiardino stasera"), che dipendono da dove
+    // si consegna e non dal ristorante.
+    int? savedAddressId,
+    double? latitude,
+    double? longitude,
+    String? postalCode,
   }) async {
     try {
       print('🕐 [SLOTS] Recupero slot disponibili...');
-      print('📍 [SLOTS] Ristorante: $restaurantId, Data: $date');
+      print('📍 [SLOTS] Ristorante: $restaurantId, Data: $date, Servizio: $service');
 
       final headers = await _getHeaders();
+      final params = <String, String>{'date': date, 'service': service};
+      if (savedAddressId != null) {
+        params['saved_address_id'] = savedAddressId.toString();
+      } else {
+        if (latitude != null) params['latitude'] = latitude.toString();
+        if (longitude != null) params['longitude'] = longitude.toString();
+        if (postalCode != null && postalCode.isNotEmpty) {
+          params['postal_code'] = postalCode;
+        }
+      }
+
       final url = Uri.parse(
-        '$baseUrl/customer/restaurants/$restaurantId/available-slots?date=$date',
-      );
+        '$baseUrl/customer/restaurants/$restaurantId/available-slots',
+      ).replace(queryParameters: params);
 
       final response = await http
           .get(url, headers: headers)

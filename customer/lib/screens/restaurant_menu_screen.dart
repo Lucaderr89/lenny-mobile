@@ -1371,35 +1371,60 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                   // sa subito che a pranzo non glielo portiamo.
                   if (item.availabilityLabel != null) ...[
                     const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF4E5),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFFFD9A0)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.schedule,
-                            size: 12,
-                            color: Color(0xFF9A6400),
+                    Builder(
+                      builder: (context) {
+                        // "Non disponibile oggi" e' uno stop, non un orario: rosso.
+                        // Un vincolo di fascia ("Disponibile dalle 18:00") e' un
+                        // avviso: arancione.
+                        final bloccante = item.availabilityLabel!
+                            .toLowerCase()
+                            .startsWith('non disponibile');
+                        final testo = bloccante
+                            ? const Color(0xFFB3261E)
+                            : const Color(0xFF9A6400);
+                        final sfondo = bloccante
+                            ? const Color(0xFFFDECEA)
+                            : const Color(0xFFFFF4E5);
+                        final bordo = bloccante
+                            ? const Color(0xFFF5C2BD)
+                            : const Color(0xFFFFD9A0);
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.availabilityLabel!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF9A6400),
-                            ),
+                          decoration: BoxDecoration(
+                            color: sfondo,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: bordo),
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                bloccante
+                                    ? Icons.do_not_disturb_on_outlined
+                                    : Icons.schedule,
+                                size: 12,
+                                color: testo,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  item.availabilityLabel!,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: testo,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                   const SizedBox(height: 6),
