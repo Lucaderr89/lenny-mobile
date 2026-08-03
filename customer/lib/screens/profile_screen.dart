@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -422,51 +423,95 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// In debug le segnalazioni sono disattivate per scelta, quindi la prova va fatta
   /// su una build di release.
   Future<void> _diagnosticaCrash() async {
-    final conferma = await showDialog<bool>(
+    final esiti = <String>[];
+
+    // Ogni passo viene provato singolarmente e il risultato mostrato a schermo:
+    // se qualcosa non funziona si vede QUALE passo fallisce e con che errore,
+    // invece di restare a guardare una dashboard vuota.
+    esiti.add('Firebase inizializzato: ${Firebase.apps.length} app'
+        '${Firebase.apps.isNotEmpty ? ' (${Firebase.apps.first.name})' : ''}');
+
+    try {
+      final attiva = FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled;
+      esiti.add('Raccolta attiva: $attiva');
+      if (!attiva) {
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+        esiti.add('  -> riattivata ora');
+      }
+    } catch (e) {
+      esiti.add('Raccolta: ERRORE $e');
+    }
+
+    try {
+      await FirebaseCrashlytics.instance.setCustomKey('diagnostica', true);
+      esiti.add('Chiave personalizzata: ok');
+    } catch (e) {
+      esiti.add('Chiave personalizzata: ERRORE $e');
+    }
+
+    try {
+      await FirebaseCrashlytics.instance.recordError(
+        'Test diagnostico dal profilo',
+        StackTrace.current,
+        reason: 'verifica manuale Crashlytics',
+        fatal: false,
+      );
+      esiti.add('Segnalazione non fatale: inviata');
+    } catch (e) {
+      esiti.add('Segnalazione non fatale: ERRORE $e');
+    }
+
+    // Forza l'invio immediato di quanto in coda, cosi' non serve riaprire l'app
+    try {
+      await FirebaseCrashlytics.instance.sendUnsentReports();
+      esiti.add('Invio forzato della coda: ok');
+    } catch (e) {
+      esiti.add('Invio forzato della coda: ERRORE $e');
+    }
+
+    if (!mounted) return;
+
+    await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Diagnostica'),
-        content: const Text(
-          'Invio una segnalazione di prova e poi chiudo l\'app forzando un crash.\n\n'
-          'Serve solo a verificare che i report arrivino. Funziona sulle build di '
-          'release, non in debug.',
+        title: const Text('Diagnostica Crashlytics'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...esiti.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(r, style: const TextStyle(fontSize: 12)),
+                  )),
+              const SizedBox(height: 10),
+              const Text(
+                'Se sopra e\' tutto ok, premi "Forza crash": l\'app si chiudera\'. '
+                'Riaprila e il crash verra\' spedito.',
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annulla'),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Chiudi'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Procedi'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              // Crash nativo: lo raccoglie il gestore di Crashlytics
+              FirebaseCrashlytics.instance.crash();
+            },
+            child: const Text(
+              'Forza crash',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
     );
-
-    if (conferma != true) return;
-
-    // 1) Evento non fatale: arriva subito, senza chiudere l'app
-    await FirebaseCrashlytics.instance.setCustomKey('diagnostica', true);
-    await FirebaseCrashlytics.instance.recordError(
-      'Test diagnostico dal profilo',
-      StackTrace.current,
-      reason: 'verifica manuale Crashlytics',
-      fatal: false,
-    );
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Segnalazione inviata. Ora forzo il crash...'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    // 2) Crash reale: viene inviato alla riapertura dell'app
-    FirebaseCrashlytics.instance.crash();
   }
 
   Future<void> _handleLogout() async {
