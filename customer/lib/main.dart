@@ -1,7 +1,12 @@
+import 'dart:async';
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
@@ -15,12 +20,43 @@ import 'services/fcm_service.dart';
 
 /// Entry point dell'app Lenny Customer
 void main() async {
+  // runZonedGuarded cattura anche gli errori asincroni che sfuggono a Flutter
+  // (Future senza catch, callback, isolate del main): senza, in beta resterebbero
+  // invisibili.
+  runZonedGuarded<Future<void>>(() async {
+    await _avvia();
+  }, (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
+}
+
+Future<void> _avvia() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inizializza Firebase
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
+
+    // ── Crash reporting ────────────────────────────────────────────────────
+    // In debug non si inviano segnalazioni: altrimenti ogni prova durante lo
+    // sviluppo sporcherebbe la dashboard usata per la beta.
+    await FirebaseCrashlytics.instance
+        .setCrashlyticsCollectionEnabled(!kDebugMode);
+
+    // Errori del framework (build, layout, gesture)
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    };
+
+    // Errori della piattaforma non gestiti
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+
+    FirebaseCrashlytics.instance.setCustomKey('ambiente', AppConstants.baseUrl);
   } catch (e) {
     // Già inizializzato (hot-restart / debug) — ignorato
   }

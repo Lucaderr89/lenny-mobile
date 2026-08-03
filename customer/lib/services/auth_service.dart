@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
@@ -227,6 +228,18 @@ class AuthService {
     // l'api_token, che basta e si puo' revocare. Rimuoviamo anche eventuali password
     // salvate dalle versioni precedenti.
     await prefs.remove(AppConstants.keyUserPassword);
+
+    // Collega i crash a questo utente: in beta permette di risalire a chi ha
+    // incontrato il problema e richiamarlo. Nessun dato personale nella chiave,
+    // solo l'id numerico.
+    try {
+      if (data.customer?.id != null) {
+        await FirebaseCrashlytics.instance
+            .setUserIdentifier(data.customer!.id.toString());
+      }
+    } catch (_) {
+      // Crashlytics non disponibile (es. test): non deve bloccare il login
+    }
 
     if (data.sessionId != null) {
       print('💾 [AUTH] Salvo session_id: ${data.sessionId}');

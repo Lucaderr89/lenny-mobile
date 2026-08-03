@@ -1,3 +1,4 @@
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -313,6 +314,60 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Diagnostica riservata (pressione lunga sul numero di versione).
+  ///
+  /// Serve a verificare che la catena di segnalazione arrivi davvero a Crashlytics:
+  /// invia prima un evento NON fatale e poi, su conferma, provoca un crash reale.
+  /// In debug le segnalazioni sono disattivate per scelta, quindi la prova va fatta
+  /// su una build di release.
+  Future<void> _diagnosticaCrash() async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Diagnostica'),
+        content: const Text(
+          'Invio una segnalazione di prova e poi chiudo l\'app forzando un crash.\n\n'
+          'Serve solo a verificare che i report arrivino. Funziona sulle build di '
+          'release, non in debug.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Procedi'),
+          ),
+        ],
+      ),
+    );
+
+    if (conferma != true) return;
+
+    // 1) Evento non fatale: arriva subito, senza chiudere l'app
+    await FirebaseCrashlytics.instance.setCustomKey('diagnostica', true);
+    await FirebaseCrashlytics.instance.recordError(
+      'Test diagnostico dal profilo',
+      StackTrace.current,
+      reason: 'verifica manuale Crashlytics',
+      fatal: false,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Segnalazione inviata. Ora forzo il crash...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    await Future.delayed(const Duration(seconds: 2));
+
+    // 2) Crash reale: viene inviato alla riapertura dell'app
+    FirebaseCrashlytics.instance.crash();
+  }
+
   Future<void> _handleLogout() async {
     // Mostra dialog di conferma
     final confirm = await showDialog<bool>(
@@ -588,6 +643,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Navigator.pop(context);
                       _handleLogout();
                     },
+                  ),
+
+                  // Numero di versione. La pressione LUNGA e' una diagnostica
+                  // riservata: forza un crash di prova per verificare che le
+                  // segnalazioni arrivino davvero in Crashlytics. Invisibile a chi
+                  // non la conosce, e inerte finche' non si tiene premuto.
+                  GestureDetector(
+                    onLongPress: _diagnosticaCrash,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Center(
+                        child: Text(
+                          'Lenny v${AppConstants.appVersion}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

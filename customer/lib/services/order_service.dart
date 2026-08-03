@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
@@ -125,6 +126,28 @@ class OrderService {
             jsonResponse['message'];
 
         print('❌ [ORDER] Errore: ${serverMessage ?? 'Errore sconosciuto'}');
+
+        // Segnalazione non fatale: un ordine rifiutato non e' un crash, ma in beta
+        // e' l'informazione piu' utile che ci sia. Finisce in Crashlytics con il
+        // contesto necessario a capire quale regola l'ha bloccato.
+        try {
+          final crashlytics = FirebaseCrashlytics.instance;
+          await crashlytics.setCustomKey('ordine_ristorante', restaurantId);
+          await crashlytics.setCustomKey('ordine_data', dateOrder);
+          await crashlytics.setCustomKey('ordine_fascia', slotStartTime ?? '-');
+          await crashlytics.setCustomKey('ordine_tipo', pickupDelivery);
+          await crashlytics.setCustomKey('ordine_totale', total);
+          await crashlytics.setCustomKey('http_status', response.statusCode);
+          await crashlytics.recordError(
+            'Ordine rifiutato: ${serverMessage ?? 'errore sconosciuto'}',
+            StackTrace.current,
+            reason: 'createOrder',
+            fatal: false,
+          );
+        } catch (_) {
+          // Crashlytics non disponibile: non deve impedire la gestione dell'errore
+        }
+
         throw Exception(
           serverMessage ?? 'Errore nella creazione dell\'ordine',
         );

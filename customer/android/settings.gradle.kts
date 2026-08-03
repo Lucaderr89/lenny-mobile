@@ -22,6 +22,9 @@ plugins {
     id("com.android.application") version "8.11.1" apply false
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
     id("com.google.gms.google-services") version "4.4.2" apply false
+    // Carica i simboli di debug su Firebase: senza, gli stack trace delle build
+    // release arrivano offuscati e illeggibili.
+    id("com.google.firebase.crashlytics") version "3.0.2" apply false
 }
 
 include(":app")
