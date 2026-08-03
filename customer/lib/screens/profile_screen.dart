@@ -773,6 +773,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   // segnalazioni arrivino davvero in Crashlytics. Invisibile a chi
                   // non la conosce, e inerte finche' non si tiene premuto.
                   GestureDetector(
+                    // Senza questo il gesto risponde SOLO sui glifi del testo
+                    // (comportamento predefinito deferToChild): con un testo da 11px
+                    // diventa quasi impossibile centrarlo.
+                    behavior: HitTestBehavior.opaque,
                     onLongPress: _diagnosticaCrash,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
