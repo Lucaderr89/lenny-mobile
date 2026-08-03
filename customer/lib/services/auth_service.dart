@@ -186,6 +186,45 @@ class AuthService {
     }
   }
 
+  /// Elimina definitivamente l'account del cliente autenticato.
+  /// I dati personali vengono rimossi lato server; gli ordini gia' effettuati
+  /// restano in forma anonima per obblighi fiscali.
+  Future<AuthResponse> deleteAccount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+
+      final response = await http
+          .post(
+            Uri.parse('${AppConstants.apiUrl}/customer/account/delete'),
+            headers: {..._headers, 'X-API-Token': token ?? ''},
+            body: jsonEncode({}),
+          )
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && decoded['success'] == true) {
+        await logout(); // pulisce le preferenze locali
+        return AuthResponse.fromJson(decoded);
+      }
+
+      final error = decoded['error'];
+      return AuthResponse(
+        success: false,
+        message: (error is Map ? error['message'] as String? : null) ??
+            decoded['message'] as String? ??
+            'Impossibile eliminare l\'account',
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: 'Errore di connessione: ${e.toString()}',
+        error: e.toString(),
+      );
+    }
+  }
+
   /// Conferma il recupero password: codice ricevuto via email + nuova password.
   Future<AuthResponse> resetPassword({
     required String email,

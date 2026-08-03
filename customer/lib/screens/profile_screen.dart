@@ -314,6 +314,107 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Cancellazione dell'account su richiesta dell'utente.
+  ///
+  /// Due passaggi voluti: la prima schermata spiega cosa succede, la seconda
+  /// chiede di scrivere ELIMINA. E' irreversibile e non deve poter partire per
+  /// un tocco distratto.
+  Future<void> _handleDeleteAccount() async {
+    final primaConferma = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Elimina account'),
+        content: const Text(
+          'Verranno eliminati definitivamente il tuo profilo, i tuoi indirizzi, '
+          'i metodi di pagamento salvati e i tuoi preferiti.\n\n'
+          'Gli ordini gia\' effettuati restano registrati in forma anonima, come '
+          'richiesto dalla normativa fiscale.\n\n'
+          'L\'operazione non puo\' essere annullata.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Continua',
+              style: TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (primaConferma != true || !mounted) return;
+
+    final controller = TextEditingController();
+    final confermaFinale = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confermi?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Scrivi ELIMINA per confermare.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(
+              ctx,
+              controller.text.trim().toUpperCase() == 'ELIMINA',
+            ),
+            child: const Text(
+              'Elimina definitivamente',
+              style: TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (confermaFinale != true || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final response = await AuthService().deleteAccount();
+
+    if (!mounted) return;
+    Navigator.pop(context); // chiude il caricamento
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(response.message),
+        backgroundColor:
+            response.success ? AppColors.success : AppColors.danger,
+      ),
+    );
+
+    if (response.success) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) context.go('/login');
+    }
+  }
+
   /// Diagnostica riservata (pressione lunga sul numero di versione).
   ///
   /// Serve a verificare che la catena di segnalazione arrivi davvero a Crashlytics:
@@ -642,6 +743,28 @@ class _ProfileScreenState extends State<ProfileScreen>
                     onTap: () {
                       Navigator.pop(context);
                       _handleLogout();
+                    },
+                  ),
+
+                  // Cancellazione account: obbligatoria per Google Play e diritto
+                  // dell'interessato (GDPR). Volutamente in fondo e in rosso.
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete_forever_outlined,
+                      color: AppColors.danger,
+                      size: 22,
+                    ),
+                    title: const Text(
+                      'Elimina account',
+                      style: TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleDeleteAccount();
                     },
                   ),
 
