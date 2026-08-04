@@ -476,12 +476,15 @@ class _RistorantiTabState extends State<RistorantiTab> {
         controller: widget.scrollController,
         slivers: [
           // 🎯 SEZIONE 1: Offerte in corso (Sconto)
+          // Senza emptyMessage la sezione SPARISCE finché non c'è nulla da
+          // mostrare, invece di presentare un titolo con sotto "nessuna offerta".
+          // La logica offerte non è ancora implementata: la lista resta vuota e
+          // la sezione non occupa spazio, così la home non appare mai povera.
           SliverToBoxAdapter(
             child: _buildSection(
               title: 'Offerte in corso',
               iconPath: 'assets/icons/icons8-sconto-32.png',
-              restaurants: [], // TODO: Implementare logica coupon/offerte
-              emptyMessage: 'Nessuna offerta disponibile al momento',
+              restaurants: const [], // TODO: logica coupon/offerte
             ),
           ),
 
