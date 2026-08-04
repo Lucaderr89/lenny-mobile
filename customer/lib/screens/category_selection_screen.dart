@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -140,14 +141,14 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD91546).withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Image.asset(
                   'assets/icons/icons8-uscita-32.png',
                   width: 48,
                   height: 48,
-                  color: const Color(0xFFD91546),
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 20),
@@ -195,7 +196,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context, true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD91546),
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -329,7 +330,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                     'assets/icons/icons8-uscita-32.png',
                     width: 24,
                     height: 24,
-                    color: const Color(0xFFD91546),
+                    color: AppColors.primary,
                   ),
                   padding: EdgeInsets.zero,
                 ),
@@ -624,7 +625,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                       style: GoogleFonts.poppins(
                         fontSize: label == 'News & Eventi' ? 10.0 : size * 0.10,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF212121),
+                        color: AppColors.dark,
                         height: 1.0,
                       ),
                     ),
@@ -682,7 +683,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFFFFFFF), Color(0xFFFAFAFA)],
+                colors: [Color(0xFFFFFFFF), AppColors.light],
               ),
               boxShadow: [
                 BoxShadow(
@@ -710,7 +711,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF212121),
+                        color: AppColors.dark,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -732,7 +733,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                               'assets/icons/icons8-location-32.png',
                               width: 20,
                               height: 20,
-                              color: const Color(0xFFD91546),
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -741,7 +742,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF212121),
+                                  color: AppColors.dark,
                                   height: 1.3,
                                 ),
                                 maxLines: 2,
@@ -750,7 +751,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                             ),
                             const Icon(
                               Icons.keyboard_arrow_down,
-                              color: Color(0xFFD91546),
+                              color: AppColors.primary,
                               size: 20,
                             ),
                           ],
@@ -809,7 +810,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF212121),
+                  color: AppColors.dark,
                 ),
               ),
               const SizedBox(height: 12),
@@ -826,7 +827,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFD042),
-                  foregroundColor: const Color(0xFF212121),
+                  foregroundColor: AppColors.dark,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 12,

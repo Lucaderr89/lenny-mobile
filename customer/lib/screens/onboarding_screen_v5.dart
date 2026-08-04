@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
@@ -38,7 +39,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
       imagePath: "assets/images/ORDINA.png",
       backgroundColor: Colors.white,
       bottomColor: const Color(0xFFFFD042), // Giallo accent brillante
-      accentColor: const Color(0xFFFFC107), // Giallo accent
+      accentColor: AppColors.accent, // Giallo accent
     ),
     OnboardingPageV5(
       title: "Ricevi a Casa Tua",

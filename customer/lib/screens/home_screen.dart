@@ -2,6 +2,7 @@
 import 'dart:math' as math;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,19 +60,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Colori dal prototipo 6-HOME DEFINITIVA.html
   static const Color primaryBlue = Color(0xFF0F4BCA);
-  static const Color primaryDarkPink = Color(0xFFD91546);
+  static const Color primaryDarkPink = AppColors.primary;
   static const Color secondaryPink = Color(0xFFFF1A60);
   static const Color accentYellow = Color(0xFFFFD042);
   // Colori badge tipo ordine (uguali al dialog)
-  static const Color badgeDeliveryColor = Color(0xFFFF7566); // Rosso consegna
+  static const Color badgeDeliveryColor = AppColors.primary; // Rosso consegna
   static const Color badgePickupColor = Color(0xFFF6E644); // Giallo ritiro
   static const Color successGold = Color(0xFFFFB83D);
   static const Color warningOrange = Color(0xFFE67700);
   static const Color dangerRed = Color(0xFFC62828);
-  static const Color darkColor = Color(0xFF0A0A0A);
+  static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
-  static const Color grayColor = Color(0xFF595959);
-  static const Color lightGrayColor = Color(0xFFD8D8D8);
+  static const Color grayColor = AppColors.grayDark;
+  static const Color lightGrayColor = AppColors.grayLight;
 
   @override
   void initState() {

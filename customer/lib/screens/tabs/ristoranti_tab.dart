@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../config/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../restaurant_menu_screen.dart';
 import '../../models/restaurant.dart';
@@ -27,12 +28,12 @@ class RistorantiTab extends StatefulWidget {
 
 class _RistorantiTabState extends State<RistorantiTab> {
   // Colori
-  static const Color primaryDarkPink = Color(0xFFD91546);
+  static const Color primaryDarkPink = AppColors.primary;
   static const Color accentYellow = Color(0xFFFFD042);
-  static const Color darkColor = Color(0xFF0A0A0A);
+  static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
-  static const Color grayColor = Color(0xFF595959);
-  static const Color lightGrayColor = Color(0xFFD8D8D8);
+  static const Color grayColor = AppColors.grayDark;
+  static const Color lightGrayColor = AppColors.grayLight;
 
   final RestaurantService _restaurantService = RestaurantService();
   // Liste filtrate per la UI (dipendono da cuisineId attivo)
@@ -848,7 +849,7 @@ class _RistorantiTabState extends State<RistorantiTab> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50),
+                        color: AppColors.success,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -1118,7 +1119,7 @@ class _RistorantiTabState extends State<RistorantiTab> {
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: deliveryFeeText == 'Gratis'
-                                      ? const Color(0xFF4CAF50)
+                                      ? AppColors.success
                                       : grayColor,
                                 ),
                               ),

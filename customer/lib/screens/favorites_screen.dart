@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/favorites_provider.dart';
 import '../models/favorite.dart';
@@ -14,10 +15,10 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  static const Color primaryColor = Color(0xFFFF7566);
-  static const Color darkColor = Color(0xFF212121);
-  static const Color grayColor = Color(0xFF9E9E9E);
-  static const Color lightGrayColor = Color(0xFFEEEEEE);
+  static const Color primaryColor = AppColors.primary;
+  static const Color darkColor = AppColors.dark;
+  static const Color grayColor = AppColors.gray;
+  static const Color lightGrayColor = AppColors.lightGray;
 
   // Stato locale per espansione card
   final Set<int> _expandedRestaurants = {};
@@ -42,28 +43,28 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
-            color: const Color(0xFF0A0A0A),
+            color: AppColors.dark,
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'I miei preferiti',
           style: TextStyle(
-            color: Color(0xFF0A0A0A),
+            color: AppColors.dark,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF0A0A0A)),
+        iconTheme: const IconThemeData(color: AppColors.dark),
         actions: [
           IconButton(
             icon: Image.asset(
               'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
-              color: const Color(0xFF0A0A0A),
+              color: AppColors.dark,
             ),
             onPressed: () {
               Provider.of<FavoritesProvider>(

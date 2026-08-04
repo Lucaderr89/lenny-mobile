@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import '../models/address_model.dart';
 import '../services/address_service.dart';
 import 'add_address_screen.dart';
@@ -129,13 +130,13 @@ class _AddressesScreenState extends State<AddressesScreen> {
         title: const Text(
           'I miei indirizzi',
           style: TextStyle(
-            color: Color(0xFF0A0A0A),
+            color: AppColors.dark,
             fontWeight: FontWeight.w700,
           ),
         ),
         backgroundColor: const Color(0xFFFFF8F0),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF0A0A0A)),
+        iconTheme: const IconThemeData(color: AppColors.dark),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -144,7 +145,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
           : _buildAddressList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToAddAddress(),
-        backgroundColor: const Color(0xFFD91546),
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -189,8 +190,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: address.isDefault
-                  ? const Color(0xFFD91546)
-                  : const Color(0xFFD8D8D8),
+                  ? AppColors.primary
+                  : AppColors.grayLight,
               width: address.isDefault ? 2 : 1,
             ),
           ),
@@ -209,14 +210,14 @@ class _AddressesScreenState extends State<AddressesScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD91546).withOpacity(0.15),
+                          color: AppColors.primary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Image.asset(
                           _getAddressIconPath(address),
                           width: 22,
                           height: 22,
-                          color: const Color(0xFFD91546),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -246,7 +247,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                       vertical: 3,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFD91546),
+                                      color: AppColors.primary,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: const Text(
@@ -282,7 +283,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                 child: Text(
                                   address.name!,
                                   style: const TextStyle(
-                                    color: Color(0xFF0A0A0A),
+                                    color: AppColors.dark,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -334,7 +335,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                 child: IconButton(
                                   onPressed: () => _setDefaultAddress(address),
                                   icon: const Icon(Icons.star_border),
-                                  color: const Color(0xFFD91546),
+                                  color: AppColors.primary,
                                   iconSize: 18,
                                   padding: EdgeInsets.zero,
                                 ),

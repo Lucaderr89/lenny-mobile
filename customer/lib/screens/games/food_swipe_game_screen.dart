@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../config/app_colors.dart';
 import '../../models/food_swipe_card.dart';
 import '../../services/games_service.dart';
 import '../../services/restaurant_service.dart';
@@ -18,13 +19,13 @@ class FoodSwipeGameScreen extends StatefulWidget {
 class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
     with TickerProviderStateMixin {
   // Colori (coerenti con scopri_tab.dart e dish_match_game_screen.dart)
-  static const Color primaryDarkPink = Color(0xFFD91546);
+  static const Color primaryDarkPink = AppColors.primary;
   static const Color accentYellow = Color(0xFFFFD042);
   static const Color warningOrange = Color(0xFFE67700);
-  static const Color darkColor = Color(0xFF0A0A0A);
+  static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
-  static const Color grayColor = Color(0xFF595959);
-  static const Color lightGrayColor = Color(0xFFD8D8D8);
+  static const Color grayColor = AppColors.grayDark;
+  static const Color lightGrayColor = AppColors.grayLight;
 
   final GamesService _gamesService = GamesService();
 

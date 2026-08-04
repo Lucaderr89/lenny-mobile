@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'dart:math' as math;
 import 'live_orders_screen.dart';
 
@@ -28,7 +29,7 @@ class OrderCompletedScreen extends StatefulWidget {
 
 class _OrderCompletedScreenState extends State<OrderCompletedScreen>
     with TickerProviderStateMixin {
-  static const Color primaryColor = Color(0xFFFF7566);
+  static const Color primaryColor = AppColors.primary;
 
   late AnimationController _scaleController;
   late AnimationController _fadeController;
@@ -405,7 +406,7 @@ class _ConfettiState extends State<_Confetti>
 
     // Colori casuali festivi
     final colors = [
-      const Color(0xFFFF7566),
+      AppColors.primary,
       const Color(0xFFFFB74D),
       const Color(0xFF66BB6A),
       const Color(0xFF5C6BC0),

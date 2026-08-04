@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -44,12 +45,12 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   final Map<String, List<MenuItem>> _menuItemsByCategory = {};
 
   // Colori ridotti
-  static const Color primaryColor = Color(0xFFFF7566);
-  static const Color accentColor = Color(0xFFFFC107);
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color dangerColor = Color(0xFFF44336);
-  static const Color darkColor = Color(0xFF212121);
-  static const Color grayColor = Color(0xFF9E9E9E);
+  static const Color primaryColor = AppColors.primary;
+  static const Color accentColor = AppColors.accent;
+  static const Color successColor = AppColors.success;
+  static const Color dangerColor = AppColors.danger;
+  static const Color darkColor = AppColors.dark;
+  static const Color grayColor = AppColors.gray;
   static const Color lightGrayColor = Color(0xffeeeeee);
 
   // Dynamic categories from API
@@ -1707,7 +1708,7 @@ class _CategoryTabsDelegate extends SliverPersistentHeaderDelegate {
   final String selectedCategory;
   final Function(String) onCategorySelected;
 
-  static const Color primaryColor = Color(0xFFFF7566);
+  static const Color primaryColor = AppColors.primary;
 
   _CategoryTabsDelegate({
     required this.categories,
@@ -1757,7 +1758,7 @@ class _CategoryTabsDelegate extends SliverPersistentHeaderDelegate {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? primaryColor : const Color(0xFF9E9E9E),
+                    color: isSelected ? primaryColor : AppColors.gray,
                   ),
                 ),
               ),
@@ -1809,11 +1810,11 @@ class _MenuItemImageState extends State<_MenuItemImage> {
             }
             // Mostra un placeholder durante il caricamento
             return Container(
-              color: const Color(0xFFEEEEEE),
+              color: AppColors.lightGray,
               child: const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF7566)),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
             );

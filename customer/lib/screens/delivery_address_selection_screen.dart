@@ -77,7 +77,7 @@ class _DeliveryAddressSelectionScreenState
                           'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
                           width: 24,
                           height: 24,
-                          color: const Color(0xFF0A0A0A),
+                          color: AppColors.dark,
                         ),
                         padding: EdgeInsets.zero,
                       ),
@@ -94,7 +94,7 @@ class _DeliveryAddressSelectionScreenState
                             style: GoogleFonts.poppins(
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0A0A0A),
+                              color: AppColors.dark,
                               height: 1.1,
                             ),
                           ),
@@ -142,7 +142,7 @@ class _DeliveryAddressSelectionScreenState
                           height: MediaQuery.of(context).size.height - 140,
                           child: const Center(
                             child: CircularProgressIndicator(
-                              color: Color(0xFFD91546),
+                              color: AppColors.primary,
                             ),
                           ),
                         )
@@ -155,7 +155,7 @@ class _DeliveryAddressSelectionScreenState
                                 iconPath: 'assets/icons/icons8-mirino-32.png',
                                 title: 'Usa posizione corrente',
                                 subtitle: 'Useremo il GPS del tuo dispositivo',
-                                iconColor: const Color(0xFFD91546),
+                                iconColor: AppColors.primary,
                                 onTap: () => _useCurrentPosition(),
                               ),
 
@@ -173,7 +173,7 @@ class _DeliveryAddressSelectionScreenState
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF595959),
+                                      color: AppColors.grayDark,
                                     ),
                                   ),
                                 ),
@@ -197,7 +197,7 @@ class _DeliveryAddressSelectionScreenState
                                 subtitle:
                                     'Salva un indirizzo per riutilizzarlo',
                                 iconColor: const Color(0xFFFFD042),
-                                textColor: const Color(0xFF0A0A0A),
+                                textColor: AppColors.dark,
                                 onTap: () => _addNewAddress(),
                               ),
                             ],
@@ -309,7 +309,7 @@ class _AddressOptionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.iconColor,
-    this.textColor = const Color(0xFF0A0A0A),
+    this.textColor = AppColors.dark,
     required this.onTap,
   });
 
@@ -325,7 +325,7 @@ class _AddressOptionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFFFF8F0),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFD8D8D8), width: 1),
+            border: Border.all(color: AppColors.grayLight, width: 1),
           ),
           child: Row(
             children: [
@@ -362,7 +362,7 @@ class _AddressOptionCard extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF595959),
+                        color: AppColors.grayDark,
                       ),
                     ),
                   ],
@@ -410,10 +410,10 @@ class _SavedAddressCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFD91546).withOpacity(0.08),
+            color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFD91546).withOpacity(0.2),
+              color: AppColors.primary.withOpacity(0.2),
               width: 1,
             ),
           ),
@@ -423,14 +423,14 @@ class _SavedAddressCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD91546).withOpacity(0.15),
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Image.asset(
                   _getAddressIconPath(),
                   width: 22,
                   height: 22,
-                  color: const Color(0xFFD91546),
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -445,7 +445,7 @@ class _SavedAddressCard extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0A0A0A),
+                        color: AppColors.dark,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -454,7 +454,7 @@ class _SavedAddressCard extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF595959),
+                        color: AppColors.grayDark,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

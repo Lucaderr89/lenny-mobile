@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_colors.dart';
 
 /// Tab "Per te" - Sezione personalizzata con funzionalità coming soon
 class PerTeTab extends StatefulWidget {
@@ -43,14 +44,14 @@ class _PerTeTabState extends State<PerTeTab> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFFC107), Color(0xFFFFB300)],
+          colors: [AppColors.accent, Color(0xFFFFB300)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFC107).withOpacity(0.4),
+            color: AppColors.accent.withOpacity(0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -33,13 +34,13 @@ class _CartScreenState extends State<CartScreen> {
   bool _suggestionsLoading = true;
 
   // Colori identici al prototipo
-  static const Color primaryColor = Color(0xFFFF7566);
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color dangerColor = Color(0xFFF44336);
-  static const Color darkColor = Color(0xFF212121);
-  static const Color lightColor = Color(0xFFFAFAFA);
-  static const Color grayColor = Color(0xFF9E9E9E);
-  static const Color lightGrayColor = Color(0xFFEEEEEE);
+  static const Color primaryColor = AppColors.primary;
+  static const Color successColor = AppColors.success;
+  static const Color dangerColor = AppColors.danger;
+  static const Color darkColor = AppColors.dark;
+  static const Color lightColor = AppColors.light;
+  static const Color grayColor = AppColors.gray;
+  static const Color lightGrayColor = AppColors.lightGray;
 
   // URL base API
   // HTTPS obbligatorio: in chiaro il traffico e' leggibile e modificabile

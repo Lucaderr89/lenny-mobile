@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -41,18 +42,18 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   // Colori identici al prototipo
-  static const Color primaryColor = Color(0xFFFF7566);
+  static const Color primaryColor = AppColors.primary;
   static const Color primaryLight = Color(0xFFFFB5A7);
   static const Color primaryDark = Color(0xFFFF5A5F);
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color darkColor = Color(0xFF212121);
-  static const Color grayColor = Color(0xFF9E9E9E);
-  static const Color lightGrayColor = Color(0xFFEEEEEE);
+  static const Color successColor = AppColors.success;
+  static const Color darkColor = AppColors.dark;
+  static const Color grayColor = AppColors.gray;
+  static const Color lightGrayColor = AppColors.lightGray;
   // Usato per le fasce non ordinabili (bloccate dal pannello o al completo)
   static const Color dangerColor = Color(0xFFD32F2F);
 
   // Colori badge tipo ordine (stessi della home)
-  static const Color badgeDeliveryColor = Color(0xFFFF7566); // Rosso consegna
+  static const Color badgeDeliveryColor = AppColors.primary; // Rosso consegna
   static const Color badgePickupColor = Color(0xFFF6E644); // Giallo ritiro
 
   // Dati caricati dall'API
@@ -2192,13 +2193,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         backgroundColor: Colors.white,
         title: const Row(
           children: [
-            Icon(Icons.warning_outlined, color: Color(0xFFF44336)),
+            Icon(Icons.warning_outlined, color: AppColors.danger),
             SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Piatti non disponibili',
                 style: TextStyle(
-                  color: Color(0xFF212121),
+                  color: AppColors.dark,
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
                 ),
@@ -2229,7 +2230,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const Icon(
                         Icons.circle,
                         size: 6,
-                        color: Color(0xFFF44336),
+                        color: AppColors.danger,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -2240,7 +2241,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               dish['name'] as String? ?? 'Piatto sconosciuto',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF212121),
+                                color: AppColors.dark,
                                 fontSize: 12,
                               ),
                             ),
@@ -2268,7 +2269,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: const Text(
               'Torna al carrello',
               style: TextStyle(
-                color: Color(0xFFFF7566),
+                color: AppColors.primary,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -2751,7 +2752,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.08),
+                color: AppColors.info.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -2760,7 +2761,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Icon(
                     Icons.add_circle_outline,
                     size: 14,
-                    color: const Color(0xFF2196F3),
+                    color: AppColors.info,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -2768,7 +2769,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF2196F3),
+                      color: AppColors.info,
                       fontFamily: 'Segoe UI',
                     ),
                   ),

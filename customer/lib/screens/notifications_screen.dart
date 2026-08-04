@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/notification_provider.dart';
@@ -14,9 +15,9 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   static const Color primaryBlue = Color(0xFF0F4BCA);
   static const Color dangerRed = Color(0xFFC62828);
-  static const Color darkColor = Color(0xFF0A0A0A);
-  static const Color grayColor = Color(0xFF595959);
-  static const Color lightGrayColor = Color(0xFFD8D8D8);
+  static const Color darkColor = AppColors.dark;
+  static const Color grayColor = AppColors.grayDark;
+  static const Color lightGrayColor = AppColors.grayLight;
 
   @override
   void initState() {
@@ -141,7 +142,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(height: 6),
                   const Text(
                     'Le notifiche sui tuoi ordini appariranno qui',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+                    style: TextStyle(fontSize: 13, color: AppColors.gray),
                     textAlign: TextAlign.center,
                   ),
                 ],

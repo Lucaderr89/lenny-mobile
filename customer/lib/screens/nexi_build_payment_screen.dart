@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -34,8 +35,8 @@ class NexiBuildPaymentScreen extends StatefulWidget {
 }
 
 class _NexiBuildPaymentScreenState extends State<NexiBuildPaymentScreen> {
-  static const Color primaryColor = Color(0xFFFF7566);
-  static const Color darkColor = Color(0xFF212121);
+  static const Color primaryColor = AppColors.primary;
+  static const Color darkColor = AppColors.dark;
 
   bool _isLoading = true;
   bool _hasError = false;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../models/menu_item.dart';
 import '../providers/favorites_provider.dart';
@@ -35,13 +36,13 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   final Set<String> _selectedExtras = {};
   final TextEditingController _instructionsController = TextEditingController();
 
-  static const Color primaryColor = Color(0xFFFF7566);
+  static const Color primaryColor = AppColors.primary;
   static const Color primaryLight = Color(0xFFFFB5A7);
-  static const Color successColor = Color(0xFF4CAF50);
-  static const Color dangerColor = Color(0xFFF44336);
-  static const Color darkColor = Color(0xFF212121);
-  static const Color grayColor = Color(0xFF9E9E9E);
-  static const Color lightGrayColor = Color(0xFFEEEEEE);
+  static const Color successColor = AppColors.success;
+  static const Color dangerColor = AppColors.danger;
+  static const Color darkColor = AppColors.dark;
+  static const Color grayColor = AppColors.gray;
+  static const Color lightGrayColor = AppColors.lightGray;
 
   @override
   void initState() {

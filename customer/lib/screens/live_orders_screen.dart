@@ -123,28 +123,28 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
-            color: const Color(0xFF0A0A0A),
+            color: AppColors.dark,
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Ordini in corso',
           style: TextStyle(
-            color: Color(0xFF0A0A0A),
+            color: AppColors.dark,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF0A0A0A)),
+        iconTheme: const IconThemeData(color: AppColors.dark),
         actions: [
           IconButton(
             icon: Image.asset(
               'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
-              color: const Color(0xFF0A0A0A),
+              color: AppColors.dark,
             ),
             onPressed: _loadOrders,
           ),
@@ -1055,9 +1055,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       case 2: // assigned
         return const Color(0xFF17A2B8); // Teal
       case 3: // picking_up
-        return const Color(0xFFFFC107); // Yellow
+        return AppColors.accent; // Yellow
       case 4: // in_delivery
-        return const Color(0xFFFF9800); // Orange
+        return AppColors.warning; // Orange
       default:
         return AppColors.gray;
     }
