@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
@@ -28,10 +29,6 @@ class OrderService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final responseStr = data.toString();
-        print(
-          '📦 Risposta API (${responseStr.length} chars): ${responseStr.length > 200 ? "${responseStr.substring(0, 200)}..." : responseStr}',
-        );
 
         // Gli ordini possono essere in data.orders o data.data.orders
         final ordersJson =
@@ -39,19 +36,16 @@ class OrderService {
             ? data['data']['orders'] as List<dynamic>?
             : data['orders'] as List<dynamic>?;
 
-        if (ordersJson == null) {
-          print('⚠️ ordersJson è null');
-          return [];
-        }
-        print('✅ Ordini trovati: ${ordersJson.length}');
-        final orders = ordersJson.map((json) => Order.fromJson(json)).toList();
-        print('✅ Ordini parsati: ${orders.length}');
-        return orders;
+        if (ordersJson == null) return [];
+
+        // Non si logga il contenuto della risposta: contiene nome, telefono e
+        // indirizzo dei clienti.
+        return ordersJson.map((json) => Order.fromJson(json)).toList();
       } else {
         throw Exception('Errore caricamento ordini: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Errore getOrders: $e');
+      debugPrint('Errore getOrders: $e');
       rethrow;
     }
   }
@@ -105,7 +99,7 @@ class OrderService {
         throw Exception('Errore storico ordini: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Errore getOrderHistory: $e');
+      debugPrint('Errore getOrderHistory: $e');
       rethrow;
     }
   }
@@ -127,58 +121,24 @@ class OrderService {
             Uri.parse(endpoint),
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer \$token',
-            },
-          )
-          .timeout(const Duration(seconds: AppConstants.apiTimeout));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['success'] ?? false;
-      } else {
-        print('❌ confirmPickup HTTP \${response.statusCode}: \${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Errore confirmPickup: \$e');
-      return false;
-    }
-  }
-
-  /// Posticipa un ordine
-  Future<bool> postponeOrder(int orderId, int delayMinutes) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.keyApiToken);
-
-      if (token == null) {
-        throw Exception('Token non trovato');
-      }
-
-      final endpoint = AppConstants.postponeOrderEndpoint.replaceAll(
-        '{id}',
-        orderId.toString(),
-      );
-
-      final response = await http
-          .post(
-            Uri.parse(endpoint),
-            headers: {
-              'Content-Type': 'application/json',
+              // Il dollaro NON va escapato: con 'Bearer \$token' Dart manda la
+              // stringa letterale invece del token e il server risponde 401.
               'Authorization': 'Bearer $token',
             },
-            body: jsonEncode({'delay_minutes': delayMinutes}),
+            // Il corpo e' obbligatorio: una POST con Content-Type application/json
+            // e corpo vuoto viene respinta dal WAF del server con 403.
+            body: jsonEncode({}),
           )
           .timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['success'] ?? false;
-      } else {
-        return false;
       }
+      debugPrint('confirmPickup HTTP ${response.statusCode}');
+      return false;
     } catch (e) {
-      print('❌ Errore postponeOrder: $e');
+      debugPrint('Errore confirmPickup: $e');
       return false;
     }
   }

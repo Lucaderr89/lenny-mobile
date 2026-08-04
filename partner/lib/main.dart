@@ -35,9 +35,9 @@ void main() async {
   try {
     await SunmiPrinter.initPrinter();
     await SunmiPrinter.bindingPrinter();
-    print('🖨️ Stampante Sunmi inizializzata');
+    debugPrint('Stampante Sunmi inizializzata');
   } catch (e) {
-    print('⚠️ Stampante Sunmi non disponibile: $e');
+    debugPrint('Stampante Sunmi non disponibile: $e');
   }
 
   runApp(const LennyPartnerApp());

@@ -16,6 +16,14 @@ class Order {
   final String? paymentStatus; // 'paid', 'pending', ecc.
   final List<OrderItem> items;
 
+  /// Somma delle righe articolo. Il totale dell'ordine comprende anche consegna,
+  /// commissione e sconti, quindi da solo non quadra con gli articoli.
+  final double itemsTotal;
+  final double deliveryFee;
+  final double orderFee;
+  final double discountAmount;
+  final double appCreditsUsed;
+
   Order({
     required this.id,
     required this.status,
@@ -32,6 +40,11 @@ class Order {
     required this.pickupDelivery,
     this.paymentStatus,
     required this.items,
+    this.itemsTotal = 0,
+    this.deliveryFee = 0,
+    this.orderFee = 0,
+    this.discountAmount = 0,
+    this.appCreditsUsed = 0,
   });
 
   bool get isDelivery => pickupDelivery == 'delivery';
@@ -89,8 +102,28 @@ class Order {
     return statusLabel.toUpperCase();
   }
 
+  static double _num(dynamic v) =>
+      double.tryParse(v?.toString() ?? '0') ?? 0.0;
+
   factory Order.fromJson(Map<String, dynamic> json) {
+    final items = (json['items'] is List)
+        ? (json['items'] as List<dynamic>)
+              .map((item) => OrderItem.fromJson(item))
+              .toList()
+        : <OrderItem>[];
+
+    // items_total lo calcola il server; se manca (risposta vecchia) lo si
+    // ricava dalle righe, cosi' la comanda resta corretta comunque.
+    final itemsTotal = json['items_total'] != null
+        ? _num(json['items_total'])
+        : items.fold<double>(0, (s, i) => s + i.lineTotal);
+
     return Order(
+      itemsTotal: itemsTotal,
+      deliveryFee: _num(json['delivery_fee']),
+      orderFee: _num(json['order_fee']),
+      discountAmount: _num(json['discount_amount']),
+      appCreditsUsed: _num(json['app_credits_used']),
       id: json['id'] ?? 0,
       status: json['status_name'] ?? 'pending',
       statusLabel: json['status_label'] ?? 'Nuovo',
@@ -107,11 +140,7 @@ class Order {
       dateOrder: json['date_order'],
       pickupDelivery: json['pickup_delivery'] ?? 'delivery',
       paymentStatus: json['payment_status']?.toString(),
-      items: (json['items'] is List)
-          ? (json['items'] as List<dynamic>)
-                .map((item) => OrderItem.fromJson(item))
-                .toList()
-          : [],
+      items: items,
     );
   }
 }
@@ -121,6 +150,8 @@ class OrderItem {
   final int id;
   final String name;
   final int quantity;
+
+  /// Prezzo di UNA unita', gia' comprensivo degli extra scelti.
   final double price;
   final String? notes;
   final List<OrderExtra> extras;
@@ -134,12 +165,18 @@ class OrderItem {
     this.extras = const [],
   });
 
+  /// Importo della riga: e' questo che va stampato accanto alla quantita'.
+  double get lineTotal => price * quantity;
+
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       quantity: json['quantity'] ?? 1,
-      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      price: double.tryParse(
+            (json['unit_price'] ?? json['price'])?.toString() ?? '0',
+          ) ??
+          0.0,
       notes: json['notes'],
       extras: (json['extras'] is List)
           ? (json['extras'] as List<dynamic>)

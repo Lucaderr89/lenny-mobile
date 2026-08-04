@@ -7,10 +7,7 @@ class AppConstants {
   // API Endpoints
   static const String loginEndpoint = '$apiUrl/partner/login';
   static const String logoutEndpoint = '$apiUrl/partner/logout';
-  static const String meEndpoint = '$apiUrl/partner/me';
   static const String ordersEndpoint = '$apiUrl/partner/orders';
-  static const String postponeOrderEndpoint =
-      '$apiUrl/partner/orders/{id}/postpone';
   static const String confirmPickupEndpoint =
       '$apiUrl/partner/orders/{id}/confirm-pickup';
   static const String orderHistoryEndpoint = '$apiUrl/partner/orders/history';

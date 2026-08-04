@@ -643,19 +643,20 @@ class _HistoryOrderSheet extends StatelessWidget {
     );
     try {
       final restaurantName = await _getRestaurantName();
-      final success = await printer.printOrder(order, restaurantName);
+      final esito = await printer.printOrder(order, restaurantName);
       if (context.mounted) {
         Navigator.pop(context);
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              success
-                  ? '✓ Ordine ristampato con successo'
-                  : '✗ Errore durante la stampa',
+              esito.ok
+                  ? 'Comanda #${order.id} ristampata'
+                  : (esito.motivo ?? 'Errore durante la stampa'),
             ),
-            backgroundColor: success ? AppColors.success : AppColors.danger,
+            backgroundColor: esito.ok ? AppColors.success : AppColors.danger,
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: esito.ok ? 3 : 6),
           ),
         );
       }

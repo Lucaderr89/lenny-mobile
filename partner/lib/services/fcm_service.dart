@@ -65,8 +65,11 @@ class FcmService {
     if (initialMessage != null) _handleNotificationTap(initialMessage);
 
     // Inizializza flutter_local_notifications con canale custom
+    // Icona di notifica dedicata: Android ne usa solo il canale alpha, quindi
+    // deve essere una silhouette su trasparente. L'icona del launcher e' opaca
+    // e verrebbe resa come un quadrato bianco.
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
     );
@@ -150,7 +153,7 @@ class FcmService {
             importance: Importance.high,
             priority: Priority.high,
             sound: const RawResourceAndroidNotificationSound('notifica'),
-            icon: '@mipmap/ic_launcher',
+            icon: '@drawable/ic_notification',
           ),
         ),
       );

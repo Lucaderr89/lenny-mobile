@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -88,7 +89,7 @@ class AuthService {
       }
     } catch (e) {
       // Ignora errori di logout API
-      print('Errore logout API: $e');
+      debugPrint('Errore logout API: $e');
     } finally {
       // Pulisci sempre i dati locali
       await _clearAuthData();

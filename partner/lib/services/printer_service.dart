@@ -2,12 +2,53 @@ import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 import '../models/order.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
-import 'dart:typed_data';
+
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
+/// Esito di una stampa: oltre al successo porta il motivo del fallimento in
+/// forma leggibile, perche' il ristorante deve poter capire cosa fare
+/// (rimettere la carta, chiudere il coperchio) senza guardare i log.
+class EsitoStampa {
+  final bool ok;
+  final String? motivo;
+
+  const EsitoStampa.riuscita() : ok = true, motivo = null;
+  const EsitoStampa.fallita(this.motivo) : ok = false;
+}
+
 /// Service per gestire la stampante Sunmi integrata
 class PrinterService {
+  /// Traduce lo stato grezzo della stampante in un messaggio per l'operatore.
+  /// Restituisce null quando la stampante e' pronta.
+  static String? _motivoDaStato(String? stato) {
+    if (stato == null) return null;
+    final s = stato.toUpperCase();
+    if (s.contains('READY')) return null;
+    if (s.contains('PAPER_OUT') || s.contains('PICK_PAPER')) {
+      return 'Carta finita: inserisci un nuovo rotolo';
+    }
+    if (s.contains('PAPER_JAM')) return 'Carta inceppata';
+    if (s.contains('PAPER')) return 'Problema con la carta';
+    if (s.contains('COVER')) return 'Coperchio della stampante aperto';
+    if (s.contains('HOT')) return 'Stampante surriscaldata: attendi un minuto';
+    if (s.contains('CUTTER')) return 'Taglierina bloccata';
+    if (s.contains('CARTRIDGE')) return 'Problema con la cartuccia';
+    if (s.contains('OFFLINE') || s.contains('COMM')) {
+      return 'Stampante non raggiungibile';
+    }
+    return null;
+  }
+
+  /// Stato corrente della stampante, null se tutto a posto.
+  Future<String?> problemaCorrente() async {
+    try {
+      return _motivoDaStato(await SunmiConfig.getStatus());
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Ridimensiona un'immagine per la stampante termica 55mm
   Future<Uint8List?> _resizeImageForPrinter(
     Uint8List imageBytes,
@@ -55,9 +96,18 @@ class PrinterService {
 
       return byteData?.buffer.asUint8List();
     } catch (e) {
-      print('❌ Errore ridimensionamento immagine: $e');
+      debugPrint('Errore ridimensionamento immagine: $e');
       return null;
     }
+  }
+
+  /// Riga del riepilogo importi: etichetta a sinistra, cifra a destra.
+  Future<void> _riga(String etichetta, double importo) async {
+    await SunmiPrinter.printText(etichetta, style: SunmiTextStyle(fontSize: 20));
+    await SunmiPrinter.printText(
+      'EUR ${importo.toStringAsFixed(2)}',
+      style: SunmiTextStyle(fontSize: 20, align: SunmiPrintAlign.RIGHT),
+    );
   }
 
   /// Verifica se la stampante è disponibile
@@ -68,25 +118,33 @@ class PrinterService {
 
       // Poi verifica il binding
       final result = await SunmiPrinter.bindingPrinter();
-      print('🖨️ Binding stampante: $result');
+
 
       // Su alcuni modelli Sunmi, bindingPrinter restituisce null ma la stampante funziona
       // Accettiamo true o null come validi
       return result != false;
     } catch (e) {
-      print('❌ Errore verifica stampante: $e');
+      debugPrint('Errore verifica stampante: $e');
       return false;
     }
   }
 
   /// Stampa un ordine completo
-  Future<bool> printOrder(Order order, String restaurantName) async {
+  Future<EsitoStampa> printOrder(Order order, String restaurantName) async {
     try {
       // Verifica disponibilità stampante
       final available = await isPrinterAvailable();
       if (!available) {
-        print('❌ Stampante non disponibile');
-        return false;
+        return const EsitoStampa.fallita(
+          'Stampante non disponibile: controlla che sia accesa e collegata',
+        );
+      }
+
+      // Stato carta/coperchio: se c'e' un problema si esce subito con il
+      // motivo, cosi' l'ordine puo' essere ristampato dopo averlo risolto.
+      final problema = await problemaCorrente();
+      if (problema != null) {
+        return EsitoStampa.fallita(problema);
       }
 
       // --- LOGO ---
@@ -108,7 +166,7 @@ class PrinterService {
           await SunmiPrinter.lineWrap(1);
         }
       } catch (e) {
-        print('⚠️ Impossibile stampare logo: $e');
+        debugPrint('Impossibile stampare logo: $e');
       }
 
       // --- HEADER ---
@@ -205,7 +263,10 @@ class PrinterService {
       if (order.customerPhone.isNotEmpty) {
         await SunmiPrinter.printText('Tel: ${order.customerPhone}');
       }
-      await SunmiPrinter.printText('Indirizzo: ${order.deliveryAddress}');
+      // Sugli asporti l'indirizzo non c'e': non si stampa un'etichetta vuota.
+      if (order.isDelivery && order.deliveryAddress.trim().isNotEmpty) {
+        await SunmiPrinter.printText('Indirizzo: ${order.deliveryAddress}');
+      }
       await SunmiPrinter.lineWrap(1);
 
       await SunmiPrinter.printText('--------------------------------');
@@ -218,45 +279,53 @@ class PrinterService {
       await SunmiPrinter.lineWrap(1);
 
       for (final item in order.items) {
-        // Nome prodotto
+        // Quantita' e nome, poi l'importo DELLA RIGA allineato a destra.
+        // Stampare il prezzo unitario da solo si legge come importo di riga:
+        // con 4 pezzi da 3,10 la riga vale 12,40, non 3,10.
         await SunmiPrinter.printText(
           '${item.quantity}x ${item.name}',
           style: SunmiTextStyle(fontSize: 22),
         );
-        // Prezzo su riga separata
         await SunmiPrinter.printText(
-          'EUR ${item.price.toStringAsFixed(2)}',
+          'EUR ${item.lineTotal.toStringAsFixed(2)}',
           style: SunmiTextStyle(
             fontSize: 22,
             bold: true,
             align: SunmiPrintAlign.RIGHT,
           ),
         );
+        // Il prezzo unitario si mostra solo quando puo' servire, cioe' con piu'
+        // di un pezzo, e in piccolo per non confonderlo con l'importo di riga.
+        if (item.quantity > 1) {
+          await SunmiPrinter.printText(
+            '(${item.quantity} x EUR ${item.price.toStringAsFixed(2)})',
+            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+          );
+        }
 
         // Stampa extra se presenti
         if (item.extras.isNotEmpty) {
           // Raggruppa extra per categoria
           final Map<String?, List<OrderExtra>> grouped = {};
           for (var extra in item.extras) {
-            final groupName = extra.groupName ?? 'Extra';
+            final groupName = extra.groupName ?? 'Aggiunte';
             if (!grouped.containsKey(groupName)) {
               grouped[groupName] = [];
             }
             grouped[groupName]!.add(extra);
           }
 
-          // Stampa ogni gruppo
+          // Stampa ogni gruppo. NB: il prezzo degli extra e' GIA' compreso nel
+          // prezzo unitario, quindi non va stampato accanto: sembrerebbe da
+          // sommare una seconda volta.
           for (var entry in grouped.entries) {
             await SunmiPrinter.printText(
               '  ${entry.key}:',
               style: SunmiTextStyle(fontSize: 20),
             );
             for (var extra in entry.value) {
-              final priceText = extra.price > 0
-                  ? ' +EUR${extra.price.toStringAsFixed(2)}'
-                  : '';
               await SunmiPrinter.printText(
-                '    + ${extra.name}$priceText',
+                '    + ${extra.name}',
                 style: SunmiTextStyle(fontSize: 20),
               );
             }
@@ -276,10 +345,26 @@ class PrinterService {
 
       await SunmiPrinter.printText('--------------------------------');
 
-      // --- TOTALE ---
+      // --- RIEPILOGO IMPORTI ---
+      // Il totale dell'ordine comprende consegna, commissione e sconti: senza
+      // il dettaglio non quadrerebbe con la somma delle righe qui sopra.
       await SunmiPrinter.lineWrap(1);
+      await _riga('Totale articoli', order.itemsTotal);
+      if (order.deliveryFee > 0) {
+        await _riga('Consegna', order.deliveryFee);
+      }
+      if (order.orderFee > 0) {
+        await _riga('Servizio', order.orderFee);
+      }
+      if (order.discountAmount > 0) {
+        await _riga('Sconto', -order.discountAmount);
+      }
+      if (order.appCreditsUsed > 0) {
+        await _riga('Crediti usati', -order.appCreditsUsed);
+      }
+      await SunmiPrinter.printText('--------------------------------');
       await SunmiPrinter.printText(
-        'TOTALE',
+        order.isDelivery ? 'TOTALE CLIENTE' : 'TOTALE DA INCASSARE',
         style: SunmiTextStyle(bold: true, fontSize: 28),
       );
       await SunmiPrinter.printText(
@@ -331,11 +416,15 @@ class PrinterService {
       // Taglia la carta
       await SunmiPrinter.cutPaper();
 
-      print('✅ Ordine #${order.id} stampato con successo');
-      return true;
+      return const EsitoStampa.riuscita();
     } catch (e) {
-      print('❌ Errore stampa ordine: $e');
-      return false;
+      debugPrint('Errore stampa ordine: $e');
+      // Se la stampa si e' interrotta a meta', spesso il motivo e' leggibile
+      // dallo stato: meglio quello di un messaggio tecnico.
+      final problema = await problemaCorrente();
+      return EsitoStampa.fallita(
+        problema ?? 'Errore durante la stampa della comanda',
+      );
     }
   }
 
@@ -363,7 +452,7 @@ class PrinterService {
           await SunmiPrinter.lineWrap(1);
         }
       } catch (e) {
-        print('⚠️ Impossibile stampare logo: $e');
+        debugPrint('Impossibile stampare logo: $e');
       }
 
       await SunmiPrinter.printText(
@@ -393,7 +482,7 @@ class PrinterService {
 
       return true;
     } catch (e) {
-      print('❌ Errore test stampante: $e');
+      debugPrint('Errore test stampante: $e');
       return false;
     }
   }

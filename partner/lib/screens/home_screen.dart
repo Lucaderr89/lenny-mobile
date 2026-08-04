@@ -29,9 +29,22 @@ class _HomeScreenState extends State<HomeScreen>
   String _restaurantName = '';
   bool _isLoading = true;
   List<Order> _orders = [];
-  final Set<int> _seenOrderIds = {}; // Traccia ordini già visti
+
+  /// Ordini gia' stampati, persistiti su disco. Tenerli solo in memoria
+  /// significava che dopo un riavvio del tablet gli ordini arrivati ad app
+  /// spenta venivano marcati come "gia' visti" e non si stampavano mai.
+  final Set<int> _stampati = {};
+  static const String _chiaveStampati = 'partner_ordini_stampati';
+  static const String _chiavePrimoAvvio = 'partner_primo_avvio_fatto';
+  static const int _maxStampatiMemorizzati = 300;
+  bool _memoriaCaricata = false;
+
   bool _autoPrintEnabled = true; // Stampa automatica abilitata
-  bool _isFirstLoad = true; // Flag per primo caricamento
+  bool _stampaInCorso = false; // Evita stampe sovrapposte sulla stessa stampante
+
+  /// Ordini che non si sono riusciti a stampare, con il motivo: restano in
+  /// evidenza finche' non vengono ristampati.
+  final Map<int, String> _stampeFallite = {};
   Timer? _ordersRefreshTimer;
   StreamSubscription? _fcmSubscription;
   late TabController _tabController;
@@ -79,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Quando l'app viene riportata in foreground, aggiorna solo gli ordini
-      // senza resettare _isFirstLoad (altrimenti ristamperebbe tutti gli ordini)
+      // la memoria delle stampe e' su disco, quindi non si ristampa nulla
       _loadOrders();
     }
   }
@@ -94,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen>
 
       await _loadOrders();
     } catch (e) {
-      print('❌ Errore caricamento dati: $e');
+      debugPrint('Errore caricamento dati: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -102,46 +115,97 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  /// Carica da disco gli ordini gia' stampati.
+  /// Alla primissima apertura dell'app la memoria e' vuota: in quel caso si
+  /// registrano gli ordini presenti senza stamparli, altrimenti il ristorante
+  /// si troverebbe a stampare tutto lo storico.
+  Future<void> _caricaMemoriaStampe(List<Order> ordiniCorrenti) async {
+    if (_memoriaCaricata) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final primoAvvioFatto = prefs.getBool(_chiavePrimoAvvio) ?? false;
+
+    if (!primoAvvioFatto) {
+      _stampati.addAll(ordiniCorrenti.map((o) => o.id));
+      await prefs.setBool(_chiavePrimoAvvio, true);
+      await _salvaMemoriaStampe();
+    } else {
+      final salvati = prefs.getStringList(_chiaveStampati) ?? const [];
+      _stampati.addAll(salvati.map(int.tryParse).whereType<int>());
+    }
+
+    _memoriaCaricata = true;
+  }
+
+  Future<void> _salvaMemoriaStampe() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Si tengono solo gli id piu' recenti: la lista non deve crescere all'infinito.
+    final lista = _stampati.toList()..sort();
+    final daSalvare = lista.length > _maxStampatiMemorizzati
+        ? lista.sublist(lista.length - _maxStampatiMemorizzati)
+        : lista;
+    _stampati
+      ..clear()
+      ..addAll(daSalvare);
+    await prefs.setStringList(
+      _chiaveStampati,
+      daSalvare.map((e) => e.toString()).toList(),
+    );
+  }
+
   Future<void> _loadOrders() async {
     try {
       final orders = await _orderService.getOrders();
+      if (!mounted) return;
 
-      if (mounted) {
-        // Al primo caricamento, registra tutti gli ordini esistenti senza stamparli
-        if (_isFirstLoad) {
-          _seenOrderIds.addAll(orders.map((o) => o.id));
-          _isFirstLoad = false;
-          print(
-            '📋 Primo caricamento: ${orders.length} ordini registrati (nessuna stampa)',
-          );
-        } else {
-          // Dai caricamenti successivi, controlla nuovi ordini
-          final newOrders = orders.where((order) {
-            // Un ordine è nuovo se non l'abbiamo mai visto E è in stato pending o assigned
-            return !_seenOrderIds.contains(order.id) &&
-                (order.status == 'pending' || order.status == 'assigned');
-          }).toList();
+      await _caricaMemoriaStampe(orders);
+      if (!mounted) return;
 
-          // Aggiorna la lista degli ordini visti
-          _seenOrderIds.addAll(orders.map((o) => o.id));
+      // Da stampare: mai stampato prima e ancora da preparare. Include gli
+      // ordini arrivati mentre l'app era chiusa, che prima andavano persi.
+      final daStampare = orders
+          .where(
+            (o) =>
+                !_stampati.contains(o.id) &&
+                (o.status == 'pending' || o.status == 'assigned'),
+          )
+          .toList();
 
-          // Se ci sono nuovi ordini e stampa automatica attiva
-          if (newOrders.isNotEmpty && _autoPrintEnabled) {
-            print('🆕 ${newOrders.length} nuovi ordini rilevati');
-            for (final order in newOrders) {
-              // Notifica visiva
-              _showNewOrderNotification(order);
+      setState(() => _orders = orders);
 
-              // Stampa automatica
-              _printOrderAutomatically(order);
-            }
-          }
+      if (daStampare.isNotEmpty && _autoPrintEnabled) {
+        for (final order in daStampare) {
+          _showNewOrderNotification(order);
         }
-
-        setState(() => _orders = orders);
+        // Sequenziale: due comande in parallelo si sovrappongono sulla stessa
+        // stampante e escono mescolate.
+        await _stampaInSequenza(daStampare);
       }
     } catch (e) {
-      print('❌ Errore caricamento ordini: $e');
+      debugPrint('Errore caricamento ordini: $e');
+    }
+  }
+
+  /// Stampa gli ordini uno alla volta, segnando l'esito.
+  Future<void> _stampaInSequenza(List<Order> ordini) async {
+    if (_stampaInCorso) return;
+    _stampaInCorso = true;
+    try {
+      for (final order in ordini) {
+        final esito = await _printerService.printOrder(order, _restaurantName);
+        if (esito.ok) {
+          _stampati.add(order.id);
+          _stampeFallite.remove(order.id);
+        } else {
+          // Non si segna come stampato: cosi' resta ristampabile.
+          _stampeFallite[order.id] =
+              esito.motivo ?? 'Errore durante la stampa';
+        }
+        if (mounted) setState(() {});
+      }
+      await _salvaMemoriaStampe();
+    } finally {
+      _stampaInCorso = false;
     }
   }
 
@@ -180,24 +244,19 @@ class _HomeScreenState extends State<HomeScreen>
       final player = AudioPlayer();
       await player.play(AssetSource('sounds/new_order.mp3'), volume: 1.0);
     } catch (e) {
-      print('⚠️ Impossibile riprodurre suono: $e');
+      debugPrint('Impossibile riprodurre suono: $e');
     }
   }
 
-  /// Stampa automatica nuovo ordine
-  Future<void> _printOrderAutomatically(Order order) async {
-    try {
-      print('🖨️ Stampa automatica ordine #${order.id}');
-      final success = await _printerService.printOrder(order, _restaurantName);
-
-      if (success) {
-        print('✅ Ordine #${order.id} stampato automaticamente');
-      } else {
-        print('⚠️ Stampa automatica ordine #${order.id} fallita');
-      }
-    } catch (e) {
-      print('❌ Errore stampa automatica: $e');
-    }
+  /// Ristampa manuale di un ordine la cui stampa era fallita.
+  Future<void> _ristampa(Order order) async {
+    await _stampaInSequenza([order]);
+    if (!mounted) return;
+    final fallita = _stampeFallite[order.id];
+    _showMessage(
+      fallita ?? 'Comanda #${order.id} ristampata',
+      fallita == null,
+    );
   }
 
   void _startOrdersRefresh() {
@@ -293,25 +352,84 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
+          : Column(
               children: [
-                // Tab Consegne
-                RefreshIndicator(
-                  onRefresh: _loadOrders,
-                  child: _deliveryOrders.isEmpty
-                      ? _buildEmptyState('Nessuna consegna')
-                      : _buildOrdersList(_deliveryOrders),
-                ),
-                // Tab Asporto
-                RefreshIndicator(
-                  onRefresh: _loadOrders,
-                  child: _pickupOrders.isEmpty
-                      ? _buildEmptyState('Nessun ordine asporto')
-                      : _buildOrdersList(_pickupOrders),
+                _buildAvvisoStampe(),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Tab Consegne
+                      RefreshIndicator(
+                        onRefresh: _loadOrders,
+                        child: _deliveryOrders.isEmpty
+                            ? _buildEmptyState('Nessuna consegna')
+                            : _buildOrdersList(_deliveryOrders),
+                      ),
+                      // Tab Asporto
+                      RefreshIndicator(
+                        onRefresh: _loadOrders,
+                        child: _pickupOrders.isEmpty
+                            ? _buildEmptyState('Nessun ordine asporto')
+                            : _buildOrdersList(_pickupOrders),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+    );
+  }
+
+  /// Avviso permanente per le comande non stampate.
+  /// Prima un fallimento di stampa finiva solo nei log: l'ordine risultava
+  /// ricevuto ma la cucina non aveva nulla in mano.
+  Widget _buildAvvisoStampe() {
+    if (_stampeFallite.isEmpty) return const SizedBox.shrink();
+
+    final idFalliti = _stampeFallite.keys.toList()..sort();
+    final motivo = _stampeFallite[idFalliti.first]!;
+    final ordine = _orders.where((o) => o.id == idFalliti.first).firstOrNull;
+
+    return Container(
+      width: double.infinity,
+      color: AppColors.danger,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: Row(
+        children: [
+          const Icon(Icons.print_disabled, color: Colors.white, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  idFalliti.length == 1
+                      ? 'Comanda #${idFalliti.first} non stampata'
+                      : '${idFalliti.length} comande non stampate',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  motivo,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          if (ordine != null)
+            TextButton(
+              onPressed: () => _ristampa(ordine),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.danger,
+              ),
+              child: const Text('Ristampa'),
+            ),
+        ],
+      ),
     );
   }
 
@@ -921,57 +1039,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-/// Dialog per posticipare un ordine
-class _PostponeDialog extends StatefulWidget {
-  @override
-  State<_PostponeDialog> createState() => _PostponeDialogState();
-}
-
-class _PostponeDialogState extends State<_PostponeDialog> {
-  int _selectedMinutes = 15;
-
-  final List<int> _delayOptions = [10, 15, 20, 30, 45, 60];
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Posticipa ordine'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Di quanti minuti vuoi posticipare?'),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            children: _delayOptions.map((minutes) {
-              final isSelected = minutes == _selectedMinutes;
-              return ChoiceChip(
-                label: Text('$minutes min'),
-                selected: isSelected,
-                onSelected: (selected) {
-                  if (selected) {
-                    setState(() => _selectedMinutes = minutes);
-                  }
-                },
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annulla'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, _selectedMinutes),
-          child: const Text('Conferma'),
-        ),
-      ],
-    );
-  }
-}
+// NB: il dialog "Posticipa ordine" e' stato rimosso insieme al suo endpoint.
+// Scriveva una colonna inesistente, quindi non produceva alcun effetto, e non
+// esisteva una funzione corrispondente ne' nell'app cliente ne' nel pannello.
 
 /// Bottom sheet con dettagli ordine
 class _OrderDetailsSheet extends StatelessWidget {
@@ -1252,6 +1322,7 @@ class _OrderDetailsSheet extends StatelessWidget {
   Future<void> _printOrder(BuildContext context, Order order) async {
     final printerService = PrinterService();
     final restaurantName = await _getRestaurantName();
+    if (!context.mounted) return;
 
     // Mostra loading
     showDialog(
@@ -1261,7 +1332,7 @@ class _OrderDetailsSheet extends StatelessWidget {
     );
 
     try {
-      final success = await printerService.printOrder(order, restaurantName);
+      final esito = await printerService.printOrder(order, restaurantName);
 
       if (context.mounted) {
         Navigator.pop(context); // Chiudi loading
@@ -1269,13 +1340,16 @@ class _OrderDetailsSheet extends StatelessWidget {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            // Sul fallimento si mostra il motivo, non un generico "errore":
+            // il ristorante deve sapere se e' finita la carta.
             content: Text(
-              success
-                  ? '✓ Ordine stampato con successo'
-                  : '✗ Errore durante la stampa',
+              esito.ok
+                  ? 'Comanda #${order.id} stampata'
+                  : (esito.motivo ?? 'Errore durante la stampa'),
             ),
-            backgroundColor: success ? AppColors.success : AppColors.danger,
+            backgroundColor: esito.ok ? AppColors.success : AppColors.danger,
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: esito.ok ? 3 : 6),
           ),
         );
       }
