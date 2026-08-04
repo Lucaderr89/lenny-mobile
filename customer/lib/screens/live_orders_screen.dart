@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/live_order.dart';
@@ -19,29 +20,59 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   String? _errorMessage;
   final Set<int> _expandedOrders = {}; // Track expanded orders
 
+  // Aggiornamento automatico leggero: ricarica lo stato degli ordini attivi
+  // ogni 30s, cosi' la schermata "evolve" da sola mentre l'ordine avanza, senza
+  // che l'utente debba trascinare per aggiornare. Non usa GPS ne' mappa: e' una
+  // singola chiamata leggera, e si ferma quando non ci sono piu' ordini attivi.
+  static const Duration _intervalloRefresh = Duration(seconds: 30);
+  Timer? _timerRefresh;
+
   @override
   void initState() {
     super.initState();
     _loadOrders();
+    _timerRefresh = Timer.periodic(
+      _intervalloRefresh,
+      (_) => _loadOrders(silenzioso: true),
+    );
   }
 
-  Future<void> _loadOrders() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  @override
+  void dispose() {
+    _timerRefresh?.cancel();
+    super.dispose();
+  }
+
+  /// Carica gli ordini attivi. In modalita' silenziosa (auto-refresh) non mostra
+  /// lo spinner e non azzera la lista, cosi' l'aggiornamento non fa "sfarfallare"
+  /// la schermata.
+  Future<void> _loadOrders({bool silenzioso = false}) async {
+    if (!silenzioso) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final orders = await _service.getActiveOrders();
+      if (!mounted) return;
       setState(() {
         _orders = orders;
         _isLoading = false;
       });
+      // Nessun ordine attivo: non ha senso continuare a interrogare il server.
+      if (orders.isEmpty) {
+        _timerRefresh?.cancel();
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Errore nel caricamento degli ordini';
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      if (!silenzioso) {
+        setState(() {
+          _errorMessage = 'Errore nel caricamento degli ordini';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -312,6 +343,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
               ),
             ),
           ),
+
+          // Timeline sempre visibile: il colpo d'occhio sullo stato, che avanza
+          // da solo con l'auto-refresh. Niente mappa ne' posizione del driver.
+          _buildTimeline(order),
 
           // Contenuto espandibile
           if (isExpanded) ...[
@@ -672,6 +707,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
               ),
             ),
           ),
+
+          // Timeline sempre visibile: il colpo d'occhio sullo stato, che avanza
+          // da solo con l'auto-refresh. Niente mappa ne' posizione del driver.
+          _buildTimeline(order),
 
           // Contenuto espandibile
           if (isExpanded) ...[
@@ -1066,5 +1105,98 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       default:
         return null;
     }
+  }
+
+  /// Timeline dei quattro stati dell'ordine, sempre visibile sulla card.
+  /// Da' al cliente il colpo d'occhio su dove si trova l'ordine e, con
+  /// l'auto-refresh, avanza da sola. Niente mappa ne' posizione del driver.
+  Widget _buildTimeline(LiveOrder order) {
+    const tappe = [
+      (icona: Icons.receipt_long, label: 'Confermato'),
+      (icona: Icons.storefront, label: 'In ritiro'),
+      (icona: Icons.local_shipping, label: 'In consegna'),
+      (icona: Icons.check_circle, label: 'Consegnato'),
+    ];
+
+    // Indice della tappa corrente in base allo stato dell'ordine.
+    int corrente;
+    switch (order.statusId) {
+      case 1:
+      case 2:
+        corrente = 0;
+        break;
+      case 3:
+        corrente = 1;
+        break;
+      case 4:
+        corrente = 2;
+        break;
+      case 5:
+        corrente = 3;
+        break;
+      default:
+        corrente = 0;
+    }
+
+    final righe = <Widget>[];
+    for (var i = 0; i < tappe.length; i++) {
+      final raggiunta = i <= corrente;
+      final colore = raggiunta ? AppColors.primary : Colors.grey[300]!;
+
+      // Pallino con icona
+      righe.add(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: raggiunta ? AppColors.primary : Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: colore, width: 2),
+              ),
+              child: Icon(
+                tappe[i].icona,
+                size: 17,
+                color: raggiunta ? Colors.white : Colors.grey[400],
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: 62,
+              child: Text(
+                tappe[i].label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  height: 1.1,
+                  fontWeight: i == corrente ? FontWeight.w700 : FontWeight.w500,
+                  color: raggiunta ? AppColors.dark : Colors.grey[400],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      // Linea di collegamento tra i pallini (non dopo l'ultimo)
+      if (i < tappe.length - 1) {
+        righe.add(
+          Expanded(
+            child: Container(
+              height: 2,
+              margin: const EdgeInsets.only(bottom: 26),
+              color: i < corrente ? AppColors.primary : Colors.grey[300],
+            ),
+          ),
+        );
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: righe),
+    );
   }
 }

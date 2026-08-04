@@ -2289,10 +2289,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) =>
-            OrderCompletedScreen(orderId: orderId, deliveryType: _deliveryType),
+        builder: (context) => OrderCompletedScreen(
+          orderId: orderId,
+          deliveryType: _deliveryType,
+          orarioConsegna: _riepilogoOrario(),
+          totale: _finalTotal,
+          indirizzo: _deliveryType == 'delivery'
+              ? _selectedSavedAddress?.address
+              : null,
+        ),
       ),
     );
+  }
+
+  /// Stringa orario per la conferma: "Oggi, 13:30" o "Gio 07/08, 13:30".
+  String? _riepilogoOrario() {
+    if (_selectedTime == null) return null;
+    final ora =
+        '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
+
+    if (_selectedDate == null) return ora;
+
+    final oggi = DateTime.now();
+    final d = _selectedDate!;
+    final isOggi = d.year == oggi.year && d.month == oggi.month && d.day == oggi.day;
+    final domani = oggi.add(const Duration(days: 1));
+    final isDomani =
+        d.year == domani.year && d.month == domani.month && d.day == domani.day;
+
+    if (isOggi) return 'Oggi, $ora';
+    if (isDomani) return 'Domani, $ora';
+
+    final giorni = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+    final g = giorni[d.weekday - 1];
+    return '$g ${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}, $ora';
   }
 
   @override

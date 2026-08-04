@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'live_orders_screen.dart';
 
 /// Screen esplosivo per ordine completato con effetti festivi
 class OrderCompletedScreen extends StatefulWidget {
   final int orderId;
   final String deliveryType;
 
+  /// Info riepilogo mostrate al cliente subito dopo l'ordine. Opzionali per
+  /// retrocompatibilita': se non passate, il riepilogo non viene mostrato.
+  final String? orarioConsegna; // es. "Oggi, 13:30 - 14:00"
+  final double? totale;
+  final String? indirizzo;
+
   const OrderCompletedScreen({
     super.key,
     required this.orderId,
     required this.deliveryType,
+    this.orarioConsegna,
+    this.totale,
+    this.indirizzo,
   });
 
   @override
@@ -205,45 +215,7 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 14),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.green[200]!,
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green[600],
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 10),
-                                Flexible(
-                                  child: Text(
-                                    widget.deliveryType == 'delivery'
-                                        ? 'In arrivo all\'orario scelto'
-                                        : 'Pronto all\'orario scelto',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.green[700],
-                                      fontFamily: 'Segoe UI',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          _buildRiepilogo(),
                         ],
                       ),
                     ),
@@ -252,45 +224,154 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
 
                 const Spacer(),
 
-                // Bottone con bounce animation
+                // Bottoni con bounce animation
                 ScaleTransition(
                   scale: _bounceAnimation,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Torna alla home (chiude tutti gli screen)
-                          Navigator.of(
-                            context,
-                          ).popUntil((route) => route.isFirst);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          elevation: 8,
-                          shadowColor: primaryColor.withOpacity(0.4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                    child: Column(
+                      children: [
+                        // Primario: segui il tuo ordine (porta al tracking)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (context) => const LiveOrdersScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.local_shipping_outlined,
+                                size: 20),
+                            label: const Text(
+                              'Segui il tuo ordine',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Segoe UI',
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 8,
+                              shadowColor: primaryColor.withOpacity(0.4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          'Torna alla Home',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Segoe UI',
+                        const SizedBox(height: 12),
+                        // Secondario: torna alla home
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(
+                                context,
+                              ).popUntil((route) => route.isFirst);
+                            },
+                            child: Text(
+                              'Torna alla Home',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[600],
+                                fontFamily: 'Segoe UI',
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 20),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Riepilogo mostrato al cliente subito dopo l'ordine: quando arriva/e' pronto,
+  /// dove, e quanto ha speso. Ogni riga compare solo se il dato e' disponibile.
+  Widget _buildRiepilogo() {
+    final righe = <Widget>[];
+
+    if (widget.orarioConsegna != null && widget.orarioConsegna!.isNotEmpty) {
+      righe.add(
+        _rigaInfo(
+          widget.deliveryType == 'delivery'
+              ? Icons.schedule
+              : Icons.storefront,
+          widget.deliveryType == 'delivery' ? 'Consegna' : 'Ritiro',
+          widget.orarioConsegna!,
+        ),
+      );
+    }
+
+    if (widget.deliveryType == 'delivery' &&
+        widget.indirizzo != null &&
+        widget.indirizzo!.isNotEmpty) {
+      righe.add(_rigaInfo(Icons.place_outlined, 'Indirizzo', widget.indirizzo!));
+    }
+
+    if (widget.totale != null) {
+      righe.add(
+        _rigaInfo(
+          Icons.receipt_long_outlined,
+          'Totale',
+          'EUR ${widget.totale!.toStringAsFixed(2)}',
+        ),
+      );
+    }
+
+    if (righe.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: righe),
+    );
+  }
+
+  Widget _rigaInfo(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.grey[500]),
+          const SizedBox(width: 10),
+          Text(
+            '$label  ',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[500],
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+                fontFamily: 'Segoe UI',
+              ),
             ),
           ),
         ],
