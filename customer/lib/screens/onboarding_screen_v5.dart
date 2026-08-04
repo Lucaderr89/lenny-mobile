@@ -73,9 +73,11 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
     setState(() => _currentPage = page);
   }
 
-  Future<void> _navigateToLogin() async {
+  /// Fine onboarding: si entra come ospite. Ristoranti e menu sono navigabili
+  /// senza account; la registrazione viene proposta al momento di ordinare.
+  Future<void> _entraComeOspite() async {
     await _authService.setFirstLaunchComplete();
-    if (mounted) context.go('/login');
+    if (mounted) context.go('/categories');
   }
 
   void _nextPage() {
@@ -85,7 +87,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
         curve: Curves.easeInOutCubic,
       );
     } else {
-      _navigateToLogin();
+      _entraComeOspite();
     }
   }
 
@@ -346,7 +348,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: _navigateToLogin,
+                          onPressed: _entraComeOspite,
                           child: const Text(
                             "Salta",
                             style: TextStyle(
@@ -364,7 +366,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _navigateToLogin,
+                        onPressed: _entraComeOspite,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black87,
                           foregroundColor: Colors.white,

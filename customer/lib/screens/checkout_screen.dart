@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import 'package:go_router/go_router.dart';
+import '../services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -1886,7 +1888,110 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  /// Invito ad accedere o registrarsi mostrato quando un ospite prova a
+  /// completare l'ordine. Il carrello e' persistente: dopo l'accesso lo ritrova.
+  void _mostraGateAccount() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20,
+          24,
+          24 + MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grayLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Icon(Icons.lock_open_outlined, size: 40, color: AppColors.primary),
+            const SizedBox(height: 14),
+            const Text(
+              'Ci siamo quasi!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Accedi o crea un account per completare l\'ordine. Il tuo carrello resta salvato.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppColors.grayDark),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/register');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Crea un account',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 50,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/login');
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Ho gia\' un account',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _placeOrder() async {
+    // Guest-first: navigare e riempire il carrello e' libero, ma per completare
+    // l'ordine serve un account. Se l'utente e' ospite glielo proponiamo qui; il
+    // carrello resta salvato, cosi' dopo l'accesso ritrova tutto.
+    final loggato = await AuthService().isLoggedIn();
+    if (!mounted) return;
+    if (!loggato) {
+      _mostraGateAccount();
+      return;
+    }
+
     if (_selectedDate == null || _selectedTime == null) {
       _showToast('Seleziona data e orario di consegna');
       return;

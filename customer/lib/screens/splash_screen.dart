@@ -93,9 +93,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (isLoggedIn) {
       context.go('/categories');
-    } else {
-      context.go('/onboarding');
+      return;
     }
+
+    // Guest-first: chi non e' loggato entra comunque come ospite e naviga
+    // liberamente (ristoranti e menu sono pubblici). L'account viene richiesto
+    // solo al momento di completare l'ordine. L'onboarding si mostra solo alla
+    // primissima apertura dell'app.
+    final primaApertura = await _authService.isFirstLaunch();
+    if (!mounted) return;
+    context.go(primaApertura ? '/onboarding' : '/categories');
   }
 
   @override
