@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
+import '../services/credenziali_sicure.dart';
 import '../services/fcm_service.dart';
 
 /// Login Screen per driver - solo email e password
@@ -48,9 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (response.success) {
-        // Salva la password per auto-login nel pannello web
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('driver_password', _passwordController.text);
+        // La password serve per l'auto-login nella WebView del pannello.
+        // Va in archivio cifrato: in SharedPreferences era salvata in chiaro
+        // e su un dispositivo con accesso root sarebbe leggibile.
+        await CredenzialiSicure.salvaPassword(_passwordController.text);
 
         _showToast('Login effettuato con successo!', isError: false);
         FcmService()

@@ -21,7 +21,16 @@ void main() async {
     await _avvia();
   }, (error, stack) {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  });
+  },
+      // In release nessuna print() finisce nel log di sistema: nel codice ce ne
+      // sono che stampano il corpo delle richieste di login e registrazione,
+      // quindi password e IBAN in chiaro, e il token di sessione.
+      // In debug restano, perche' li' servono.
+      zoneSpecification: ZoneSpecification(
+        print: (self, parent, zone, riga) {
+          if (kDebugMode) parent.print(zone, riga);
+        },
+      ));
 }
 
 Future<void> _avvia() async {

@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Consenti tutto il traffico cleartext HTTP per sviluppo -->
-    <base-config cleartextTrafficPermitted="true">
+    <!--
+      In produzione: nessun traffico in chiaro e SOLO le autorita' di
+      certificazione di sistema.
+
+      La configurazione precedente diceva "per sviluppo" ma era quella
+      compilata negli APK pubblicati, e conteneva <certificates src="user" />:
+      con quella riga l'app si fida anche dei certificati installati
+      dall'utente, quindi chiunque installi un certificato proxy sul telefono
+      puo' leggere e modificare tutto il traffico HTTPS dell'app, token di
+      autenticazione compreso. Da Android 7 in poi le app NON si fidano dei
+      certificati utente: quella riga riabilitava esplicitamente il rischio.
+    -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
-    
-    <!-- Configurazione per localhost e IP locali -->
+
+    <!--
+      Eccezione per lo sviluppo in locale: solo emulatore e loopback, mai il
+      dominio di produzione.
+    -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">192.168.1.41</domain>
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
 </network-security-config>

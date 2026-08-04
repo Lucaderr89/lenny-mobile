@@ -27,7 +27,17 @@ void main() async {
     await _avvia();
   }, (error, stack) {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  });
+  },
+      // In release nessuna print() finisce nel log di sistema. Nel codice ce ne
+      // sono centinaia che stampano corpi di risposta e di richiesta: contengono
+      // token di sessione, dati personali dei clienti e, al login, la password.
+      // Su logcat sarebbero leggibili da chi ha accesso al dispositivo via ADB.
+      // In debug restano, perche' li' servono.
+      zoneSpecification: ZoneSpecification(
+        print: (self, parent, zone, riga) {
+          if (kDebugMode) parent.print(zone, riga);
+        },
+      ));
 }
 
 Future<void> _avvia() async {

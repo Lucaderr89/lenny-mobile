@@ -20,6 +20,10 @@ dependencies:
   
   # Local storage
   shared_preferences: ^2.2.2
+
+  # Archivio cifrato (Keystore di Android) per la password usata dall'auto-login
+  # del pannello: in SharedPreferences sarebbe salvata in chiaro.
+  flutter_secure_storage: ^9.2.2
   
   # Routing
   go_router: ^14.0.2

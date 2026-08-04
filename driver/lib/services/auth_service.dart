@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import '../models/auth_response.dart';
+import 'credenziali_sicure.dart';
 import 'firebase_storage_service.dart';
 
 /// Servizio per gestire l'autenticazione dei driver
@@ -215,6 +216,9 @@ class AuthService {
     await prefs.remove(AppConstants.keyDriverName);
     await prefs.remove(AppConstants.keyDriverEmail);
     await prefs.remove(AppConstants.keyDriverPhone);
+    // Anche la password dell'auto-login del pannello: al logout non deve
+    // restare sul dispositivo.
+    await CredenzialiSicure.cancella();
   }
 
   /// Verifica se il driver è loggato

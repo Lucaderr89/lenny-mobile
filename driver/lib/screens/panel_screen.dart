@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../config/app_colors.dart';
+import '../services/credenziali_sicure.dart';
 import '../config/app_constants.dart';
 
 class PanelScreen extends StatefulWidget {
@@ -29,7 +30,7 @@ class _PanelScreenState extends State<PanelScreen> {
   Future<void> _loadCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     _email = prefs.getString(AppConstants.keyDriverEmail);
-    _password = prefs.getString('driver_password');
+    _password = await CredenzialiSicure.leggiPassword();
   }
 
   void _initWebView() {

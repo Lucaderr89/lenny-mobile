@@ -42,7 +42,9 @@ class _CartScreenState extends State<CartScreen> {
   static const Color lightGrayColor = Color(0xFFEEEEEE);
 
   // URL base API
-  static const String apiBaseUrl = 'http://lenny-staging.com/api';
+  // HTTPS obbligatorio: in chiaro il traffico e' leggibile e modificabile
+  // da chiunque sia sulla stessa rete.
+  static const String apiBaseUrl = 'https://lenny-staging.com/api';
 
   @override
   void initState() {
