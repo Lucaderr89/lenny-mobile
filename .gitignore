@@ -1,0 +1,9 @@
+# Crash dump della JVM generati durante le build Android (possono pesare
+# centinaia di MB e bloccano il push su GitHub, che rifiuta i file oltre 100 MB)
+*.hprof
+java_pid*.hprof
+hs_err_pid*.log
+
+# Artefatti di sistema
+.DS_Store
+Thumbs.db
