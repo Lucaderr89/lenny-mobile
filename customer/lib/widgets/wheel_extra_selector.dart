@@ -23,7 +23,7 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
   late FixedExtentScrollController _controller;
   int _currentIndex = 0;
 
-  static const Color primaryColor = Color(0xFFFF7566);
+  static const Color primaryColor = Color(0xFF0F4E8C);
   static const Color successColor = Color(0xFF4CAF50);
   static const Color darkColor = Color(0xFF212121);
   static const Color grayColor = Color(0xFF9E9E9E);

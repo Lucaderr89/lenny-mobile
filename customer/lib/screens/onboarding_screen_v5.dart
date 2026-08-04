@@ -47,8 +47,8 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
           "Tracciamento live del tuo ordine. Preparati ad aprire la porta (e l'appetito)",
       imagePath: "assets/images/RICEVI.png",
       backgroundColor: Colors.white,
-      bottomColor: const Color(0xFFFF8F6B), // Arancione coral Lenny
-      accentColor: const Color(0xFFFF5A5F), // Rosso-arancione primary
+      bottomColor: const Color(0xFFFF8F6B), // sfondo illustrazione (asset)
+      accentColor: AppColors.primary, // blu del logo
     ),
   ];
 

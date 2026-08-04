@@ -45,8 +45,8 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   // Colori identici al prototipo
   static const Color primaryColor = AppColors.primary;
-  static const Color primaryLight = Color(0xFFFFB5A7);
-  static const Color primaryDark = Color(0xFFFF5A5F);
+  static const Color primaryLight = AppColors.primaryLight;
+  static const Color primaryDark = AppColors.primaryDark;
   static const Color successColor = AppColors.success;
   static const Color darkColor = AppColors.dark;
   static const Color grayColor = AppColors.gray;

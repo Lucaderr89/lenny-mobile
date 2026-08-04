@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 /// Colori dell'app Lenny Driver
 class AppColors {
-  // Primary Colors - Blu driver (diverso dal rosso customer)
-  static const Color primary = Color(0xFF2196F3);
-  static const Color primaryLight = Color(0xFF64B5F6);
-  static const Color primaryDark = Color(0xFF1976D2);
+  // Primary Colors - Blu del logo Lenny (il cappellino)
+  static const Color primary = Color(0xFF0F4E8C);
+  static const Color primaryLight = Color(0xFF5B93C9);
+  static const Color primaryDark = Color(0xFF0B3A6B);
 
   // Secondary Colors
-  static const Color secondary = Color(0xFF00BCD4);
-  static const Color accent = Color(0xFFFFC107);
+  static const Color secondary = Color(0xFF2AAEDF);
+  static const Color accent = Color(0xFFFDD017);
 
   // Status Colors
   static const Color success = Color(0xFF4CAF50);
@@ -20,8 +20,8 @@ class AppColors {
   // Splash Screen Colors - Giallo (simile a customer)
   static const Color splashGradientStart = Color(0xFFF6E644);
   static const Color splashGradientEnd = Color(0xFFFFD000);
-  static const Color splashAccent = Color(0xFF2196F3); // Blu invece di rosa
-  static const Color splashDark = Color(0xFF003B73);
+  static const Color splashAccent = Color(0xFF0F4E8C);
+  static const Color splashDark = Color(0xFF0B3A6B);
 
   // Neutral Colors
   static const Color dark = Color(0xFF212121);

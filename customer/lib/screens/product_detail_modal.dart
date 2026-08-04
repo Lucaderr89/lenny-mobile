@@ -37,7 +37,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   final TextEditingController _instructionsController = TextEditingController();
 
   static const Color primaryColor = AppColors.primary;
-  static const Color primaryLight = Color(0xFFFFB5A7);
+  static const Color primaryLight = AppColors.primaryLight;
   static const Color successColor = AppColors.success;
   static const Color dangerColor = AppColors.danger;
   static const Color darkColor = AppColors.dark;

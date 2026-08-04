@@ -9,7 +9,7 @@ class OrderTypeDialog extends StatelessWidget {
   const OrderTypeDialog({super.key});
 
   // Colori coerenti con l'app
-  static const Color primaryDarkPink = Color(0xFFFF7566); // primary dell'app
+  static const Color primaryDarkPink = Color(0xFF0F4E8C); // primary dell'app (blu del logo)
   static const Color accentYellow = Color(
     0xFFF6E644,
   ); // splash gradient dell'app

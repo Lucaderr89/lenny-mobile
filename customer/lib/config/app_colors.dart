@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 
 /// Colori dell'app Lenny Customer basati sui prototipi HTML
 class AppColors {
-  // Primary Colors - Gradiente rosso-arancione del pannello
-  static const Color primary = Color(0xFFFF7566); // Colore medio del gradiente
-  static const Color primaryLight = Color(0xFFFFB5A7); // Versione chiara
-  static const Color primaryDark = Color(
-    0xFFFF5A5F,
-  ); // #ff5a5f (inizio gradiente)
-  static const Color primaryEnd = Color(0xFFFF8F6B); // #ff8f6b (fine gradiente)
+  // Primary Colors - Blu del logo Lenny (il cappellino)
+  static const Color primary = Color(0xFF0F4E8C); // blu profondo del marchio
+  static const Color primaryLight = Color(0xFF5B93C9); // blu chiaro
+  static const Color primaryDark = Color(0xFF0B3A6B); // blu scuro (inizio gradiente)
+  static const Color primaryEnd = Color(0xFF1E6FB0); // blu medio (fine gradiente)
 
-  // Secondary Colors
-  static const Color secondary = Color(0xFF00BCD4);
-  static const Color accent = Color(0xFFFFC107);
+  // Secondary Colors - dai colori del cappellino
+  static const Color secondary = Color(0xFF2AAEDF); // ciano della calotta
+  static const Color accent = Color(0xFFFDD017); // giallo della visiera
 
   // Status Colors
   static const Color success = Color(0xFF4CAF50);
@@ -23,8 +21,8 @@ class AppColors {
   // Splash Screen Colors - Giallo (dal prototipo splash)
   static const Color splashGradientStart = Color(0xFFF6E644);
   static const Color splashGradientEnd = Color(0xFFFFD000);
-  static const Color splashAccent = Color(0xFFF47BA0);
-  static const Color splashDark = Color(0xFF003B73);
+  static const Color splashAccent = Color(0xFF0F4E8C);
+  static const Color splashDark = Color(0xFF0B3A6B);
 
   // Neutral Colors
   static const Color dark = Color(0xFF212121);
