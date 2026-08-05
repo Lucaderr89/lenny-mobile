@@ -872,12 +872,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(vertical: 8),
       color: Colors.transparent,
       child: SizedBox(
-        // Casella 70 + spazio + etichetta. La lista ritaglia il proprio
+        // Casella 66 + spazio + etichetta. La lista ritaglia il proprio
         // riquadro: se resta stretta, taglia l'alone della pastiglia scelta.
-        height: 98,
+        height: 94,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          // Stretto di proposito: e' il passo della lista a decidere quante
+          // pastiglie entrano nello schermo, e la sesta deve restare
+          // intravedibile per far capire che si scorre.
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           itemCount: _cuisines.length,
           itemBuilder: (context, index) {
             final cuisine = _cuisines[index];
@@ -887,10 +890,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final coloreCategoria = AppColors.coloreCategoria(cuisine.id);
 
             final isSelected = _selectedCuisineId == cuisine.id;
-            // Nessuna spaziatura aggiuntiva: la casella porta gia' dentro 9px
-            // di margine per lato, quindi fra due pastiglie restano 18px anche
-            // con le caselle attaccate, praticamente i 16px di prima. Con 8px
-            // di padding il vuoto saliva a 26 e si notava.
+            // Nessuna spaziatura aggiuntiva: la casella porta gia' dentro 7px
+            // di margine per lato, quindi fra due pastiglie restano 14px anche
+            // con le caselle attaccate.
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

@@ -45,7 +45,7 @@ class BlobIconSelector extends StatelessWidget {
     required this.onTap,
     this.selectedColor = const Color(0xFFFFD042),
     this.unselectedColor = const Color(0xFFE8E8E8),
-    this.size = 70,
+    this.size = 66,
   });
 
   @override
@@ -92,18 +92,19 @@ class BlobPainter extends CustomPainter {
   /// E' la stanza in cui vive l'alone. Tenerlo qui, e non nel widget che
   /// disegna, e' cio' che impedisce all'alone di sconfinare sulla pastiglia
   /// vicina o di essere tagliato dal bordo della lista.
-  static const double margineAlone = 9.0;
+  static const double margineAlone = 7.0;
 
   /// Sigma della sfocatura interna.
   ///
   /// Una MaskFilter.blur si estende all'incirca per tre volte il proprio
-  /// sigma: 3,5 significa una decina di pixel, cioe' quanto basta a stare in
-  /// [margineAlone]. Alzarlo ancora renderebbe l'alone piu' ampio ma
-  /// comincerebbe a invadere la pastiglia vicina.
-  static const double _sigmaInterno = 3.5;
+  /// sigma: 2,8 fa poco piu' di otto pixel. E' tarato sul margine disponibile,
+  /// che va tenuto stretto perche' e' anche cio' che distanzia le pastiglie:
+  /// piu' largo, e sullo schermo ne entra una di meno. L'alone resta ben
+  /// visibile grazie all'allargamento e all'opacita', non all'ampiezza.
+  static const double _sigmaInterno = 2.8;
 
   /// Sigma della sfumatura esterna, quella che evita il bordo netto.
-  static const double _sigmaEsterno = 5.5;
+  static const double _sigmaEsterno = 4.2;
 
   /// Quanto l'alone viene allargato rispetto alla sagoma prima di sfocarlo.
   ///
