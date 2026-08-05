@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/app_colors.dart';
 import '../providers/location_provider.dart';
 import '../services/address_service.dart';
+import '../services/auth_service.dart';
 import '../models/address_model.dart';
 import '../screens/add_address_screen.dart';
 
@@ -20,6 +22,11 @@ class _AddressSelectorBottomSheetState
   List<AddressModel> _addresses = [];
   bool _isLoading = true;
 
+  /// Un ospite non ha indirizzi salvati ne' puo' aggiungerne: gli si mostra
+  /// solo la posizione del telefono, senza il pulsante che porterebbe a una
+  /// schermata destinata a fallire al salvataggio.
+  bool _loggato = false;
+
   @override
   void initState() {
     super.initState();
@@ -28,15 +35,34 @@ class _AddressSelectorBottomSheetState
 
   Future<void> _loadAddresses() async {
     setState(() => _isLoading = true);
+
+    final loggato = await AuthService().isLoggedIn();
+    if (!mounted) return;
+
+    if (!loggato) {
+      setState(() {
+        _loggato = false;
+        _addresses = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
       final addresses = await _addressService.getAddresses();
+      if (!mounted) return;
       setState(() {
+        _loggato = true;
         _addresses = addresses;
         _isLoading = false;
       });
     } catch (e) {
       debugPrint('❌ [ADDRESS SELECTOR] Errore caricamento indirizzi: $e');
-      setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _loggato = true;
+        _isLoading = false;
+      });
     }
   }
 
@@ -98,43 +124,56 @@ class _AddressSelectorBottomSheetState
                 : _buildAddressList(),
           ),
 
-          // Add new address button
+          // Aggiungi indirizzo: solo con un account, perche' il salvataggio
+          // avviene sul profilo. All'ospite si spiega invece perche' non c'e'.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(32),
+              child: _loggato
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(32),
+                              ),
+                            ),
+                            builder: (context) => SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.80,
+                              child: const AddAddressScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text(
+                          'Aggiungi nuovo indirizzo',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
-                      builder: (context) => SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.80,
-                        child: const AddAddressScreen(),
+                    )
+                  : Text(
+                      'Con un account puoi salvare i tuoi indirizzi e ritrovarli al prossimo ordine.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.4,
+                        color: Colors.grey[600],
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    'Aggiungi nuovo indirizzo',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
         ],
@@ -185,7 +224,7 @@ class _AddressSelectorBottomSheetState
         'assets/icons/icons8-codice-regione-32.png',
         width: 32,
         height: 32,
-        color: const Color(0xFFD91546),
+        color: AppColors.primary,
       ),
       title: Row(
         children: [
@@ -278,12 +317,12 @@ class _AddressSelectorBottomSheetState
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD91546).withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.edit_location,
-                      color: Color(0xFFD91546),
+                      color: AppColors.primary,
                       size: 24,
                     ),
                   ),
@@ -321,7 +360,7 @@ class _AddressSelectorBottomSheetState
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(
-                      color: Color(0xFFD91546),
+                      color: AppColors.primary,
                       width: 2,
                     ),
                   ),
@@ -358,7 +397,7 @@ class _AddressSelectorBottomSheetState
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD91546),
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -412,7 +451,7 @@ class _AddressSelectorBottomSheetState
         iconPath,
         width: 32,
         height: 32,
-        color: const Color(0xFFD91546),
+        color: AppColors.primary,
       ),
       title: Row(
         children: [

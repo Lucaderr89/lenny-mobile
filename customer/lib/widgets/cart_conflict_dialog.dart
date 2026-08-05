@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../config/app_colors.dart';
 
 /// Dialog che avvisa l'utente che ha prodotti di un altro ristorante nel carrello
 Future<bool?> showCartConflictDialog({
@@ -32,7 +33,7 @@ Future<bool?> showCartConflictDialog({
               child: const Icon(
                 Icons.shopping_cart_outlined,
                 size: 56,
-                color: Color(0xFFD91546),
+                color: AppColors.primary,
               ),
             ),
 
@@ -66,7 +67,7 @@ Future<bool?> showCartConflictDialog({
                     text: currentRestaurantName,
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFFD91546),
+                      color: AppColors.primary,
                     ),
                   ),
                   const TextSpan(
@@ -90,7 +91,7 @@ Future<bool?> showCartConflictDialog({
                       onClearCart();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFD91546),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(

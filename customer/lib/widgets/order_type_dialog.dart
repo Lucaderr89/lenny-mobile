@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +8,7 @@ import '../services/auth_service.dart';
 import '../screens/delivery_address_selection_screen.dart';
 
 /// Dialog Full Screen per selezione tipo ordine - Stile Lenny
-class OrderTypeDialog extends StatelessWidget {
+class OrderTypeDialog extends StatefulWidget {
   const OrderTypeDialog({super.key});
 
   // Colori coerenti con l'app
@@ -15,6 +17,32 @@ class OrderTypeDialog extends StatelessWidget {
     0xFFF6E644,
   ); // splash gradient dell'app
   static const Color darkColor = Color(0xFF0A0A0A);
+
+  @override
+  State<OrderTypeDialog> createState() => _OrderTypeDialogState();
+}
+
+class _OrderTypeDialogState extends State<OrderTypeDialog> {
+  static const Color primaryDarkPink = OrderTypeDialog.primaryDarkPink;
+  static const Color accentYellow = OrderTypeDialog.accentYellow;
+  static const Color darkColor = OrderTypeDialog.darkColor;
+
+  /// Una scelta e' gia' in corso: un secondo tocco non deve avviarne un'altra.
+  bool _sceltaInCorso = false;
+
+  /// Il dialog e' gia' stato chiuso. Serve perche' la chiusura puo' arrivare
+  /// dopo un'attesa asincrona: senza questo controllo una seconda pop
+  /// toglierebbe anche la schermata sotto e lascerebbe lo schermo nero.
+  bool _chiuso = false;
+
+  /// Chiude il dialog una volta sola e mai se non c'e' nulla sotto.
+  void _chiudi() {
+    if (_chiuso || !mounted) return;
+    final navigator = Navigator.of(context);
+    if (!navigator.canPop()) return;
+    _chiuso = true;
+    navigator.pop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +120,7 @@ class OrderTypeDialog extends StatelessWidget {
                             subtitle: 'Ti portiamo il cibo dove vuoi',
                             color: primaryDarkPink,
                             textColor: darkColor,
-                            onTap: () => _handleDeliverySelection(context),
+                            onTap: _handleDeliverySelection,
                           ),
 
                           const SizedBox(height: 16),
@@ -104,7 +132,7 @@ class OrderTypeDialog extends StatelessWidget {
                             subtitle: 'Passa a prendere il tuo ordine',
                             color: accentYellow,
                             textColor: darkColor,
-                            onTap: () => _handlePickupSelection(context),
+                            onTap: _handlePickupSelection,
                           ),
 
                           const SizedBox(height: 28),
@@ -269,22 +297,31 @@ class OrderTypeDialog extends StatelessWidget {
   }
 
   /// Gestisce selezione CONSEGNA
-  void _handleDeliverySelection(BuildContext context) async {
+  Future<void> _handleDeliverySelection() async {
+    if (_sceltaInCorso) return;
+    _sceltaInCorso = true;
+
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
     );
 
+    final loggato = await AuthService().isLoggedIn();
+    if (!mounted) return;
+
     // Ospite: non ha indirizzi salvati, quindi far scegliere tra "posizione
     // attuale" e "indirizzi salvati" non ha senso (e la lista fallirebbe).
-    // Si usa direttamente la posizione e si entra in home.
-    final loggato = await AuthService().isLoggedIn();
-    if (!context.mounted) return;
-
+    // Si usa direttamente la posizione del telefono.
     if (!loggato) {
       locationProvider.setOrderType('delivery');
-      await locationProvider.requestCurrentPosition();
-      if (context.mounted) Navigator.of(context).pop();
+
+      // Il dialog si chiude subito. La posizione NON viene attesa: fra
+      // permesso di sistema, aggancio del GPS e reverse geocoding puo'
+      // richiedere anche una quindicina di secondi, e nel frattempo qui
+      // resterebbe una schermata ferma senza spiegazione. La home si aggiorna
+      // da sola quando le coordinate arrivano.
+      _chiudi();
+      unawaited(locationProvider.requestCurrentPosition());
       return;
     }
 
@@ -295,16 +332,22 @@ class OrderTypeDialog extends StatelessWidget {
         builder: (context) => const DeliveryAddressSelectionScreen(),
       ),
     );
+    if (!mounted) return;
 
     // Chiudi il dialog SOLO se l'utente ha selezionato un indirizzo
-    if (result != null && context.mounted) {
-      Navigator.of(context).pop();
+    if (result != null) {
+      _chiudi();
+    } else {
+      // È tornato indietro: il dialog resta aperto e riabilita la scelta.
+      _sceltaInCorso = false;
     }
-    // Altrimenti l'utente è tornato indietro, il dialog rimane aperto
   }
 
   /// Gestisce selezione RITIRO
-  void _handlePickupSelection(BuildContext context) {
+  void _handlePickupSelection() {
+    if (_sceltaInCorso) return;
+    _sceltaInCorso = true;
+
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
@@ -314,7 +357,7 @@ class OrderTypeDialog extends StatelessWidget {
     locationProvider.setOrderType('pickup');
 
     // Chiudi il dialog
-    Navigator.of(context).pop();
+    _chiudi();
   }
 }
 
