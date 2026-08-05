@@ -97,15 +97,22 @@ class BlobPainter extends CustomPainter {
   /// Sigma della sfocatura interna.
   ///
   /// Una MaskFilter.blur si estende all'incirca per tre volte il proprio
-  /// sigma, quindi 3 significa una decina di pixel: e' il valore che tiene
-  /// l'alone dentro [margineAlone]. Alzarlo lo renderebbe piu' vistoso ma
-  /// comincerebbe a sconfinare, che e' esattamente il difetto da evitare.
-  static const double _sigmaInterno = 3.0;
+  /// sigma: 3,5 significa una decina di pixel, cioe' quanto basta a stare in
+  /// [margineAlone]. Alzarlo ancora renderebbe l'alone piu' ampio ma
+  /// comincerebbe a invadere la pastiglia vicina.
+  static const double _sigmaInterno = 3.5;
 
-  /// Sigma della sfumatura esterna. Si spinge oltre il margine, ma con
-  /// un'opacita' cosi' bassa che a quella distanza e' gia' impercettibile:
-  /// serve solo a evitare che l'alone si chiuda con un bordo netto.
-  static const double _sigmaEsterno = 5.0;
+  /// Sigma della sfumatura esterna, quella che evita il bordo netto.
+  static const double _sigmaEsterno = 5.5;
+
+  /// Quanto l'alone viene allargato rispetto alla sagoma prima di sfocarlo.
+  ///
+  /// E' l'accorgimento che lo rende visibile. Sfocando la sagoma alla sua
+  /// misura, meta' della sfocatura finisce sotto il riempimento opaco che
+  /// viene disegnato sopra: si butta via meta' dell'alone e quel che resta si
+  /// nota appena. Allargando il contorno prima di sfocarlo, la parte luminosa
+  /// cade fuori dalla pastiglia, dove si vede.
+  static const double _allargamentoAlone = 1.10;
 
   BlobPainter({required this.color, required this.isSelected});
 
@@ -116,18 +123,28 @@ class BlobPainter extends CustomPainter {
     // L'alone va sotto: disegnato dopo, la sfocatura coprirebbe il colore
     // pieno e lo intorbidirebbe.
     if (isSelected) {
+      final centro = Offset(size.width / 2, size.height / 2);
+      final ingrandimento = Matrix4.identity()
+        ..translateByDouble(centro.dx, centro.dy, 0, 1)
+        ..scaleByDouble(
+          _allargamentoAlone,
+          _allargamentoAlone,
+          _allargamentoAlone,
+          1,
+        )
+        ..translateByDouble(-centro.dx, -centro.dy, 0, 1);
+      final sagomaAlone = path.transform(ingrandimento.storage);
+
       canvas.drawPath(
-        path,
+        sagomaAlone,
         Paint()
-          ..color = color.withValues(alpha: 0.60)
+          ..color = color.withValues(alpha: 0.95)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _sigmaInterno),
       );
-      // Secondo passaggio piu' largo e tenue: sfuma verso l'esterno invece di
-      // chiudersi con un bordo netto.
       canvas.drawPath(
-        path,
+        sagomaAlone,
         Paint()
-          ..color = color.withValues(alpha: 0.22)
+          ..color = color.withValues(alpha: 0.40)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _sigmaEsterno),
       );
     }

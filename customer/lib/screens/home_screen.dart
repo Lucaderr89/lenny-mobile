@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -887,54 +887,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final coloreCategoria = AppColors.coloreCategoria(cuisine.id);
 
             final isSelected = _selectedCuisineId == cuisine.id;
-            return Padding(
-              // La casella porta gia' dentro il margine per l'alone: qui basta
-              // l'aria fra una pastiglia e l'altra.
-              padding: const EdgeInsets.only(right: 8),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  BlobIconSelector(
-                    isSelected: isSelected,
-                    selectedColor: coloreCategoria,
-                    size: 70,
-                    onTap: () {
-                      setState(() {
-                        // Toggle: se già selezionato, deseleziona (mostra tutti)
-                        _selectedCuisineId = isSelected ? null : cuisine.id;
-                      });
+            // Nessuna spaziatura aggiuntiva: la casella porta gia' dentro 9px
+            // di margine per lato, quindi fra due pastiglie restano 18px anche
+            // con le caselle attaccate, praticamente i 16px di prima. Con 8px
+            // di padding il vuoto saliva a 26 e si notava.
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                BlobIconSelector(
+                  isSelected: isSelected,
+                  selectedColor: coloreCategoria,
+                  size: 70,
+                  onTap: () {
+                    setState(() {
+                      // Toggle: se già selezionato, deseleziona (mostra tutti)
+                      _selectedCuisineId = isSelected ? null : cuisine.id;
+                    });
+                  },
+                  child: Image.asset(
+                    cuisine.getIconAssetPath(),
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Il fondo e' chiaro in entrambi gli stati: il bianco
+                      // di prima sarebbe sparito sulla pastiglia selezionata.
+                      return Icon(
+                        Icons.restaurant,
+                        color: coloreCategoria,
+                        size: 27,
+                      );
                     },
-                    child: Image.asset(
-                      cuisine.getIconAssetPath(),
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Il fondo e' chiaro in entrambi gli stati: il bianco
-                        // di prima sarebbe sparito sulla pastiglia selezionata.
-                        return Icon(
-                          Icons.restaurant,
-                          color: coloreCategoria,
-                          size: 27,
-                        );
-                      },
-                    ),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    cuisine.name,
-                    style: TextStyle(
-                      fontSize: 10,
-                      // Da selezionata l'etichetta prende il colore pieno
-                      // della categoria: rinforza l'anello senza aggiungere
-                      // altri elementi grafici.
-                      color: isSelected ? coloreCategoria : darkColor,
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  cuisine.name,
+                  style: TextStyle(
+                    fontSize: 10,
+                    // Da selezionata l'etichetta prende il colore pieno
+                    // della categoria: rinforza l'anello senza aggiungere
+                    // altri elementi grafici.
+                    color: isSelected ? coloreCategoria : darkColor,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
@@ -1046,11 +1043,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildBottomNavItem(
-                'assets/icons/icons8-home-32.png',
-                'Home',
-                0,
-              ),
+              _buildBottomNavItem('assets/icons/icons8-home-32.png', 'Home', 0),
               _buildBottomNavItem(
                 'assets/icons/icons8-fattura-32.png',
                 'Ordini',
