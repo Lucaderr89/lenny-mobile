@@ -52,7 +52,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _messages.add(
         ChatMessage(
           text:
-              'Ciao! 👋 Sono Lenny, il tuo assistente AI!\n\nPosso aiutarti a trovare ristoranti vicino a te, suggerirti piatti e aggiungerli al carrello.\n\nCosa vuoi fare?',
+              'Ciao, sono Lenny.\n\nConosco i menu di tutti i locali qui intorno: dimmi che fame hai, quanto vuoi spendere o quanto tempo hai, e ti trovo qualcosa di buono.\n\nPosso anche dirti chi è aperto, quanto dista un locale e quando ti arriverebbe l\'ordine.',
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -113,6 +113,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       lat: lat,
       lng: lng,
       conversationHistory: history,
+      cart: _riepilogoCarrello(),
     );
 
     if (response.status == 'queued') {
@@ -128,6 +129,25 @@ class _AIChatScreenState extends State<AIChatScreen> {
       setState(() => _isTyping = false);
       _addFallbackError(response.message);
     }
+  }
+
+  /// Riepilogo del carrello da mandare a Lenny.
+  ///
+  /// Solo il minimo che serve a ragionarci: cosa c'è dentro, da quale locale e
+  /// quanto fa. Nessun dato personale, e niente se il carrello è vuoto.
+  Map<String, dynamic>? _riepilogoCarrello() {
+    final cart = context.read<CartProvider>();
+    if (cart.isEmpty) return null;
+
+    return {
+      'restaurant_id': cart.restaurantId,
+      'restaurant_name': cart.restaurantName,
+      'total': cart.total,
+      'items': cart.items
+          .take(15)
+          .map((i) => {'name': i.menuItem.name, 'quantity': i.quantity})
+          .toList(),
+    };
   }
 
   /// Attesa in parole invece che in secondi.
@@ -258,13 +278,16 @@ class _AIChatScreenState extends State<AIChatScreen> {
   void _onQuickActionTap(String label) {
     switch (label) {
       case 'Ispirami':
-        _onSendMessage('Cosa mi consigli da mangiare vicino a me?');
+        _onSendMessage('Cosa mi consigli da mangiare adesso?');
         break;
       case 'Aperti ora':
-        _onSendMessage('Quali ristoranti sono aperti ora vicino a me?');
+        _onSendMessage('Quali locali sono aperti adesso qui vicino?');
         break;
-      case 'Novità':
-        _onSendMessage('Ci sono novità o ristoranti nuovi nella mia zona?');
+      // "Novità" chiedeva dei ristoranti nuovi in zona, un dato che non
+      // esiste da nessuna parte: la risposta era per forza vaga. La
+      // popolarità recente invece è un dato vero e serve davvero a scegliere.
+      case 'Va forte':
+        _onSendMessage('Cosa stanno ordinando tutti in questi giorni?');
         break;
     }
   }
@@ -306,7 +329,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 quantity: qty,
                 selectedExtras: _extractExtras(customizations),
               );
-              _addFallbackText('✅ ${item.name} aggiunto al carrello!');
+              _addFallbackText('${item.name} aggiunto al carrello.');
             } catch (e) {
               _showCartConflictDialog(aiDish);
             }
@@ -335,7 +358,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           quantity: 1,
         );
         _addFallbackText(
-          '✅ ${aiDish.name} aggiunto al carrello! 🛒\nVai al carrello per completare l\'ordine.',
+          '${aiDish.name} aggiunto al carrello.\nVai al carrello quando vuoi completare l\'ordine.',
         );
       } catch (e) {
         _showCartConflictDialog(aiDish);
@@ -647,7 +670,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Ecco cosa ho trovato per te 👇',
+                  'Ecco cosa ho trovato per te',
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.dark.withOpacity(0.7),
@@ -658,7 +681,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
           ),
           SizedBox(
-            height: 148,
+            // Più alta di prima: la copertina del piatto è passata da una
+            // fascia colorata di 44 a una foto di 64.
+            height: 168,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -668,6 +693,20 @@ class _AIChatScreenState extends State<AIChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Segnaposto per i piatti che non hanno ancora una foto.
+  Widget _segnapostoPiatto() {
+    return Container(
+      color: AppColors.primary.withValues(alpha: 0.08),
+      child: Center(
+        child: Icon(
+          Icons.restaurant_menu,
+          size: 22,
+          color: AppColors.primary.withValues(alpha: 0.45),
+        ),
       ),
     );
   }
@@ -689,16 +728,23 @@ class _AIChatScreenState extends State<AIChatScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
-              ),
-            ),
-            child: const Center(
-              child: Text('🍽️', style: TextStyle(fontSize: 22)),
+          // Foto vera se il piatto ce l'ha, altrimenti un segnaposto sobrio.
+          // Le immagini si stanno caricando a mano un po' alla volta: la scheda
+          // migliora da sola man mano che arrivano, senza toccare il codice.
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: SizedBox(
+              height: 64,
+              width: double.infinity,
+              child: (dish.imageUrl != null && dish.imageUrl!.isNotEmpty)
+                  ? Image.network(
+                      dish.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _segnapostoPiatto(),
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null ? child : _segnapostoPiatto(),
+                    )
+                  : _segnapostoPiatto(),
             ),
           ),
           Padding(
@@ -790,7 +836,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Ristoranti trovati 📍',
+                  'Ristoranti trovati',
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.dark.withOpacity(0.7),
@@ -826,16 +872,51 @@ class _AIChatScreenState extends State<AIChatScreen> {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Center(
-            child: Text('🏪', style: TextStyle(fontSize: 22)),
+          child: Icon(
+            Icons.storefront_outlined,
+            size: 20,
+            color: AppColors.primary.withValues(alpha: 0.7),
           ),
         ),
-        title: Text(
-          rest.name,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                rest.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            // Un locale chiuso resta proponibile (si ordina su fascia), ma
+            // dev'essere evidente prima di aprirne il menu.
+            if (!rest.isOpen) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 1,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.gray.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'chiuso ora',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         subtitle: Text(
           rest.distanceKm > 0
@@ -955,9 +1036,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   Widget _buildQuickActions() {
     final actions = [
-      {'icon': '✨', 'label': 'Ispirami'},
-      {'icon': '🕐', 'label': 'Aperti ora'},
-      {'icon': '🆕', 'label': 'Novità'},
+      {'icon': Icons.auto_awesome_outlined, 'label': 'Ispirami'},
+      {'icon': Icons.schedule_outlined, 'label': 'Aperti ora'},
+      {'icon': Icons.local_fire_department_outlined, 'label': 'Va forte'},
     ];
 
     return Padding(
@@ -966,15 +1047,15 @@ class _AIChatScreenState extends State<AIChatScreen> {
         children: actions.map((action) {
           return Expanded(
             child: GestureDetector(
-              onTap: () => _onQuickActionTap(action['label']!),
+              onTap: () => _onQuickActionTap(action['label']! as String),
               child: Container(
                 margin: EdgeInsets.only(right: action == actions.last ? 0 : 6),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -982,11 +1063,15 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.max,
                   children: [
-                    Text(action['icon']!, style: const TextStyle(fontSize: 13)),
+                    Icon(
+                      action['icon']! as IconData,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        action['label']!,
+                        action['label']! as String,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,

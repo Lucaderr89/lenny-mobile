@@ -22,11 +22,18 @@ class GeminiService {
   /// Invia un messaggio all'assistente AI
   /// [lat] / [lng]  — posizione utente (0 = non disponibile)
   /// [conversationHistory] — ultimi messaggi della chat per il multi-turn
+  /// [cart] — contenuto attuale del carrello
+  ///
+  /// Il carrello viaggia nella richiesta perché vive qui sul telefono: il
+  /// server non ha una riga da leggere. Serve a Lenny per ragionare
+  /// sull'ordine in corso ("ti manca poco al minimo", "quello è di un altro
+  /// locale, dovresti svuotare").
   Future<AIResponse> sendMessage(
     String message, {
     double lat = 0,
     double lng = 0,
     List<Map<String, String>> conversationHistory = const [],
+    Map<String, dynamic>? cart,
   }) async {
     try {
       final response = await http
@@ -38,6 +45,7 @@ class GeminiService {
               'lat': lat,
               'lng': lng,
               'conversation_history': conversationHistory,
+              if (cart != null) 'cart': cart,
             }),
           )
           .timeout(Duration(seconds: AppConstants.apiTimeout));
@@ -173,6 +181,10 @@ class AIResponse {
 }
 
 /// Piatto suggerito dall'AI
+///
+/// Nome, prezzo e foto arrivano dal database, non dal testo del modello: le
+/// schede le costruisce il server rileggendo i piatti che l'assistente ha
+/// scelto di mostrare. Il prezzo in chat è quindi sempre quello vero.
 class AIDish {
   final int id;
   final String name;
@@ -180,6 +192,9 @@ class AIDish {
   final int restaurantId;
   final String restaurantName;
   final bool hasRequiredExtras;
+  final String? imageUrl;
+  final String? description;
+  final String? category;
 
   const AIDish({
     required this.id,
@@ -188,6 +203,9 @@ class AIDish {
     required this.restaurantId,
     required this.restaurantName,
     required this.hasRequiredExtras,
+    this.imageUrl,
+    this.description,
+    this.category,
   });
 
   factory AIDish.fromJson(Map<String, dynamic> json) => AIDish(
@@ -197,6 +215,9 @@ class AIDish {
         restaurantId:        json['restaurant_id'] as int? ?? 0,
         restaurantName:      json['restaurant_name'] as String? ?? '',
         hasRequiredExtras:   json['has_required_extras'] as bool? ?? false,
+        imageUrl:            json['image_url'] as String?,
+        description:         json['description'] as String?,
+        category:            json['category'] as String?,
       );
 }
 
@@ -206,12 +227,14 @@ class AIRestaurant {
   final String name;
   final double distanceKm;
   final String city;
+  final bool isOpen;
 
   const AIRestaurant({
     required this.id,
     required this.name,
     required this.distanceKm,
     required this.city,
+    this.isOpen = true,
   });
 
   factory AIRestaurant.fromJson(Map<String, dynamic> json) => AIRestaurant(
@@ -219,5 +242,6 @@ class AIRestaurant {
         name:        json['name'] as String? ?? '',
         distanceKm:  (json['distance_km'] as num?)?.toDouble() ?? 0,
         city:        json['city'] as String? ?? '',
+        isOpen:      json['is_open'] as bool? ?? true,
       );
 }
