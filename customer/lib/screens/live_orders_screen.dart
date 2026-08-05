@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../models/live_order.dart';
 import '../services/live_order_service.dart';
 import '../config/app_colors.dart';
+import '../services/auth_service.dart';
+import '../widgets/guest_gate.dart';
 
 /// Screen ordini attivi - Mostra ordini in corso (status 1-4)
 class LiveOrdersScreen extends StatefulWidget {
@@ -27,9 +29,22 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   static const Duration _intervalloRefresh = Duration(seconds: 30);
   Timer? _timerRefresh;
 
+  /// null = non ancora verificato. Un ospite non ha ordini da mostrare: si
+  /// presenta l'invito a registrarsi invece di far fallire la chiamata.
+  bool? _loggato;
+
   @override
   void initState() {
     super.initState();
+    _avvia();
+  }
+
+  Future<void> _avvia() async {
+    final loggato = await AuthService().isLoggedIn();
+    if (!mounted) return;
+    setState(() => _loggato = loggato);
+    if (!loggato) return;
+
     _loadOrders();
     _timerRefresh = Timer.periodic(
       _intervalloRefresh,
@@ -155,6 +170,19 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   }
 
   Widget _buildBody() {
+    if (_loggato == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_loggato == false) {
+      return const GuestGate(
+        titolo: 'I tuoi ordini',
+        messaggio:
+            'Con un account segui i tuoi ordini in tempo reale e ritrovi tutto lo storico.',
+        icona: Icons.receipt_long_outlined,
+        conAppBar: false,
+      );
+    }
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }

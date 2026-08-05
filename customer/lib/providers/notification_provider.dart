@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
+import '../services/auth_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _service = NotificationService();
@@ -14,8 +15,12 @@ class NotificationProvider extends ChangeNotifier {
   List<CustomerNotification> get notifications => _notifications;
   bool get isLoading => _isLoading;
 
-  /// Avvia il provider: carica il count e inizia il polling ogni 60s
-  void start() {
+  /// Avvia il provider: carica il count e inizia il polling ogni 60s.
+  /// Per un ospite non parte nulla: non ha notifiche e ogni chiamata
+  /// fallirebbe senza token.
+  Future<void> start() async {
+    if (!await AuthService().isLoggedIn()) return;
+
     refreshCount();
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 60), (_) {

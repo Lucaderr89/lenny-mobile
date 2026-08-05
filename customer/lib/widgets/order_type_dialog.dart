@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
+import '../services/auth_service.dart';
 import '../screens/delivery_address_selection_screen.dart';
 
 /// Dialog Full Screen per selezione tipo ordine - Stile Lenny
@@ -269,7 +270,25 @@ class OrderTypeDialog extends StatelessWidget {
 
   /// Gestisce selezione CONSEGNA
   void _handleDeliverySelection(BuildContext context) async {
-    // NON chiudere il dialog ancora, apri selezione indirizzo
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+
+    // Ospite: non ha indirizzi salvati, quindi far scegliere tra "posizione
+    // attuale" e "indirizzi salvati" non ha senso (e la lista fallirebbe).
+    // Si usa direttamente la posizione e si entra in home.
+    final loggato = await AuthService().isLoggedIn();
+    if (!context.mounted) return;
+
+    if (!loggato) {
+      locationProvider.setOrderType('delivery');
+      await locationProvider.requestCurrentPosition();
+      if (context.mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    // Utente registrato: sceglie tra posizione attuale e indirizzi salvati.
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -280,7 +299,6 @@ class OrderTypeDialog extends StatelessWidget {
     // Chiudi il dialog SOLO se l'utente ha selezionato un indirizzo
     if (result != null && context.mounted) {
       Navigator.of(context).pop();
-      print('✅ Indirizzo consegna selezionato');
     }
     // Altrimenti l'utente è tornato indietro, il dialog rimane aperto
   }

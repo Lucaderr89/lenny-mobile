@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../screens/splash_screen.dart';
 import '../screens/onboarding_screen_v5.dart';
+import '../widgets/guest_gate.dart';
 import '../screens/login_screen.dart';
 import '../screens/registration_screen.dart';
 import '../screens/forgot_password_screen.dart';
@@ -95,13 +96,27 @@ class AppRouter {
           );
         },
       ),
+      // Sezioni personali: per l'ospite mostrano l'invito a registrarsi invece
+      // di far partire chiamate che fallirebbero senza account.
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        builder: (context, state) => const SoloUtenti(
+          schermata: ProfileScreen(),
+          titolo: 'Il tuo profilo',
+          messaggio:
+              'Crea un account per salvare i tuoi indirizzi, vedere lo storico degli ordini e usare il portafoglio.',
+          icona: Icons.person_outline,
+        ),
       ),
       GoRoute(
         path: '/notifications',
-        builder: (context, state) => const NotificationsScreen(),
+        builder: (context, state) => const SoloUtenti(
+          schermata: NotificationsScreen(),
+          titolo: 'Le tue notifiche',
+          messaggio:
+              'Con un account ti avvisiamo a ogni passo del tuo ordine, dalla conferma alla consegna.',
+          icona: Icons.notifications_none,
+        ),
       ),
     ],
   );

@@ -1,3 +1,4 @@
+import '../services/auth_service.dart';
 import 'package:flutter/foundation.dart';
 import '../models/favorite.dart';
 import '../services/favorites_service.dart';
@@ -50,6 +51,10 @@ class FavoritesProvider with ChangeNotifier {
   Future<void> loadFavorites({bool forceRefresh = false}) async {
     if (_isLoading) return;
     if (_isLoaded && !forceRefresh) return;
+
+    // Un ospite non ha preferiti: senza account la chiamata fallirebbe e
+    // lascerebbe un errore in memoria senza motivo.
+    if (!await AuthService().isLoggedIn()) return;
 
     _isLoading = true;
     _error = null;

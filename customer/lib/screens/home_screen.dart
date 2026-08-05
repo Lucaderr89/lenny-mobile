@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../widgets/guest_gate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -371,7 +372,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 child: Text(
-                                  'Ciao, $_customerName',
+                                  // L'ospite non ha un nome: si saluta senza.
+                                  _customerName.isEmpty
+                                      ? 'Ciao!'
+                                      : 'Ciao, $_customerName',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
@@ -532,8 +536,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              const NotificationsScreen(),
+                                          builder: (_) => const SoloUtenti(
+                                            schermata: NotificationsScreen(),
+                                            titolo: 'Le tue notifiche',
+                                            messaggio:
+                                                'Con un account ti avvisiamo a ogni passo del tuo ordine, dalla conferma alla consegna.',
+                                            icona: Icons.notifications_none,
+                                          ),
                                         ),
                                       ).then((_) {
                                         // Aggiorna count al ritorno
@@ -1070,10 +1079,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             MaterialPageRoute(builder: (context) => const LiveOrdersScreen()),
           );
         } else if (index == 2) {
-          // Preferiti - apre favorites screen
+          // Preferiti - richiedono un account: sono salvati sul profilo
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const FavoritesScreen()),
+            MaterialPageRoute(
+              builder: (context) => const SoloUtenti(
+                schermata: FavoritesScreen(),
+                titolo: 'I tuoi preferiti',
+                messaggio:
+                    'Crea un account per salvare i ristoranti che ami e ritrovarli al volo.',
+                icona: Icons.favorite_border,
+              ),
+            ),
           );
         } else if (index == 3) {
           // Profilo
