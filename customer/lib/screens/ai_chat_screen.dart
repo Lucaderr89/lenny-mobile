@@ -117,8 +117,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
     if (response.status == 'queued') {
       setState(() {
-        _queueMessage =
-            'Sto pensando... (~${response.estimatedWait}s)  •  Coda: ${response.position}';
+        _queueMessage = _attesaLeggibile(response.estimatedWait ?? 30);
         _currentRequestId = response.requestId;
       });
       _startQueuePolling();
@@ -127,17 +126,51 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _addAIResponse(response);
     } else {
       setState(() => _isTyping = false);
-      _addFallbackError();
+      _addFallbackError(response.message);
     }
+  }
+
+  /// Attesa in parole invece che in secondi.
+  ///
+  /// Quando la quota giornaliera di tutti i modelli e' esaurita l'attesa puo'
+  /// essere di ore: scriverla in secondi non direbbe nulla a chi legge.
+  String _attesaLeggibile(int secondi) {
+    if (secondi >= 3600) {
+      final ore = (secondi / 3600).round();
+      return 'Sono molto richiesto in questo momento. Riprova fra circa $ore ${ore == 1 ? 'ora' : 'ore'}.';
+    }
+    if (secondi >= 90) {
+      final minuti = (secondi / 60).round();
+      return 'Un attimo di pazienza, ci vogliono circa $minuti minuti...';
+    }
+    return 'Sto pensando...';
   }
 
   void _startQueuePolling() {
     _queueCheckTimer?.cancel();
+
+    // Rete di sicurezza: senza un tetto, una richiesta che resta in attesa
+    // terrebbe il timer acceso a interrogare il server ogni 3 secondi per
+    // sempre, consumando batteria e dati anche a schermo chiuso.
+    var tentativi = 0;
+    const maxTentativi = 40; // due minuti
+
     _queueCheckTimer = Timer.periodic(const Duration(seconds: 3), (
       timer,
     ) async {
       if (_currentRequestId == null) {
         timer.cancel();
+        return;
+      }
+
+      if (++tentativi > maxTentativi) {
+        timer.cancel();
+        setState(() {
+          _isTyping = false;
+          _queueMessage = null;
+          _currentRequestId = null;
+        });
+        _addFallbackError('Ci sto mettendo troppo. Riprova fra poco!');
         return;
       }
 
@@ -157,7 +190,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
           _queueMessage = null;
           _currentRequestId = null;
         });
-        _addFallbackError();
+        _addFallbackError(status.message);
+      } else if (status.estimatedWait != null) {
+        // L'attesa puo' allungarsi mentre si aspetta (quota esaurita nel
+        // frattempo): il messaggio a schermo deve seguirla.
+        setState(() => _queueMessage = _attesaLeggibile(status.estimatedWait!));
       }
     });
   }
@@ -194,12 +231,22 @@ class _AIChatScreenState extends State<AIChatScreen> {
     }
   }
 
-  void _addFallbackError() {
+  /// Mostra l'errore in chat.
+  ///
+  /// Il server manda spesso un messaggio che spiega davvero cosa succede
+  /// ("sono molto richiesto", "crea un account per continuare"): quello vale
+  /// piu' di un generico "si e' verificato un errore", che lascia l'utente
+  /// senza sapere se riprovare ha senso.
+  void _addFallbackError([String? messaggioDalServer]) {
+    final testo = (messaggioDalServer != null && messaggioDalServer.trim().isNotEmpty)
+        ? messaggioDalServer
+        : 'Non riesco a risponderti in questo momento. Riprova tra poco!';
+
     setState(() {
       _isTyping = false;
       _messages.add(
         ChatMessage(
-          text: 'Mi dispiace, si è verificato un errore. Riprova tra poco! 😔',
+          text: testo,
           isUser: false,
           timestamp: DateTime.now(),
         ),
