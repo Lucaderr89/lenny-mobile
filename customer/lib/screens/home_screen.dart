@@ -62,12 +62,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // Colori dal prototipo 6-HOME DEFINITIVA.html
   static const Color primaryBlue = Color(0xFF0F4BCA);
   static const Color primaryDarkPink = AppColors.primary;
-  static const Color secondaryPink = Color(0xFFFF1A60);
   static const Color accentYellow = Color(0xFFFFD042);
   // Colori badge tipo ordine (uguali al dialog)
   static const Color badgeDeliveryColor = AppColors.primary; // Rosso consegna
   static const Color badgePickupColor = Color(0xFFF6E644); // Giallo ritiro
-  static const Color successGold = Color(0xFFFFB83D);
   static const Color warningOrange = Color(0xFFE67700);
   static const Color dangerRed = Color(0xFFC62828);
   static const Color darkColor = AppColors.dark;
@@ -379,7 +377,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
-                                    color: secondaryPink,
+                                    // Era rosa acceso, residuo del marchio
+                                    // precedente, proprio in cima alla home.
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ),
@@ -868,40 +868,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // Colori rotativi per le categorie (usati per il blob selezionato)
-    final colors = [
-      primaryDarkPink,
-      accentYellow,
-      secondaryPink,
-      successGold,
-      warningOrange,
-      dangerRed,
-    ];
-
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       color: Colors.transparent,
       child: SizedBox(
-        height: 82,
+        // Casella 70 + spazio + etichetta. La lista ritaglia il proprio
+        // riquadro: se resta stretta, taglia l'alone della pastiglia scelta.
+        height: 98,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           itemCount: _cuisines.length,
           itemBuilder: (context, index) {
             final cuisine = _cuisines[index];
-            final selectedColor = colors[index % colors.length];
+            // Il colore segue l'id della cucina, non la posizione: cosi'
+            // Pizzeria resta della stessa tinta anche se il server cambia
+            // l'ordine o ne aggiunge una nuova.
+            final coloreCategoria = AppColors.coloreCategoria(cuisine.id);
 
             final isSelected = _selectedCuisineId == cuisine.id;
             return Padding(
-              padding: const EdgeInsets.only(right: 15),
+              // La casella porta gia' dentro il margine per l'alone: qui basta
+              // l'aria fra una pastiglia e l'altra.
+              padding: const EdgeInsets.only(right: 8),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   BlobIconSelector(
                     isSelected: isSelected,
-                    selectedColor: selectedColor,
-                    unselectedColor: const Color(0xFFE8E8E8),
-                    size: 52,
+                    selectedColor: coloreCategoria,
+                    size: 70,
                     onTap: () {
                       setState(() {
                         // Toggle: se già selezionato, deseleziona (mostra tutti)
@@ -913,9 +909,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                       errorBuilder: (context, error, stackTrace) {
+                        // Il fondo e' chiaro in entrambi gli stati: il bianco
+                        // di prima sarebbe sparito sulla pastiglia selezionata.
                         return Icon(
                           Icons.restaurant,
-                          color: isSelected ? Colors.white : grayColor,
+                          color: coloreCategoria,
                           size: 27,
                         );
                       },
@@ -926,7 +924,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     cuisine.name,
                     style: TextStyle(
                       fontSize: 10,
-                      color: isSelected ? selectedColor : darkColor,
+                      // Da selezionata l'etichetta prende il colore pieno
+                      // della categoria: rinforza l'anello senza aggiungere
+                      // altri elementi grafici.
+                      color: isSelected ? coloreCategoria : darkColor,
                       fontWeight: isSelected
                           ? FontWeight.w700
                           : FontWeight.w500,
@@ -996,17 +997,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           MaterialPageRoute(builder: (context) => const AIChatScreen()),
         );
       },
+      // Il pulsante piu' in vista della home era rimasto rosa acceso, colore
+      // del marchio precedente. Ora prende il blu e il ciano del cappellino,
+      // con un alone che lo stacca dallo sfondo chiaro.
       child: Container(
         width: 50,
         height: 50,
         decoration: BoxDecoration(
-          color: secondaryPink,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, AppColors.secondary],
+          ),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: AppColors.primary.withValues(alpha: 0.40),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
           ],
         ),

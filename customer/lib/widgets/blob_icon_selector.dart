@@ -1,14 +1,41 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Widget con forma blob irregolare per icone di selezione
-/// Ispirato al design di Glovo
+/// Pastiglia con forma organica per le categorie di cucina.
+///
+/// Ogni categoria ha il proprio colore e lo tiene sempre, anche da ferma:
+/// prima erano tutte grigie finche' non le toccavi, e la home sembrava spenta
+/// rispetto al selettore iniziale delle categorie.
+///
+/// La selezione non puo' quindi piu' essere segnalata dal colore, che adesso
+/// c'e' sempre: la indica un alone attorno alla pastiglia, piu' la lieve
+/// inclinazione dell'icona.
+///
+/// ## Perche' l'alone non viene tagliato
+///
+/// Un alone e' una sfocatura che si estende oltre la sagoma. Disegnarlo
+/// ingenuamente lo esporrebbe a due tagli: la ListView orizzontale ritaglia il
+/// proprio riquadro, quindi la prima e l'ultima pastiglia lo perderebbero da
+/// un lato; e con pochi pixel fra una pastiglia e l'altra finirebbe addosso
+/// alla vicina.
+///
+/// Per questo la sagoma non riempie tutto il riquadro assegnato: [size] e' la
+/// misura della casella, mentre la forma viene disegnata piu' piccola
+/// lasciando attorno un margine (vedi [BlobPainter.margineAlone]) in cui
+/// l'alone sta comodo. Cosi' resta dentro i confini della casella e non
+/// dipende dallo spazio della vicina ne' dal ritaglio della lista.
 class BlobIconSelector extends StatelessWidget {
   final Widget child;
   final bool isSelected;
   final VoidCallback onTap;
+
+  /// Colore pieno della categoria.
   final Color selectedColor;
+
+  /// Ignorato: resta per non rompere le chiamate esistenti.
   final Color unselectedColor;
+
+  /// Lato della casella, alone compreso. La sagoma e' piu' piccola.
   final double size;
 
   const BlobIconSelector({
@@ -16,32 +43,28 @@ class BlobIconSelector extends StatelessWidget {
     required this.child,
     required this.isSelected,
     required this.onTap,
-    this.selectedColor = const Color(0xFFFFD042), // Giallo accento default
-    this.unselectedColor = const Color(0xFFE8E8E8), // Grigio chiaro
-    this.size = 52,
+    this.selectedColor = const Color(0xFFFFD042),
+    this.unselectedColor = const Color(0xFFE8E8E8),
+    this.size = 70,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+      child: SizedBox(
         width: size,
         height: size,
         child: CustomPaint(
-          painter: BlobPainter(
-            color: isSelected ? selectedColor : unselectedColor,
-            isSelected: isSelected,
-          ),
+          painter: BlobPainter(color: selectedColor, isSelected: isSelected),
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.all(7),
+              // Il margine dell'alone piu' l'aria attorno all'icona.
+              padding: EdgeInsets.all(BlobPainter.margineAlone + 6),
               child: TweenAnimationBuilder<double>(
                 tween: Tween<double>(
                   begin: 0,
-                  end: isSelected ? -0.15 : 0, // Rotazione leggera (~8.6 gradi)
+                  end: isSelected ? -0.15 : 0, // Inclinazione di ~8,6 gradi
                 ),
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutBack,
@@ -58,29 +81,64 @@ class BlobIconSelector extends StatelessWidget {
   }
 }
 
-/// Custom painter per disegnare una forma blob irregolare
+/// Disegna la forma organica della pastiglia e, da selezionata, il suo alone.
 class BlobPainter extends CustomPainter {
+  /// Colore pieno della categoria.
   final Color color;
   final bool isSelected;
+
+  /// Spazio lasciato libero fra il bordo della casella e la sagoma.
+  ///
+  /// E' la stanza in cui vive l'alone. Tenerlo qui, e non nel widget che
+  /// disegna, e' cio' che impedisce all'alone di sconfinare sulla pastiglia
+  /// vicina o di essere tagliato dal bordo della lista.
+  static const double margineAlone = 9.0;
+
+  /// Sigma della sfocatura interna.
+  ///
+  /// Una MaskFilter.blur si estende all'incirca per tre volte il proprio
+  /// sigma, quindi 3 significa una decina di pixel: e' il valore che tiene
+  /// l'alone dentro [margineAlone]. Alzarlo lo renderebbe piu' vistoso ma
+  /// comincerebbe a sconfinare, che e' esattamente il difetto da evitare.
+  static const double _sigmaInterno = 3.0;
+
+  /// Sigma della sfumatura esterna. Si spinge oltre il margine, ma con
+  /// un'opacita' cosi' bassa che a quella distanza e' gia' impercettibile:
+  /// serve solo a evitare che l'alone si chiuda con un bordo netto.
+  static const double _sigmaEsterno = 5.0;
 
   BlobPainter({required this.color, required this.isSelected});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
     final path = _createBlobPath(size);
-    canvas.drawPath(path, paint);
 
-    // Ombra se selezionato
+    // L'alone va sotto: disegnato dopo, la sfocatura coprirebbe il colore
+    // pieno e lo intorbidirebbe.
     if (isSelected) {
-      final shadowPaint = Paint()
-        ..color = color.withOpacity(0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-      canvas.drawPath(path, shadowPaint);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color.withValues(alpha: 0.60)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _sigmaInterno),
+      );
+      // Secondo passaggio piu' largo e tenue: sfuma verso l'esterno invece di
+      // chiudersi con un bordo netto.
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color.withValues(alpha: 0.22)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _sigmaEsterno),
+      );
     }
+
+    // Colore pieno in entrambi gli stati: e' quello che tiene viva la home.
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill,
+    );
   }
 
   /// Crea un path blob irregolare usando curve di Bézier
@@ -92,8 +150,13 @@ class BlobPainter extends CustomPainter {
     final centerX = width / 2;
     final centerY = height / 2;
 
-    // Raggio base del cerchio
-    final baseRadius = math.min(width, height) / 2.2;
+    // La sagoma non riempie la casella: si ritira di [margineAlone] per
+    // lasciare posto all'alone. Il divisore tiene conto della variazione
+    // organica applicata sotto, che puo' allargare il raggio fino a circa
+    // l'8%: senza, i lobi piu' sporgenti mangerebbero il margine.
+    const massimaSporgenza = 1.08;
+    final baseRadius =
+        (math.min(width, height) / 2 - margineAlone) / massimaSporgenza;
 
     // Molti punti per forma fluida senza spigoli (come category screen)
     const numPoints = 24;
