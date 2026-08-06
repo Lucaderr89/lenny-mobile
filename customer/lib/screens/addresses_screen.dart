@@ -125,7 +125,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
+      backgroundColor: AppColors.cream,
       appBar: AppBar(
         title: const Text(
           'I miei indirizzi',
@@ -134,7 +134,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        backgroundColor: const Color(0xFFFFF8F0),
+        backgroundColor: AppColors.cream,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.dark),
       ),
@@ -254,7 +254,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                       'PREDEFINITO',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 9,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -284,7 +284,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                   address.name!,
                                   style: const TextStyle(
                                     color: AppColors.dark,
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -306,7 +306,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                               Text(
                                 address.note!,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   color: Colors.grey[500],
                                   fontStyle: FontStyle.italic,
                                 ),
@@ -349,7 +349,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                               child: IconButton(
                                 onPressed: () => _navigateToAddAddress(address),
                                 icon: const Icon(Icons.edit),
-                                color: Colors.blue,
+                                color: AppColors.primary,
                                 iconSize: 18,
                                 padding: EdgeInsets.zero,
                               ),
@@ -363,7 +363,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                               child: IconButton(
                                 onPressed: () => _deleteAddress(address),
                                 icon: const Icon(Icons.delete),
-                                color: Colors.red,
+                                color: AppColors.danger,
                                 iconSize: 18,
                                 padding: EdgeInsets.zero,
                               ),

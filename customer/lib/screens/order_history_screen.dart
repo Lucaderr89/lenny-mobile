@@ -315,8 +315,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     // Colori diversi per consegnato/annullato
     final bool isDelivered = order.statusId == 5;
     final Color cardColor = isDelivered
-        ? const Color(0xFF00C853) // Verde per consegnato
-        : const Color(0xFFEF5350); // Rosso per annullato
+        ? AppColors.success // Verde per consegnato
+        : AppColors.danger; // Rosso per annullato
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
@@ -400,7 +400,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               child: Text(
                                 order.statusLabel,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: cardColor,
                                 ),
@@ -541,7 +541,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFFFF6B35),
+                          color: AppColors.primary,
                         ),
                       ),
                     ],

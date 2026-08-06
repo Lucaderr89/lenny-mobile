@@ -691,7 +691,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 'In Arrivo',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),

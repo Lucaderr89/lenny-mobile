@@ -751,7 +751,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   dish.restaurantName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: AppColors.gray),
+                  style: TextStyle(fontSize: 11, color: AppColors.gray),
                 ),
                 const SizedBox(height: 5),
                 Row(
@@ -781,7 +781,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                         child: Text(
                           dish.hasRequiredExtras ? 'Personalizza' : 'Aggiungi',
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -894,7 +894,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 child: Text(
                   'chiuso ora',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: AppColors.gray,
                   ),

@@ -1457,7 +1457,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         Text(
           '${current.toStringAsFixed(current < 10 ? 1 : 0)}$unit / ${required.toStringAsFixed(0)}$unit',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 11,
             color: AppColors.gray.withOpacity(0.8),
           ),
         ),
@@ -1590,7 +1590,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               child: const Text(
                                 'ATTUALE',
                                 style: TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                 ),
@@ -1865,7 +1865,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Text(
                     redemption.statusLabel,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),

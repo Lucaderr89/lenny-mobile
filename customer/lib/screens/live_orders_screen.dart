@@ -339,7 +339,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               child: Text(
                                 order.statusLabel,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: cardColor,
                                 ),
@@ -479,7 +479,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               child: Text(
                                 '${order.startTime!.substring(0, 5)} - ${order.endTime!.substring(0, 5)}',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: cardColor,
                                 ),
@@ -529,7 +529,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                                   Text(
                                     item.extras!,
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       color: Colors.grey[500],
                                     ),
                                   ),
@@ -742,7 +742,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               child: Text(
                                 order.statusLabel,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: cardColor,
                                 ),
@@ -897,7 +897,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                                   Text(
                                     item.extras!,
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       color: Colors.grey[500],
                                     ),
                                   ),
@@ -998,7 +998,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                             child: Text(
                               '${order.startTime!.substring(0, 5)} - ${order.endTime!.substring(0, 5)}',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: cardColor,
                               ),
@@ -1241,7 +1241,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 tappe[i].label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   height: 1.1,
                   fontWeight: i == corrente ? FontWeight.w700 : FontWeight.w500,
                   color: raggiunta ? AppColors.dark : Colors.grey[400],

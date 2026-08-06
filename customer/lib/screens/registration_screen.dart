@@ -737,11 +737,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleRegister,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.splashGradientEnd,
-                foregroundColor: AppColors.dark,
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
                 ),
               ),
               child: _isLoading

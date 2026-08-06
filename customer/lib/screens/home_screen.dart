@@ -67,9 +67,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   StreamSubscription? _fcmSubscription;
 
   // Colori dal prototipo 6-HOME DEFINITIVA.html
-  static const Color primaryBlue = Color(0xFF0F4BCA);
+  static const Color primaryBlue = AppColors.primary; // era un SECONDO blu (#0F4BCA)
   static const Color primaryDarkPink = AppColors.primary;
-  static const Color accentYellow = Color(0xFFFFD042);
+  static const Color accentYellow = AppColors.accent;
   // Colori badge tipo ordine (uguali al dialog)
   static const Color badgeDeliveryColor = AppColors.primary; // Rosso consegna
   static const Color badgePickupColor = Color(0xFFF6E644); // Giallo ritiro
@@ -538,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                   ? 'RITIRO'
                                                   : 'CONSEGNA',
                                               style: TextStyle(
-                                                fontSize: 9,
+                                                fontSize: 11,
                                                 fontWeight: FontWeight.w700,
                                                 color: locationProvider.isPickup
                                                     ? darkColor
@@ -674,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                       .toString(),
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontSize: 9,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -731,7 +731,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                 : cart.itemCount.toString(),
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontSize: 9,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -854,7 +854,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       ? 'RITIRO'
                                       : 'CONSEGNA',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: locationProvider.isPickup
                                         ? darkColor
@@ -1033,7 +1033,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Text(
                   cuisine.name,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     // Da selezionata l'etichetta prende il colore pieno
                     // della categoria: rinforza l'anello senza aggiungere
                     // altri elementi grafici.
@@ -1223,7 +1223,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               color: isActive ? primaryBlue : grayColor,
             ),
           ),

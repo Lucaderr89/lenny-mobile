@@ -1302,7 +1302,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                       child: Text(
                         item.badges.first.toUpperCase(),
                         style: const TextStyle(
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: darkColor,
                         ),
@@ -1535,7 +1535,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                                   child: Text(
                                     badge,
                                     style: const TextStyle(
-                                      fontSize: 9,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
@@ -1715,7 +1715,6 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: darkColor,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                       ),

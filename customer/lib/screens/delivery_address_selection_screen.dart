@@ -55,7 +55,7 @@ class _DeliveryAddressSelectionScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F0),
+      backgroundColor: AppColors.cream,
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -196,7 +196,7 @@ class _DeliveryAddressSelectionScreenState
                                 title: 'Aggiungi nuovo indirizzo',
                                 subtitle:
                                     'Salva un indirizzo per riutilizzarlo',
-                                iconColor: const Color(0xFFFFD042),
+                                iconColor: AppColors.accent,
                                 textColor: AppColors.dark,
                                 onTap: () => _addNewAddress(),
                               ),
@@ -323,7 +323,7 @@ class _AddressOptionCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF8F0),
+            color: AppColors.cream,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.grayLight, width: 1),
           ),

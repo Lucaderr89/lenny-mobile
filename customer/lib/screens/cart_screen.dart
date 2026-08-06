@@ -564,7 +564,6 @@ class _CartScreenState extends State<CartScreen> {
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                fontFamily: 'Segoe UI',
               ),
             ),
           ),
@@ -580,7 +579,6 @@ class _CartScreenState extends State<CartScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 13,
-                fontFamily: 'Segoe UI',
               ),
             ),
           ),
@@ -626,9 +624,8 @@ class _CartScreenState extends State<CartScreen> {
                       number.toString(),
                       style: TextStyle(
                         color: isActive ? Colors.white : grayColor,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        fontFamily: 'Segoe UI',
                       ),
                     ),
             ),
@@ -637,14 +634,13 @@ class _CartScreenState extends State<CartScreen> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               color: isCompleted
                   ? successColor
                   : isActive
                   ? primaryColor
                   : grayColor,
               fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
-              fontFamily: 'Segoe UI',
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -717,7 +713,6 @@ class _CartScreenState extends State<CartScreen> {
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: darkColor,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -745,7 +740,6 @@ class _CartScreenState extends State<CartScreen> {
     const infoStyle = TextStyle(
       fontSize: 13,
       color: grayColor,
-      fontFamily: 'Segoe UI',
     );
     final segments = <Widget>[];
 
@@ -803,7 +797,6 @@ class _CartScreenState extends State<CartScreen> {
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: darkColor,
-                fontFamily: 'Segoe UI',
               ),
             ),
             const SizedBox(height: 10),
@@ -813,7 +806,6 @@ class _CartScreenState extends State<CartScreen> {
               style: TextStyle(
                 fontSize: 15,
                 color: grayColor,
-                fontFamily: 'Segoe UI',
                 height: 1.5,
               ),
             ),
@@ -835,7 +827,6 @@ class _CartScreenState extends State<CartScreen> {
                 textStyle: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ),
@@ -881,13 +872,11 @@ class _CartScreenState extends State<CartScreen> {
     const labelStyle = TextStyle(
       fontSize: 13,
       color: grayColor,
-      fontFamily: 'Segoe UI',
     );
     const valueStyle = TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w600,
       color: darkColor,
-      fontFamily: 'Segoe UI',
     );
 
     return Container(
@@ -922,7 +911,6 @@ class _CartScreenState extends State<CartScreen> {
                               fontSize: 12,
                               color: grayColor,
                               decoration: TextDecoration.lineThrough,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                         const SizedBox(width: 6),
@@ -932,7 +920,6 @@ class _CartScreenState extends State<CartScreen> {
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: successColor,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                       ],
@@ -965,7 +952,6 @@ class _CartScreenState extends State<CartScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF9A6400),
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -991,7 +977,6 @@ class _CartScreenState extends State<CartScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: successColor,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -1024,7 +1009,6 @@ class _CartScreenState extends State<CartScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ],
@@ -1061,7 +1045,6 @@ class _CartScreenState extends State<CartScreen> {
                     fontWeight: FontWeight.w700,
                     color: darkColor,
                     fontSize: 14,
-                    fontFamily: 'Segoe UI',
                     height: 1.15,
                   ),
                 ),
@@ -1072,7 +1055,6 @@ class _CartScreenState extends State<CartScreen> {
                     style: const TextStyle(
                       color: grayColor,
                       fontSize: 12,
-                      fontFamily: 'Segoe UI',
                       height: 1.25,
                     ),
                   ),
@@ -1084,7 +1066,6 @@ class _CartScreenState extends State<CartScreen> {
                     color: darkColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1104,7 +1085,6 @@ class _CartScreenState extends State<CartScreen> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         textStyle: const TextStyle(
                           fontSize: 12,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                     ),
@@ -1120,7 +1100,6 @@ class _CartScreenState extends State<CartScreen> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         textStyle: const TextStyle(
                           fontSize: 12,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                     ),
@@ -1153,7 +1132,6 @@ class _CartScreenState extends State<CartScreen> {
                       fontWeight: FontWeight.w600,
                       color: darkColor,
                       fontSize: 14,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -1226,7 +1204,6 @@ class _CartScreenState extends State<CartScreen> {
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       color: darkColor,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ],
@@ -1298,7 +1275,6 @@ class _CartScreenState extends State<CartScreen> {
                                     fontWeight: FontWeight.w600,
                                     color: darkColor,
                                     fontSize: 14,
-                                    fontFamily: 'Segoe UI',
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1314,7 +1290,6 @@ class _CartScreenState extends State<CartScreen> {
                                         color: darkColor,
                                         fontWeight: FontWeight.w500,
                                         fontSize: 14,
-                                        fontFamily: 'Segoe UI',
                                       ),
                                     ),
                                     Container(
@@ -1390,7 +1365,6 @@ class _CartScreenState extends State<CartScreen> {
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       color: darkColor,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ],
@@ -1454,7 +1428,6 @@ class _CartScreenState extends State<CartScreen> {
                     fontWeight: FontWeight.w600,
                     color: darkColor,
                     fontSize: 14,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1464,7 +1437,6 @@ class _CartScreenState extends State<CartScreen> {
                     style: const TextStyle(
                       color: grayColor,
                       fontSize: 12,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
               ],
@@ -1476,7 +1448,6 @@ class _CartScreenState extends State<CartScreen> {
               color: darkColor,
               fontWeight: FontWeight.w600,
               fontSize: 14,
-              fontFamily: 'Segoe UI',
             ),
           ),
           const SizedBox(width: 10),
@@ -1659,7 +1630,6 @@ class _CartScreenState extends State<CartScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: darkColor,
-                fontFamily: 'Segoe UI',
               ),
               textAlign: TextAlign.center,
             ),
@@ -1669,7 +1639,6 @@ class _CartScreenState extends State<CartScreen> {
               style: TextStyle(
                 fontSize: 15,
                 color: grayColor,
-                fontFamily: 'Segoe UI',
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -1693,7 +1662,6 @@ class _CartScreenState extends State<CartScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
-                        fontFamily: 'Segoe UI',
                       ),
                     ),
                   ),
@@ -1716,7 +1684,6 @@ class _CartScreenState extends State<CartScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        fontFamily: 'Segoe UI',
                       ),
                     ),
                   ),

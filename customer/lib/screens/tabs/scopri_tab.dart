@@ -41,10 +41,10 @@ class _ScopriTabState extends State<ScopriTab>
 
   // Colori (coerenti con home_screen.dart)
   static const Color primaryDarkPink = AppColors.primary;
-  static const Color secondaryPink = Color(0xFFFF1A60);
-  static const Color accentYellow = Color(0xFFFFD042);
-  static const Color successGold = Color(0xFFFFB83D);
-  static const Color warningOrange = Color(0xFFE67700);
+  static const Color secondaryPink = AppColors.danger; // era il rosa del vecchio brand
+  static const Color accentYellow = AppColors.accent;
+  static const Color successGold = AppColors.accent;
+  static const Color warningOrange = AppColors.warning;
   static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
   static const Color grayColor = AppColors.grayDark;
@@ -174,7 +174,7 @@ class _ScopriTabState extends State<ScopriTab>
         height: 120,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+            colors: [AppColors.primaryDark, AppColors.primaryEnd],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -197,7 +197,7 @@ class _ScopriTabState extends State<ScopriTab>
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+          colors: [AppColors.primaryDark, AppColors.primaryEnd],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -560,7 +560,7 @@ class _ScopriTabState extends State<ScopriTab>
                     Text(
                       dish.timeAgo,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: grayColor,
                       ),
@@ -620,7 +620,7 @@ class _ScopriTabState extends State<ScopriTab>
               Text(
                 'by Misya',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   color: grayColor.withOpacity(0.7),
                 ),
               ),
@@ -699,7 +699,7 @@ class _ScopriTabState extends State<ScopriTab>
                       child: Text(
                         content.badge!,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),

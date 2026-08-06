@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../config/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 import '../services/auth_service.dart';
@@ -12,10 +13,8 @@ class OrderTypeDialog extends StatefulWidget {
   const OrderTypeDialog({super.key});
 
   // Colori coerenti con l'app
-  static const Color primaryDarkPink = Color(0xFF0F4E8C); // primary dell'app (blu del logo)
-  static const Color accentYellow = Color(
-    0xFFF6E644,
-  ); // splash gradient dell'app
+  static const Color primaryDarkPink = AppColors.primary;
+  static const Color accentYellow = AppColors.accent;
   static const Color darkColor = Color(0xFF0A0A0A);
 
   @override
@@ -49,7 +48,7 @@ class _OrderTypeDialogState extends State<OrderTypeDialog> {
     return WillPopScope(
       onWillPop: () async => false,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFFF8F0),
+        backgroundColor: AppColors.cream,
         body: SafeArea(
           bottom: false,
           child: Column(

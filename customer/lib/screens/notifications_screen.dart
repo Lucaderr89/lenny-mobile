@@ -13,8 +13,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  static const Color primaryBlue = Color(0xFF0F4BCA);
-  static const Color dangerRed = Color(0xFFC62828);
+  static const Color primaryBlue = AppColors.primary;
+  static const Color dangerRed = AppColors.danger;
   static const Color darkColor = AppColors.dark;
   static const Color grayColor = AppColors.grayDark;
   static const Color lightGrayColor = AppColors.grayLight;
@@ -62,13 +62,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _colorForEvent(String? event) {
     switch (event) {
       case 'order_confirmed':
-        return const Color(0xFF2E7D32);
+        return AppColors.success;
       case 'order_ready':
-        return const Color(0xFFE65100);
+        return AppColors.warning;
       case 'order_out_for_delivery':
         return primaryBlue;
       case 'order_delivered':
-        return const Color(0xFF2E7D32);
+        return AppColors.success;
       case 'order_cancelled':
         return dangerRed;
       default:

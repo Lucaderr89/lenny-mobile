@@ -34,8 +34,8 @@ class _RistorantiTabState extends State<RistorantiTab>
   bool get wantKeepAlive => true;
 
   // Colori
-  static const Color primaryDarkPink = AppColors.primary;
-  static const Color accentYellow = Color(0xFFFFD042);
+  static const Color primaryDarkPink = AppColors.primary; // TODO F4: rinominare
+  static const Color accentYellow = AppColors.accent;
   static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
   static const Color grayColor = AppColors.grayDark;
@@ -555,7 +555,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                           decoration: BoxDecoration(
                             color: opensAt != null
                                 ? primaryDarkPink
-                                : const Color(0xFFB71C1C),
+                                : AppColors.danger,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -590,7 +590,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                       child: Text(
                         distanceText,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -616,7 +616,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                       child: Text(
                         'Gratis da €${restaurant.actualFreeOver!.toStringAsFixed(0)}',
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -1086,7 +1086,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                           Text(
                             'Gratis da €${restaurant.actualFreeOver!.toStringAsFixed(2)}',
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -1157,7 +1157,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                             child: const Text(
                               'PREORDINA',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: darkColor,
                               ),
@@ -1189,7 +1189,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFB71C1C),
+                          color: AppColors.danger,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -1273,7 +1273,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                         Text(
                           restaurant.rating.toStringAsFixed(1),
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: darkColor,
                           ),
@@ -1295,7 +1295,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                         child: Text(
                           restaurant.cuisine,
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: grayColor,
                           ),
                           maxLines: 1,
@@ -1322,7 +1322,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                               const Text(
                                 'Un attimo...',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   color: grayColor,
                                   fontStyle: FontStyle.italic,
                                 ),
@@ -1342,7 +1342,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                               Text(
                                 deliveryFeeText,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: deliveryFeeText == 'Gratis'
                                       ? AppColors.success
@@ -1361,7 +1361,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                                 Text(
                                   'Min €${restaurant.actualMinOrder!.toStringAsFixed(2)}',
                                   style: const TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     color: grayColor,
                                   ),
                                 ),

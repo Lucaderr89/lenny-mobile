@@ -197,7 +197,7 @@ class _AddressSelectorBottomSheetState
             child: Text(
               'Indirizzi salvati',
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey,
               ),
@@ -247,7 +247,7 @@ class _AddressSelectorBottomSheetState
                 'Selezionato',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -474,7 +474,7 @@ class _AddressSelectorBottomSheetState
                 'Predefinito',
                 style: TextStyle(
                   color: Colors.orange[900],
-                  fontSize: 7,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -492,7 +492,7 @@ class _AddressSelectorBottomSheetState
                 'Selezionato',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 8,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -517,7 +517,7 @@ class _AddressSelectorBottomSheetState
                   if (address.city != null) address.city,
                   if (address.postalCode != null) address.postalCode,
                 ].join(' • '),
-                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
               ),
             ),
         ],

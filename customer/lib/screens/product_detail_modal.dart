@@ -574,7 +574,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                   child: Text(
                     item.name,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       color: color,
                       fontWeight: FontWeight.w600,
                     ),
@@ -600,7 +600,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                         Text(
                           '+$remainingCount',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: color,
                             fontWeight: FontWeight.w800,
                           ),
@@ -770,7 +770,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                 child: Text(
                   group.isRequired ? 'OBBLIGATORIO' : 'OPZIONALE',
                   style: const TextStyle(
-                    fontSize: 8,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: 0.3,
@@ -788,19 +788,19 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                 if (group.isRequired && group.minSelected > 0)
                   Text(
                     'Min: ${group.minSelected}',
-                    style: const TextStyle(fontSize: 10, color: grayColor),
+                    style: const TextStyle(fontSize: 11, color: grayColor),
                   ),
                 if (group.isRequired &&
                     group.minSelected > 0 &&
                     group.maxSelected != null)
                   const Text(
                     ' • ',
-                    style: TextStyle(fontSize: 10, color: grayColor),
+                    style: TextStyle(fontSize: 11, color: grayColor),
                   ),
                 if (group.maxSelected != null)
                   Text(
                     'Max: ${group.maxSelected}',
-                    style: const TextStyle(fontSize: 10, color: grayColor),
+                    style: const TextStyle(fontSize: 11, color: grayColor),
                   ),
                 const Spacer(),
                 if (selectedCount > 0)
@@ -816,7 +816,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                     child: Text(
                       '$selectedCount selezionati',
                       style: const TextStyle(
-                        fontSize: 9,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -832,7 +832,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
             Text(
               error,
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 color: dangerColor,
                 fontWeight: FontWeight.w600,
               ),
@@ -1024,7 +1024,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                                 'Non disponibile oggi')
                           : missingRequirements,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         color: dangerColor,
                         fontWeight: FontWeight.w500,
                       ),

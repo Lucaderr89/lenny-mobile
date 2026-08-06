@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import 'nexi_payment_screen.dart';
 import 'order_completed_screen.dart';
@@ -215,7 +216,7 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
         'icon': Icons.credit_card,
         'color': Colors.blue,
       },
-      {'id': 3, 'name': 'SMAC', 'icon': Icons.payment, 'color': Colors.orange},
+      {'id': 3, 'name': 'SMAC', 'icon': Icons.payment, 'color': AppColors.primary},
     ];
 
     return showDialog<int>(
@@ -416,7 +417,7 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
+                              backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -442,8 +443,8 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange,
-                              side: BorderSide(color: Colors.orange, width: 2),
+                              foregroundColor: AppColors.primary,
+                              side: BorderSide(color: AppColors.primary, width: 2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

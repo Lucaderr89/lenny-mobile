@@ -17,19 +17,20 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.background,
 
-      // Text Theme - Poppins per il body, Montserrat per i titoli
+      // Text Theme — UNA sola famiglia (Poppins): la gerarchia la fanno
+      // corpi e pesi, non un secondo font. Scala: 28/22/17/15/13/11.
       textTheme: TextTheme(
-        displayLarge: GoogleFonts.montserrat(
+        displayLarge: GoogleFonts.poppins(
           fontSize: 32,
           fontWeight: FontWeight.w800,
           color: AppColors.textPrimary,
         ),
-        displayMedium: GoogleFonts.montserrat(
+        displayMedium: GoogleFonts.poppins(
           fontSize: 28,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
-        displaySmall: GoogleFonts.montserrat(
+        displaySmall: GoogleFonts.poppins(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,

@@ -36,6 +36,10 @@ class AppColors {
   static const Color background = Color(0xFFFAFAFA);
   static const Color surface = Colors.white;
 
+  /// Sfondo "crema" identitario di login, scelta ordine e indirizzi.
+  /// Prima era hardcoded in 5 file diversi.
+  static const Color cream = Color(0xFFFFF8F0);
+
   // Text Colors
   static const Color textPrimary = dark;
   static const Color textSecondary = gray;
@@ -74,11 +78,12 @@ class AppColors {
     return categorie[id.abs() % categorie.length];
   }
 
-  // Shadows
+  // Shadows — UNICA ombra card di tutta l'app (e la variante "sollevata").
+  // Se serve un'ombra diversa da queste due, probabilmente non serve.
   static BoxShadow cardShadow = BoxShadow(
-    color: Colors.black.withOpacity(0.05),
-    blurRadius: 12,
-    offset: const Offset(0, 4),
+    color: Colors.black.withOpacity(0.08),
+    blurRadius: 8,
+    offset: const Offset(0, 2),
   );
 
   static BoxShadow cardShadowHover = BoxShadow(
@@ -97,6 +102,23 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryDark, primaryEnd], // #ff5a5f → #ff8f6b
+    colors: [primaryDark, primaryEnd], // blu scuro → blu medio
   );
+}
+
+/// Scala radius UNICA dell'app. Prima ne circolavano quindici diversi
+/// (2,3,4,6,8,10,12,14,15,16,20,24,28,30,32): ora sono quattro, con un
+/// significato ciascuno. Non introdurre altri valori.
+class AppRadius {
+  /// Card, bottoni, input, banner: il raggio di default
+  static const double card = 12.0;
+
+  /// Chip, badge e pillole piccole dentro le card
+  static const double chip = 8.0;
+
+  /// Bottom sheet e dialog
+  static const double sheet = 24.0;
+
+  /// Elementi "pillola" completamente arrotondati (search bar, stepper)
+  static const double pill = 100.0;
 }

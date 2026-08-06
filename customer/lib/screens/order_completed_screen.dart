@@ -126,7 +126,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                 fontSize: 19,
                 fontWeight: FontWeight.w700,
                 color: AppColors.dark,
-                fontFamily: 'Segoe UI',
               ),
             ),
             const SizedBox(height: 8),
@@ -138,7 +137,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                 fontSize: 14,
                 color: Colors.grey[600],
                 height: 1.4,
-                fontFamily: 'Segoe UI',
               ),
             ),
             const SizedBox(height: 20),
@@ -162,7 +160,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
               ),
@@ -176,7 +173,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                   fontSize: 14,
                   color: Colors.grey[600],
                   fontWeight: FontWeight.w500,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ),
@@ -288,7 +284,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: primaryColor,
-                              fontFamily: 'Segoe UI',
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -299,7 +294,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                               fontSize: 17,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey[800],
-                              fontFamily: 'Segoe UI',
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -313,7 +307,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[700],
-                              fontFamily: 'Segoe UI',
                               height: 1.4,
                             ),
                             textAlign: TextAlign.center,
@@ -354,7 +347,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                fontFamily: 'Segoe UI',
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -385,7 +377,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.grey[600],
-                                fontFamily: 'Segoe UI',
                               ),
                             ),
                           ),
@@ -463,7 +454,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
             style: TextStyle(
               fontSize: 13,
               color: Colors.grey[500],
-              fontFamily: 'Segoe UI',
             ),
           ),
           Expanded(
@@ -474,7 +464,6 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
-                fontFamily: 'Segoe UI',
               ),
             ),
           ),

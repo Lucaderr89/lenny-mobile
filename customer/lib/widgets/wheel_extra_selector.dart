@@ -129,7 +129,7 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                                     ? '+€${option.priceModifier.toStringAsFixed(2)}'
                                     : '€${option.priceModifier.toStringAsFixed(2)}',
                                 style: const TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w500,
                                   color: grayColor,
                                 ),

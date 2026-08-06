@@ -211,14 +211,14 @@ class _WalletScreenState extends State<WalletScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFF6B35), Color(0xFFFF8C42)],
+              colors: [AppColors.primaryDark, AppColors.primaryEnd],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF6B35).withOpacity(0.3),
+                color: AppColors.primaryDark.withOpacity(0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -309,7 +309,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           child: const Text(
                             'In scadenza',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 11,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
@@ -332,7 +332,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     const SizedBox(height: 2),
                     Text(
                       'Utilizzato €${credit.used.toStringAsFixed(2)} di €${credit.originalAmount.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 10, color: AppColors.gray),
+                      style: TextStyle(fontSize: 11, color: AppColors.gray),
                     ),
                   ],
                 ],
@@ -346,13 +346,13 @@ class _WalletScreenState extends State<WalletScreen> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF00C853),
+                    color: AppColors.success,
                   ),
                 ),
                 if (credit.isPartiallyUsed)
                   Text(
                     'disponibili',
-                    style: TextStyle(fontSize: 9, color: AppColors.gray),
+                    style: TextStyle(fontSize: 11, color: AppColors.gray),
                   ),
               ],
             ),
@@ -397,7 +397,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF00C853),
+                            color: AppColors.success,
                           ),
                         ),
                       ],
@@ -561,13 +561,13 @@ class _WalletScreenState extends State<WalletScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: card.isDefault ? const Color(0xFFFF6B35) : AppColors.lightGray,
+          color: card.isDefault ? AppColors.primaryDark : AppColors.lightGray,
           width: card.isDefault ? 2 : 1,
         ),
         boxShadow: [
           if (card.isDefault)
             BoxShadow(
-              color: const Color(0xFFFF6B35).withOpacity(0.2),
+              color: AppColors.primaryDark.withOpacity(0.2),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -616,7 +616,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35),
+                      color: AppColors.primaryDark,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -647,7 +647,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     icon: const Icon(Icons.check_circle_outline, size: 16),
                     label: const Text('Imposta predefinita'),
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFFF6B35),
+                      foregroundColor: AppColors.primaryDark,
                       textStyle: const TextStyle(fontSize: 12),
                     ),
                   ),

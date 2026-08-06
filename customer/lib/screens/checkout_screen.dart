@@ -52,11 +52,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   static const Color grayColor = AppColors.gray;
   static const Color lightGrayColor = AppColors.lightGray;
   // Usato per le fasce non ordinabili (bloccate dal pannello o al completo)
-  static const Color dangerColor = Color(0xFFD32F2F);
+  static const Color dangerColor = AppColors.danger;
 
   // Colori badge tipo ordine (stessi della home)
   static const Color badgeDeliveryColor = AppColors.primary; // Rosso consegna
-  static const Color badgePickupColor = Color(0xFFF6E644); // Giallo ritiro
+  static const Color badgePickupColor = AppColors.accent; // Giallo ritiro
 
   // Dati caricati dall'API
   List<Map<String, dynamic>> _paymentMethods = [];
@@ -452,7 +452,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -463,7 +462,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   color: grayColor,
-                  fontFamily: 'Segoe UI',
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -475,7 +473,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: const TextStyle(
                     fontSize: 12,
                     color: grayColor,
-                    fontFamily: 'Segoe UI',
                     fontStyle: FontStyle.italic,
                   ),
                   textAlign: TextAlign.center,
@@ -501,7 +498,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -557,7 +553,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: darkColor,
-                    fontFamily: 'Segoe UI',
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -568,7 +563,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     color: grayColor,
-                    fontFamily: 'Segoe UI',
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -590,7 +584,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               color: darkColor,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                           Text(
@@ -599,7 +592,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: darkColor,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                         ],
@@ -613,7 +605,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               color: grayColor,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                           Text(
@@ -621,7 +612,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: const TextStyle(
                               fontSize: 14,
                               color: grayColor,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                         ],
@@ -636,7 +626,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: Colors.orange,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                           Text(
@@ -645,7 +634,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: Colors.orange,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                         ],
@@ -673,7 +661,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        fontFamily: 'Segoe UI',
                       ),
                     ),
                   ),
@@ -989,7 +976,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  fontFamily: 'Segoe UI',
                   color: Colors.black87,
                 ),
                 textAlign: TextAlign.center,
@@ -1002,7 +988,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: const TextStyle(
                   fontSize: 15,
                   color: grayColor,
-                  fontFamily: 'Segoe UI',
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -1043,7 +1028,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                           Text(
@@ -1051,7 +1035,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
-                              fontFamily: 'Segoe UI',
                               color: Colors.white.withOpacity(0.9),
                             ),
                           ),
@@ -1105,7 +1088,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                           Text(
@@ -1113,7 +1095,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
-                              fontFamily: 'Segoe UI',
                               color: primaryDark.withOpacity(0.8),
                             ),
                           ),
@@ -1263,7 +1244,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
                           color: darkColor,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                       IconButton(
@@ -1304,7 +1284,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: selezionato ? Colors.white : darkColor,
-                            fontFamily: 'Segoe UI',
                           ),
                           side: BorderSide(
                             color: selezionato ? primaryColor : lightGrayColor,
@@ -1349,7 +1328,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     color: grayColor,
                                     fontSize: 14,
                                     height: 1.5,
-                                    fontFamily: 'Segoe UI',
                                   ),
                                 ),
                               ],
@@ -1378,7 +1356,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                       fontWeight: FontWeight.w700,
                                       color: grayColor,
                                       letterSpacing: 0.5,
-                                      fontFamily: 'Segoe UI',
                                     ),
                                   ),
                                 ),
@@ -1470,10 +1447,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     // Colori per il gradiente in base al periodo
     final Map<String, Color> periodColors = {
-      'colazione': const Color(0xFFFFB74D),
-      'pranzo': const Color(0xFFEF5350),
-      'merenda': const Color(0xFF66BB6A),
-      'cena': const Color(0xFF5C6BC0),
+      'colazione': AppColors.accent,
+      'pranzo': AppColors.danger,
+      'merenda': AppColors.success,
+      'cena': AppColors.primary,
     };
 
     Color slotColor = lightGrayColor;
@@ -1541,7 +1518,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         decoration: isDisabled
                             ? TextDecoration.lineThrough
                             : TextDecoration.none,
-                        fontFamily: 'Segoe UI',
                       ),
                     ),
                     // Motivo del blocco deciso dal pannello, oppure fascia esaurita,
@@ -1556,7 +1532,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: const TextStyle(
                             fontSize: 11,
                             color: dangerColor,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                       )
@@ -1568,7 +1543,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             color: dangerColor,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                       )
@@ -1582,7 +1556,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.orange,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                       ),
@@ -2455,7 +2428,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: textColor,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                     ],
@@ -2538,7 +2510,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ],
@@ -2560,7 +2531,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: darkColor,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -2569,7 +2539,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         style: const TextStyle(
                           fontSize: 12,
                           color: grayColor,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                     ],
@@ -2606,7 +2575,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: const TextStyle(
                             fontSize: 13,
                             color: darkColor,
-                            fontFamily: 'Segoe UI',
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -2653,7 +2621,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: primaryColor,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ],
@@ -2672,7 +2639,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
               const SizedBox(width: 12),
@@ -2719,7 +2685,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               color: _selectedDate != null
                                   ? darkColor
                                   : grayColor,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                         ),
@@ -2778,7 +2743,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: darkColor,
-              fontFamily: 'Segoe UI',
             ),
           ),
           const SizedBox(height: 10),
@@ -2791,7 +2755,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: const TextStyle(
               fontSize: 14,
               color: darkColor,
-              fontFamily: 'Segoe UI',
             ),
             decoration: InputDecoration(
               hintText:
@@ -2800,7 +2763,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               hintStyle: const TextStyle(
                 fontSize: 13,
                 color: grayColor,
-                fontFamily: 'Segoe UI',
               ),
               counterText: '',
               filled: true,
@@ -2843,7 +2805,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: darkColor,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -2915,7 +2876,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: AppColors.info,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ],
@@ -2980,7 +2940,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: darkColor,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
                 // Mostra customizations (extra e note)
@@ -2997,7 +2956,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         style: const TextStyle(
                           fontSize: 11,
                           color: grayColor,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                     );
@@ -3032,7 +2990,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: darkColor,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -3065,7 +3022,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: darkColor,
-              fontFamily: 'Segoe UI',
             ),
           ),
           const SizedBox(height: 14),
@@ -3091,7 +3047,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: darkColor,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
               ],
@@ -3128,7 +3083,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: _useAppCredits ? primaryColor : darkColor,
-                              fontFamily: 'Segoe UI',
                             ),
                           ),
                           if (_useAppCredits &&
@@ -3140,7 +3094,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 fontSize: 11,
                                 color: successColor,
                                 fontWeight: FontWeight.w600,
-                                fontFamily: 'Segoe UI',
                               ),
                             ),
                           ],
@@ -3171,7 +3124,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: darkColor,
-              fontFamily: 'Segoe UI',
             ),
           ),
           const SizedBox(height: 10),
@@ -3188,7 +3140,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       hintStyle: const TextStyle(
                         fontSize: 12,
                         color: grayColor,
-                        fontFamily: 'Segoe UI',
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -3209,7 +3160,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     style: const TextStyle(
                       fontSize: 12,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -3243,7 +3193,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                 ),
@@ -3298,7 +3247,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: successColor,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                         const Text(
@@ -3306,7 +3254,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             color: grayColor,
-                            fontFamily: 'Segoe UI',
                           ),
                         ),
                       ],
@@ -3370,7 +3317,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: primaryColor,
-                      fontFamily: 'Segoe UI',
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -3381,9 +3327,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Text(
               description,
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 color: grayColor,
-                fontFamily: 'Segoe UI',
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -3407,7 +3352,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: primaryColor,
-              fontFamily: 'Segoe UI',
             ),
           ),
           const SizedBox(height: 14),
@@ -3438,7 +3382,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: primaryColor,
-                        fontFamily: 'Segoe UI',
                       ),
                     ),
                   ),
@@ -3484,7 +3427,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
               Text(
@@ -3493,7 +3435,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: primaryColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ],
@@ -3519,7 +3460,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: const TextStyle(
               fontSize: 13,
               color: grayColor,
-              fontFamily: 'Segoe UI',
             ),
           ),
           Text(
@@ -3528,7 +3468,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               fontSize: 13,
               color: isDiscount ? successColor : darkColor,
               fontWeight: FontWeight.w500,
-              fontFamily: 'Segoe UI',
             ),
           ),
         ],
@@ -3563,7 +3502,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: const TextStyle(
                   fontSize: 11,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
                 children: [
                   const TextSpan(text: 'Ti mancano '),
@@ -3610,7 +3548,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: successColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ),
@@ -3642,7 +3579,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: const TextStyle(
                     fontSize: 11,
                     color: darkColor,
-                    fontFamily: 'Segoe UI',
                   ),
                   children: [
                     const TextSpan(text: 'Ti mancano '),
@@ -3690,7 +3626,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: const TextStyle(
                   fontSize: 12,
                   color: darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
                 children: [
                   const TextSpan(text: 'Ti mancano '),
@@ -3726,7 +3661,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(
               fontSize: 13,
               color: grayColor,
-              fontFamily: 'Segoe UI',
             ),
           ),
           if (isFree)
@@ -3738,7 +3672,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     fontSize: 13,
                     color: grayColor,
                     fontWeight: FontWeight.w400,
-                    fontFamily: 'Segoe UI',
                     decoration: TextDecoration.lineThrough,
                   ),
                 ),
@@ -3758,7 +3691,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       fontSize: 11,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Segoe UI',
                     ),
                   ),
                 ),
@@ -3771,7 +3703,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 fontSize: 13,
                 color: darkColor,
                 fontWeight: FontWeight.w500,
-                fontFamily: 'Segoe UI',
               ),
             ),
         ],
@@ -3914,7 +3845,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected ? primaryColor : darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -3982,7 +3912,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected ? primaryColor : darkColor,
-                  fontFamily: 'Segoe UI',
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -3996,10 +3925,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: const Text(
                 'OneClick',
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: successColor,
-                  fontFamily: 'Segoe UI',
                 ),
               ),
             ),
@@ -4069,7 +3997,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ? FontWeight.w600
                               : FontWeight.w500,
                           color: isSelected ? primaryColor : darkColor,
-                          fontFamily: 'Segoe UI',
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -4091,10 +4018,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       child: const Text(
                         'Default',
                         style: TextStyle(
-                          fontSize: 8,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: successColor,
-                          fontFamily: 'Segoe UI',
                         ),
                       ),
                     ),
@@ -4157,7 +4083,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
-                  fontFamily: 'Segoe UI',
                   letterSpacing: 0.5,
                 ),
               ),
@@ -4176,7 +4101,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    fontFamily: 'Segoe UI',
                   ),
                 ),
               ),
