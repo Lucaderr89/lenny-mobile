@@ -205,6 +205,59 @@ class RestaurantService {
 
   /// Ottiene le regole di consegna per un singolo ristorante
   /// Usa l'endpoint esistente /api/delivery/calculate-fee
+  /// Regole di consegna per TUTTI i ristoranti in UNA richiesta.
+  /// Ritorna una mappa restaurantId -> payload regola (stesso formato
+  /// dell'endpoint singolo). Null in caso di errore di rete.
+  Future<Map<int, Map<String, dynamic>>?> getDeliveryZoneRulesBatch({
+    required List<int> restaurantIds,
+    String? postalCode,
+    double? latitude,
+    double? longitude,
+    double subtotal = 0.0,
+  }) async {
+    if (restaurantIds.isEmpty) return {};
+
+    try {
+      final requestBody = <String, dynamic>{
+        'restaurant_ids': restaurantIds,
+        'subtotal': subtotal,
+      };
+      if (postalCode != null && postalCode.isNotEmpty) {
+        requestBody['postal_code'] = postalCode;
+      }
+      if (latitude != null && longitude != null) {
+        requestBody['latitude'] = latitude;
+        requestBody['longitude'] = longitude;
+      }
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/delivery/calculate-fees'),
+            headers: _headers,
+            body: json.encode(requestBody),
+          )
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] is Map) {
+          final result = <int, Map<String, dynamic>>{};
+          (data['data'] as Map).forEach((key, value) {
+            final id = int.tryParse(key.toString());
+            if (id != null && value is Map) {
+              result[id] = Map<String, dynamic>.from(value);
+            }
+          });
+          return result;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('❌ [DELIVERY BATCH] Errore: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getDeliveryZoneRule({
     required int restaurantId,
     String? postalCode,

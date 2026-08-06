@@ -22,10 +22,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   final AuthService _authService = AuthService();
 
+  // Verifiche avviate SUBITO, in parallelo all'animazione (che resta di
+  // ~5s per scelta di prodotto): quando la coreografia finisce i risultati
+  // sono gia' pronti e la navigazione e' istantanea, senza attesa extra.
+  late final Future<List<bool>> _bootChecks;
+
   @override
   void initState() {
     super.initState();
-    print('🚀 SPLASH SCREEN - initState');
+
+    _bootChecks = Future.wait([
+      _authService.isLoggedIn(),
+      _authService.isFirstLaunch(),
+    ]);
 
     // Avvia animazione manuale (che gestirà anche la navigazione)
     _startAnimation();
@@ -88,8 +97,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _navigateNext() async {
-    final isLoggedIn = await _authService.isLoggedIn();
+    // Gia' risolte durante l'animazione: qui non si aspetta niente
+    final results = await _bootChecks;
     if (!mounted) return;
+
+    final isLoggedIn = results[0];
+    final primaApertura = results[1];
 
     if (isLoggedIn) {
       context.go('/categories');
@@ -100,8 +113,6 @@ class _SplashScreenState extends State<SplashScreen> {
     // liberamente (ristoranti e menu sono pubblici). L'account viene richiesto
     // solo al momento di completare l'ordine. L'onboarding si mostra solo alla
     // primissima apertura dell'app.
-    final primaApertura = await _authService.isFirstLaunch();
-    if (!mounted) return;
     context.go(primaApertura ? '/onboarding' : '/categories');
   }
 

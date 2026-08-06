@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import 'nexi_payment_screen.dart';
-import 'payment_success_screen.dart';
+import 'order_completed_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 
@@ -172,15 +172,14 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
           );
           cartProvider.clearCart();
 
-          // Naviga alla schermata di successo con messaggio personalizzato
+          // Stessa schermata di conferma di tutti gli altri flussi.
+          // Il tipo ordine non e' noto in questo contesto: copy neutro.
           if (mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (context) => PaymentSuccessScreen(
+                builder: (context) => OrderCompletedScreen(
                   orderId: widget.orderId!,
-                  customMessage:
-                      'Ordine confermato con ${_getMethodName(newMethodId)}!',
-                  isPaymentCompleted: false, // Ordine confermato, non pagamento
+                  deliveryType: '',
                 ),
               ),
             );
@@ -246,20 +245,6 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
         ],
       ),
     );
-  }
-
-  /// Ritorna il nome del metodo di pagamento
-  String _getMethodName(int methodId) {
-    switch (methodId) {
-      case 1:
-        return 'Contanti alla consegna';
-      case 2:
-        return 'POS/Bancomat alla consegna';
-      case 3:
-        return 'SMAC';
-      default:
-        return 'nuovo metodo';
-    }
   }
 
   void _showError(String message) {

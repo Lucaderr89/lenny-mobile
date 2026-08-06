@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/favorites_provider.dart';
 import '../models/favorite.dart';
 import '../models/restaurant.dart';
+import '../services/restaurant_service.dart';
 import 'restaurant_menu_screen.dart';
 
 /// Screen Preferiti - Lista ristoranti e piatti preferiti raggruppati
@@ -22,6 +23,56 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   // Stato locale per espansione card
   final Set<int> _expandedRestaurants = {};
+
+  final RestaurantService _restaurantService = RestaurantService();
+
+  /// Apre il menu del ristorante coi dati REALI (rating, consegna, orari).
+  /// Con [dishId] apre direttamente la scheda di quel piatto.
+  /// Se il dettaglio non e' raggiungibile si ripiega sui dati minimi
+  /// dei preferiti, cosi' la navigazione non si blocca mai.
+  Future<void> _openRestaurant(
+    RestaurantBasic basic, {
+    int? dishId,
+  }) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: primaryColor)),
+    );
+
+    Restaurant? restaurant;
+    try {
+      restaurant = await _restaurantService.getRestaurantDetail(basic.id);
+    } catch (_) {
+      restaurant = null;
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context); // chiudi loading
+
+    restaurant ??= Restaurant(
+      id: basic.id,
+      name: basic.name,
+      description: basic.description ?? '',
+      imageUrl: basic.imageUrl ?? '',
+      rating: 0.0,
+      deliveryTime: '',
+      deliveryCost: '',
+      cuisine: '',
+      minOrder: '',
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RestaurantMenuScreen(
+          restaurant: restaurant!,
+          openDishId: dishId,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -152,7 +203,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Tocca un piatto preferito per aggiungerlo al carrello!',
+              'Tocca un piatto preferito per ordinarlo subito!',
               style: TextStyle(
                 fontSize: 13,
                 color: darkColor.withOpacity(0.8),
@@ -253,24 +304,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 });
               } else {
                 // Se non ci sono piatti, apri direttamente il menu
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RestaurantMenuScreen(
-                      restaurant: Restaurant(
-                        id: restaurant.id,
-                        name: restaurant.name,
-                        description: restaurant.description ?? '',
-                        imageUrl: restaurant.imageUrl ?? '',
-                        rating: 0.0,
-                        deliveryTime: '',
-                        deliveryCost: '',
-                        cuisine: '',
-                        minOrder: '',
-                      ),
-                    ),
-                  ),
-                );
+                _openRestaurant(restaurant);
               }
             },
             borderRadius: BorderRadius.circular(16),
@@ -539,15 +573,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ],
                       ),
                       onTap: () {
-                        // TODO: Aprire product detail modal del piatto
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Ordina ${dish.name}'),
-                            backgroundColor: primaryColor,
-                            duration: const Duration(seconds: 1),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        // Apre il menu del ristorante con la scheda
+                        // del piatto gia' aperta, pronta per l'ordine.
+                        _openRestaurant(restaurant, dishId: dish.id);
                       },
                     ),
                   );

@@ -34,22 +34,47 @@ class FcmService {
     enableVibration: true,
   );
 
-  /// Inizializza FCM: chiede permessi, ottiene token, registra handlers
+  /// Inizializza FCM: handlers e token, SENZA chiedere il permesso.
+  /// Il prompt di sistema al bootstrap (prima ancora di vedere l'app) e' il
+  /// momento con il massimo tasso di rifiuto: la richiesta ora avviene dopo
+  /// il primo ordine, con contesto ("ti avvisiamo quando arriva"), tramite
+  /// [requestPermissionWithContext]. Qui si procede solo se il permesso
+  /// risulta gia' concesso in passato.
   Future<void> initialize() async {
-    // 1. Chiedi permesso notifiche
+    final settings = await _messaging.getNotificationSettings();
+    debugPrint('🔔 FCM permission: ${settings.authorizationStatus}');
+
+    if (settings.authorizationStatus == AuthorizationStatus.denied ||
+        settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+      // Mai chiesto o negato: nessun prompt qui. Handlers e token verranno
+      // attivati da requestPermissionWithContext() dopo il primo ordine.
+      return;
+    }
+
+    await _setupMessaging();
+  }
+
+  /// Chiede il permesso notifiche NEL MOMENTO GIUSTO (dopo il primo ordine,
+  /// da una UI che ha appena spiegato il beneficio). Ritorna true se concesso.
+  Future<bool> requestPermissionWithContext() async {
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
       provisional: false,
     );
-    debugPrint('🔔 FCM permission: ${settings.authorizationStatus}');
+    debugPrint('🔔 FCM permission (richiesta): ${settings.authorizationStatus}');
 
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      debugPrint('⚠️ Notifiche negate dall\'utente');
-      return;
+      return false;
     }
 
+    await _setupMessaging();
+    return true;
+  }
+
+  /// Token, handlers e canale notifiche: eseguito solo a permesso concesso
+  Future<void> _setupMessaging() async {
     // 2. Ottieni token FCM
     try {
       _token = await _messaging.getToken();

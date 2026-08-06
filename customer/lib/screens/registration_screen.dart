@@ -66,14 +66,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (!mounted) return;
 
       if (response.success) {
-        _showToast(
-          'Registrazione completata! Effettua il login',
-          isError: false,
+        // Auto-login con le credenziali appena inserite: obbligare l'utente
+        // a ridigitarle subito dopo la registrazione era un passaggio a vuoto
+        // nel momento di massima motivazione.
+        final loginResponse = await _authService.login(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
-        await Future.delayed(const Duration(milliseconds: 1500));
-        if (mounted) {
-          Navigator.pop(context);
-          context.go('/login');
+        if (!mounted) return;
+
+        if (loginResponse.success) {
+          _showToast('Benvenuto su Lenny!', isError: false);
+          await Future.delayed(const Duration(milliseconds: 800));
+          if (mounted) {
+            context.go('/categories');
+          }
+        } else {
+          // Registrato ma login fallito (caso raro): si ripiega sul login
+          // manuale, senza far ripetere la registrazione.
+          _showToast(
+            'Registrazione completata! Effettua il login',
+            isError: false,
+          );
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (mounted) {
+            Navigator.pop(context);
+            context.go('/login');
+          }
         }
       } else {
         _showToast(response.message, isError: true);

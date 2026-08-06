@@ -7,6 +7,10 @@ class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
 
   static const String supportPhone = '3346841489';
+
+  /// wa.me accetta SOLO numeri in formato internazionale senza '+':
+  /// senza prefisso il link si apre ma WhatsApp non trova il contatto.
+  static const String supportPhoneIntl = '39$supportPhone';
   static const String companyName = 'Lenny SRL';
   static const String companyAddress =
       'Via Ca\' dei Lunghi, 8\n47893 Cailungo - San Marino';
@@ -19,7 +23,7 @@ class SupportScreen extends StatelessWidget {
   }
 
   Future<void> _openWhatsApp() async {
-    final Uri whatsappUri = Uri.parse('https://wa.me/$supportPhone');
+    final Uri whatsappUri = Uri.parse('https://wa.me/$supportPhoneIntl');
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     }

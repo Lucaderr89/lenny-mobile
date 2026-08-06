@@ -118,6 +118,10 @@ class LiveOrder {
 
 class LiveOrderItem {
   final int id;
+
+  /// Id del piatto (dishes.id): serve al "Riordina" per ritrovare il piatto
+  /// nel menu attuale. Null se l'API non lo fornisce.
+  final int? foodId;
   final int quantity;
   final double price;
   final double? discountAmount;
@@ -127,6 +131,7 @@ class LiveOrderItem {
 
   LiveOrderItem({
     required this.id,
+    this.foodId,
     required this.quantity,
     required this.price,
     this.discountAmount,
@@ -138,6 +143,9 @@ class LiveOrderItem {
   factory LiveOrderItem.fromJson(Map<String, dynamic> json) {
     return LiveOrderItem(
       id: int.parse(json['id'].toString()),
+      foodId: json['food_id'] != null
+          ? int.tryParse(json['food_id'].toString())
+          : null,
       quantity: int.parse(json['quantity'].toString()),
       price: double.parse(json['price'].toString()),
       discountAmount: json['discount_amount'] != null

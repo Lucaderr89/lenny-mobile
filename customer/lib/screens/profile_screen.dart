@@ -763,9 +763,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     title: 'Notifiche',
                     onTap: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Funzione in arrivo...')),
-                      );
+                      context.push('/notifications');
                     },
                   ),
                   _buildDrawerItem(

@@ -139,7 +139,7 @@ class GuestGate extends StatelessWidget {
                   ),
                 ),
                 child: const Text(
-                  'Ho gia\' un account',
+                  'Ho già un account',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),

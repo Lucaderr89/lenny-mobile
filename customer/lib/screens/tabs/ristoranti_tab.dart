@@ -26,7 +26,13 @@ class RistorantiTab extends StatefulWidget {
   State<RistorantiTab> createState() => _RistorantiTabState();
 }
 
-class _RistorantiTabState extends State<RistorantiTab> {
+class _RistorantiTabState extends State<RistorantiTab>
+    with AutomaticKeepAliveClientMixin {
+  // Il tab resta vivo nel PageView: cambiare tab non deve rifare
+  // tutte le chiamate di rete a ogni ritorno.
+  @override
+  bool get wantKeepAlive => true;
+
   // Colori
   static const Color primaryDarkPink = AppColors.primary;
   static const Color accentYellow = Color(0xFFFFD042);
@@ -43,12 +49,11 @@ class _RistorantiTabState extends State<RistorantiTab> {
   List<Restaurant> _filteredRestaurants = [];
   bool _isLoadingFeatured = true;
 
-  // 🗄️ Master cache — caricata UNA VOLTA senza filtro cucina
-  // Il filtro cucina avviene client-side su questi dati
+  // 🗄️ Master data dell'ultimo caricamento (gia' filtrati per cucina
+  // dall'API). La ricerca testuale filtra client-side su questi.
   List<Restaurant> _masterFeatured = [];
   List<Restaurant> _masterNew = [];
   List<Restaurant> _masterAll = [];
-  bool _masterCacheLoaded = false;
 
   // 🎯 Cache per tracciare l'ultima posizione per cui abbiamo caricato le regole
   String? _lastLoadedPostalCode;
@@ -134,20 +139,17 @@ class _RistorantiTabState extends State<RistorantiTab> {
   @override
   void didUpdateWidget(RistorantiTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Da qui passa OGNI cambio di filtro (niente piu' ValueKey che smontava
+    // lo State: prima ogni lettera digitata rifaceva 3+N chiamate di rete).
     final cuisineChanged = oldWidget.cuisineId != widget.cuisineId;
     final searchChanged = oldWidget.searchQuery != widget.searchQuery;
-    if (cuisineChanged || searchChanged) {
-      if (_masterCacheLoaded) {
-        // Filtro client-side istantaneo — nessuna chiamata API
-        setState(() {
-          _featuredRestaurants = _applyFilters(_masterFeatured);
-          _newRestaurants = _applyFilters(_masterNew);
-          _allRestaurants = _applyFilters(_masterAll);
-          _filterRestaurants();
-        });
-      } else {
-        _loadRestaurants();
-      }
+
+    if (cuisineChanged) {
+      // Il filtro cucina lo applica l'API: una ricarica per tap categoria
+      _loadRestaurants();
+    } else if (searchChanged) {
+      // La ricerca e' SOLO client-side: zero chiamate di rete
+      setState(_filterRestaurants);
     }
   }
 
@@ -173,7 +175,6 @@ class _RistorantiTabState extends State<RistorantiTab> {
         _masterFeatured = results[0];
         _masterNew = results[1];
         _masterAll = results[2];
-        _masterCacheLoaded = true;
 
         setState(() {
           _featuredRestaurants = _applyFilters(_masterFeatured);
@@ -249,20 +250,22 @@ class _RistorantiTabState extends State<RistorantiTab> {
     _lastLoadedLatitude = latitude;
     _lastLoadedLongitude = longitude;
 
-    // 🎯 Carica tutte le regole SENZA setState nel loop
-    // Raccoglie tutti i risultati e fa UN SOLO setState alla fine
-    final futures = restaurants.map((restaurant) async {
-      try {
-        final rule = await _restaurantService.getDeliveryZoneRule(
-          restaurantId: restaurant.id,
-          postalCode: postalCode,
-          latitude: latitude,
-          longitude: longitude,
-          subtotal: 1.0,
-        );
+    // UNA richiesta batch per tutte le regole: prima era una chiamata
+    // per OGNI ristorante (N+1) a ogni caricamento della home.
+    try {
+      final rules = await _restaurantService.getDeliveryZoneRulesBatch(
+        restaurantIds: restaurants.map((r) => r.id).toList(),
+        postalCode: postalCode,
+        latitude: latitude,
+        longitude: longitude,
+        subtotal: 1.0,
+      );
 
-        if (rule != null) {
-          // NON chiamare setState qui - solo modifica i dati
+      if (rules != null) {
+        for (final restaurant in restaurants) {
+          final rule = rules[restaurant.id];
+          if (rule == null) continue;
+
           restaurant.isDeliverable = rule['is_deliverable'] as bool? ?? false;
           restaurant.actualDeliveryFee = (rule['delivery_fee'] as num?)
               ?.toDouble();
@@ -277,13 +280,10 @@ class _RistorantiTabState extends State<RistorantiTab> {
 
           restaurant.freeDelivery = rule['free_delivery'] as bool? ?? false;
         }
-      } catch (e) {
-        // In caso di errore, lascia i valori null
       }
-    }).toList();
-
-    // 🎯 Attendi che TUTTE le regole siano caricate
-    await Future.wait(futures);
+    } catch (e) {
+      // In caso di errore, lascia i valori null
+    }
 
     // 🎯 UN SOLO setState alla fine - aggiornamento ISTANTANEO
     if (mounted) {
@@ -468,6 +468,7 @@ class _RistorantiTabState extends State<RistorantiTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // richiesto da AutomaticKeepAliveClientMixin
     return RefreshIndicator(
       onRefresh: () async {
         // Ricarica ristoranti e regole delivery
@@ -1038,21 +1039,25 @@ class _RistorantiTabState extends State<RistorantiTab> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const ImageIcon(
-                        AssetImage('assets/icons/icons8-stella-32.png'),
-                        size: 11,
-                        color: accentYellow,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '4.5',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: darkColor,
+                      // Stella solo con un rating reale: senza recensioni
+                      // non si mostra nulla, mai un numero inventato.
+                      if (restaurant.rating > 0) ...[
+                        const SizedBox(width: 4),
+                        const ImageIcon(
+                          AssetImage('assets/icons/icons8-stella-32.png'),
+                          size: 11,
+                          color: accentYellow,
                         ),
-                      ),
+                        const SizedBox(width: 2),
+                        Text(
+                          restaurant.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: darkColor,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),

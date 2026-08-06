@@ -63,7 +63,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Map<String, dynamic>> _availableSlots = [];
   // Toggle per mostrare/nascondere indirizzi
   bool _isLoading = true;
-  bool _isLoadingSlots = false;
   int? _customerId;
 
   // Opzioni di consegna
@@ -95,8 +94,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double _couponDiscount = 0.0;
   bool _couponLoading = false;
 
-  // Istruzioni consegna
+  // Coupon suggeriti dal server: solo quelli che QUESTO cliente puo' ancora
+  // usare (i gia' usati/esauriti non arrivano proprio). Mai hardcodarli qui.
+  List<Map<String, dynamic>> _suggestedCoupons = [];
+
+  // Note ordine (uniche, finiscono nella stampa comanda)
   final TextEditingController _instructionsController = TextEditingController();
+
+  // Guardia anti doppio-invio: true mentre un ordine e' in creazione.
+  // Senza, un doppio tap su CONFERMA durante le verifiche crea ordini duplicati.
+  bool _isPlacingOrder = false;
 
   // Crediti Lenny (sistema wallet)
   bool _useAppCredits = false;
@@ -151,6 +158,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // 🆕 CARICA CREDITI DISPONIBILI
       await _loadAvailableCredits();
+
+      // Coupon suggeriti (personalizzati per cliente)
+      await _loadSuggestedCoupons();
 
       // 🔑 DEFAULT: Se NON ha carte salvate, seleziona "contanti" (cash)
       if (!_hasSavedCard && _paymentMethods.isNotEmpty) {
@@ -216,6 +226,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } catch (e) {
       print('❌ [CHECKOUT] Errore caricamento config: $e');
       // Usa valore di default in caso di errore
+    }
+  }
+
+  /// Carica dal server i coupon suggeribili a questo cliente.
+  /// Errore di rete = lista vuota: la sezione suggeriti semplicemente
+  /// non compare, il campo manuale resta comunque utilizzabile.
+  Future<void> _loadSuggestedCoupons() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/api/customer/coupons/suggested'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-API-Token': token ?? '',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          if (mounted) {
+            setState(() {
+              _suggestedCoupons = (data['data'] as List)
+                  .whereType<Map>()
+                  .map((c) => Map<String, dynamic>.from(c))
+                  .toList();
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('⚠️ [CHECKOUT] Coupon suggeriti non disponibili: $e');
     }
   }
 
@@ -1094,87 +1139,223 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  /// Selettore fascia in un PANNELLO UNICO: giorni in alto (chips),
+  /// fasce sotto raggruppate per periodo. Sostituisce i 3 livelli di
+  /// modale precedenti (calendario -> periodi -> fasce).
+  /// NESSUNA preselezione: la scelta della fascia e' sempre esplicita
+  /// (regola di prodotto). La chiusura a 30 minuti la applica il server.
   Future<void> _selectDateTime() async {
-    // Selezione data con calendario italiano migliorato
-    final DateTime? date = await showDatePicker(
+    final oggi = DateUtils.dateOnly(DateTime.now());
+    DateTime giornoScelto = DateUtils.dateOnly(_selectedDate ?? oggi);
+    if (giornoScelto.isBefore(oggi)) giornoScelto = oggi;
+
+    bool caricamento = true;
+    StateSetter? aggiornaSheet;
+
+    Future<void> caricaGiorno(DateTime giorno) async {
+      caricamento = true;
+      aggiornaSheet?.call(() {});
+      await _loadAvailableSlots(giorno);
+      caricamento = false;
+      aggiornaSheet?.call(() {});
+    }
+
+    // Primo caricamento avviato subito: il pannello si apre senza attese
+    // e mostra lo spinner finche' le fasce non arrivano.
+    caricaGiorno(giornoScelto);
+
+    String etichettaGiorno(DateTime giorno) {
+      final diff = giorno.difference(oggi).inDays;
+      if (diff == 0) return 'Oggi';
+      if (diff == 1) return 'Domani';
+      return DateFormat('EEE d MMM', 'it_IT').format(giorno);
+    }
+
+    await showModalBottomSheet(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-      locale: const Locale('it', 'IT'),
-      helpText: 'Seleziona data di consegna',
-      cancelText: 'Annulla',
-      confirmText: 'Conferma',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: primaryColor,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: darkColor,
-              surfaceContainerHighest: lightGrayColor,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          aggiornaSheet = setSheetState;
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.78,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: primaryColor,
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 8, 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _deliveryType == 'delivery'
+                            ? 'Quando vuoi la consegna?'
+                            : 'Quando passi a ritirare?',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: darkColor,
+                          fontFamily: 'Segoe UI',
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 22),
+                        color: grayColor,
+                        onPressed: () => Navigator.pop(sheetContext),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Chips dei giorni (7 giorni da oggi)
+                SizedBox(
+                  height: 44,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: 7,
+                    itemBuilder: (context, index) {
+                      final giorno = oggi.add(Duration(days: index));
+                      final selezionato = DateUtils.isSameDay(
+                        giorno,
+                        giornoScelto,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(etichettaGiorno(giorno)),
+                          selected: selezionato,
+                          onSelected: (_) {
+                            if (selezionato) return;
+                            giornoScelto = giorno;
+                            caricaGiorno(giorno);
+                          },
+                          selectedColor: primaryColor,
+                          backgroundColor: Colors.white,
+                          labelStyle: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: selezionato ? Colors.white : darkColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                          side: BorderSide(
+                            color: selezionato ? primaryColor : lightGrayColor,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          showCheckmark: false,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+
+                // Fasce del giorno scelto, raggruppate per periodo
+                Expanded(
+                  child: caricamento
+                      ? const Center(
+                          child: CircularProgressIndicator(color: primaryColor),
+                        )
+                      : _availableSlots.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.event_busy,
+                                  size: 42,
+                                  color: grayColor,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Nessuna fascia disponibile per '
+                                  '${etichettaGiorno(giornoScelto).toLowerCase()}.\n'
+                                  'Prova un altro giorno.',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: grayColor,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    fontFamily: 'Segoe UI',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          children: [
+                            for (final entry in _availableSlots)
+                              if (entry.containsKey('slots')) ...[
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    16,
+                                    20,
+                                    8,
+                                  ),
+                                  child: Text(
+                                    (entry['label'] as String? ??
+                                            entry['period'] as String? ??
+                                            '')
+                                        .toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: grayColor,
+                                      letterSpacing: 0.5,
+                                      fontFamily: 'Segoe UI',
+                                    ),
+                                  ),
+                                ),
+                                for (
+                                  int i = 0;
+                                  i < (entry['slots'] as List).length;
+                                  i++
+                                )
+                                  _buildTimeSlotOption(
+                                    (entry['slots'] as List)[i]
+                                        as Map<String, dynamic>,
+                                    giornoScelto,
+                                    period: entry['period'] as String?,
+                                    slotIndex: i,
+                                    totalSlots: (entry['slots'] as List).length,
+                                  ),
+                              ],
+                          ],
+                        ),
+                ),
+              ],
             ),
-            datePickerTheme: DatePickerThemeData(
-              backgroundColor: Colors.white,
-              headerBackgroundColor: primaryColor,
-              headerForegroundColor: Colors.white,
-              dayStyle: const TextStyle(fontSize: 14),
-              yearStyle: const TextStyle(fontSize: 16),
-              todayForegroundColor: WidgetStatePropertyAll(primaryColor),
-              todayBackgroundColor: WidgetStatePropertyAll(
-                primaryLight.withOpacity(0.2),
-              ),
-              dayForegroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return Colors.white;
-                }
-                if (states.contains(WidgetState.disabled)) {
-                  return grayColor;
-                }
-                return darkColor;
-              }),
-              dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return primaryColor;
-                }
-                return Colors.transparent;
-              }),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
+          );
+        },
+      ),
     );
 
-    if (date != null && mounted) {
-      // Carica slot disponibili per questa data
-      await _loadAvailableSlots(date);
-
-      if (_availableSlots.isNotEmpty && mounted) {
-        // Mostra bottom sheet con slot disponibili
-        await _selectTimeSlot(date);
-      } else if (mounted) {
-        _showToast('Nessuno slot disponibile per questa data');
-      }
-    }
+    aggiornaSheet = null;
   }
 
   Future<void> _loadAvailableSlots(DateTime date) async {
-    setState(() => _isLoadingSlots = true);
-
     try {
       final orderService = OrderService();
       final dateStr = DateFormat('yyyy-MM-dd').format(date);
@@ -1205,398 +1386,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('❌ Errore caricamento slot: $e');
       _showToast('Errore nel caricamento degli orari disponibili');
       _availableSlots = [];
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingSlots = false);
-      }
     }
-  }
-
-  Future<void> _selectTimeSlot(DateTime date) async {
-    if (_isLoadingSlots) {
-      return;
-    }
-
-    // Raggruppa gli slot per periodo
-    final Map<String, List<dynamic>> slotsByPeriod = {};
-    final Map<String, String> periodLabels = {};
-
-    for (var slot in _availableSlots) {
-      if (slot.containsKey('period')) {
-        // Nuovo formato con periodi
-        final period = slot['period'] as String;
-        final label = slot['label'] as String;
-        final slots = slot['slots'] as List;
-
-        slotsByPeriod[period] = slots;
-        periodLabels[period] = label;
-      }
-    }
-
-    // Se i dati sono nel vecchio formato o non ci sono periodi, usa la vecchia logica
-    if (slotsByPeriod.isEmpty) {
-      await _showSlotsDirectly(date);
-      return;
-    }
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle drag
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Seleziona fascia oraria',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Divider(height: 1),
-
-            if (slotsByPeriod.isEmpty)
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    'Nessuno slot disponibile',
-                    style: TextStyle(color: grayColor, fontFamily: 'Segoe UI'),
-                  ),
-                ),
-              )
-            else
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: slotsByPeriod.length,
-                  itemBuilder: (context, index) {
-                    final period = slotsByPeriod.keys.elementAt(index);
-                    final label = periodLabels[period]!;
-                    final slots = slotsByPeriod[period]!;
-                    return _buildPeriodOption(period, label, slots, date);
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Metodo per mostrare direttamente gli slot (fallback per vecchio formato)
-  Future<void> _showSlotsDirectly(DateTime date) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle drag
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Seleziona orario',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Divider(height: 1),
-
-            if (_availableSlots.isEmpty)
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    'Nessuno slot disponibile',
-                    style: TextStyle(color: grayColor, fontFamily: 'Segoe UI'),
-                  ),
-                ),
-              )
-            else
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  itemCount: _availableSlots.length,
-                  itemBuilder: (context, index) {
-                    final slot = _availableSlots[index];
-                    return _buildTimeSlotOption(slot, date);
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Widget per mostrare una fascia oraria (es: Pranzo)
-  Widget _buildPeriodOption(
-    String period,
-    String label,
-    List<dynamic> slots,
-    DateTime date,
-  ) {
-    // Icone personalizzate per ogni fascia
-    final Map<String, String> periodIconPaths = {
-      'colazione': 'assets/icons/icons8-cornetto-32.png',
-      'pranzo': 'assets/icons/icons8-sala-da-pranzo-32.png',
-      'merenda': 'assets/icons/icons8-bread-32.png',
-      'cena': 'assets/icons/icons8-dinner-32.png',
-    };
-
-    // Colori distintivi per ogni fascia
-    final Map<String, Color> periodColors = {
-      'colazione': const Color(0xFFFFB74D), // Arancione caldo per la colazione
-      'pranzo': const Color(0xFFEF5350), // Rosso per il pranzo
-      'merenda': const Color(0xFF66BB6A), // Verde per la merenda
-      'cena': const Color(0xFF5C6BC0), // Blu/indaco per la cena
-    };
-
-    final backgroundColor = periodColors[period] ?? primaryColor;
-    final iconPath = periodIconPaths[period];
-
-    return Container(
-      decoration: BoxDecoration(color: backgroundColor.withOpacity(0.15)),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-            _showPeriodSlots(period, label, slots, date);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: backgroundColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: iconPath != null
-                      ? Image.asset(
-                          iconPath,
-                          width: 28,
-                          height: 28,
-                          color: backgroundColor,
-                        )
-                      : Icon(Icons.schedule, color: backgroundColor, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: backgroundColor,
-                          fontFamily: 'Segoe UI',
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Builder(
-                        builder: (context) {
-                          // Conta solo le fasce realmente prenotabili: quelle bloccate
-                          // dal pannello o al completo non vanno promesse all'utente.
-                          final ordinabili = slots
-                              .where(
-                                (s) =>
-                                    s['is_blocked'] != true &&
-                                    (((s['available_spots'] as num?)?.toInt() ??
-                                            0) >
-                                        0),
-                              )
-                              .length;
-                          return Text(
-                            ordinabili == 0
-                                ? 'Nessuna fascia prenotabile'
-                                : '$ordinabili ${ordinabili == 1 ? 'fascia disponibile' : 'fasce disponibili'}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: ordinabili == 0 ? dangerColor : grayColor,
-                              fontFamily: 'Segoe UI',
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward_ios, color: backgroundColor, size: 16),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Mostra gli slot di una specifica fascia
-  Future<void> _showPeriodSlots(
-    String period,
-    String label,
-    List<dynamic> slots,
-    DateTime date,
-  ) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle drag
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Title con back button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.arrow_back, size: 20),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _selectTimeSlot(date);
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Divider(height: 1),
-
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: slots.length,
-                itemBuilder: (context, index) {
-                  final slot = slots[index];
-                  return _buildTimeSlotOption(
-                    slot,
-                    date,
-                    period: period,
-                    slotIndex: index,
-                    totalSlots: slots.length,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildTimeSlotOption(
@@ -1732,7 +1522,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Solo $availableSpots ${availableSpots == 1 ? 'posto' : 'posti'} disponibile',
+                          availableSpots == 1
+                              ? 'Solo 1 posto disponibile'
+                              : 'Solo $availableSpots posti disponibili',
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.orange,
@@ -1876,8 +1668,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       numContratto = _selectedCardAlias;
     }
 
-    // Apri XPay Build SDK (gestisce sia primo che successivi pagamenti)
-    await Navigator.of(context).push(
+    // Apri XPay Build SDK (gestisce sia primo che successivi pagamenti).
+    // A pagamento riuscito la schermata Nexi torna qui con 'success' e si
+    // mostra la STESSA conferma dei pagamenti offline: un solo design.
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => NexiBuildPaymentScreen(
           orderId: orderId,
@@ -1886,6 +1680,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       ),
     );
+
+    if (result == 'success' && mounted) {
+      _showOrderConfirmation(orderId);
+    }
   }
 
   /// Invito ad accedere o registrarsi mostrato quando un ospite prova a
@@ -1970,7 +1768,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
                 child: const Text(
-                  'Ho gia\' un account',
+                  'Ho già un account',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -1982,83 +1780,94 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   void _placeOrder() async {
-    // Guest-first: navigare e riempire il carrello e' libero, ma per completare
-    // l'ordine serve un account. Se l'utente e' ospite glielo proponiamo qui; il
-    // carrello resta salvato, cosi' dopo l'accesso ritrova tutto.
-    final loggato = await AuthService().isLoggedIn();
-    if (!mounted) return;
-    if (!loggato) {
-      _mostraGateAccount();
-      return;
-    }
+    // Guardia anti doppio-invio: dal primo tap fino all'esito, ogni altro
+    // tap viene ignorato (il bottone e' anche disabilitato via setState).
+    if (_isPlacingOrder) return;
+    setState(() => _isPlacingOrder = true);
 
-    if (_selectedDate == null || _selectedTime == null) {
-      _showToast('Seleziona data e orario di consegna');
-      return;
-    }
-
-    if (_deliveryType == 'delivery' &&
-        _deliveryMode != 'current_position' &&
-        _deliveryMode != 'saved_address') {
-      _showToast('Seleziona un indirizzo di consegna');
-      return;
-    }
-
-    // 🆕 VALIDA ORDINE MINIMO (se consegna a domicilio)
-    if (_deliveryType == 'delivery' && _deliveryFeeResult != null) {
-      // 🔥 RICALCOLA in tempo reale per avere valore aggiornato
-      final minOrder = _deliveryFeeResult!.minOrder;
-      final currentSubtotal = _currentSubtotal; // Usa getter aggiornato
-      final minOrderMet = currentSubtotal >= minOrder;
-
-      // 🐛 DEBUG
-      print('🔍 [MIN_ORDER_CHECK]');
-      print('   Min Order: €$minOrder');
-      print('   Current Subtotal: €$currentSubtotal');
-      print('   Min Order Met: $minOrderMet');
-      print(
-        '   CartProvider items: ${Provider.of<CartProvider>(context, listen: false).items.length}',
-      );
-
-      if (!minOrderMet) {
-        print('   ❌ SHOWING DIALOG - Order minimum not met');
-        _showMinOrderNotMetDialog();
-        return;
-      } else {
-        print('   ✅ MIN ORDER MET - Proceeding');
-      }
-    }
-
-    // 🆕 VERIFICA ZONA SERVITA
-    if (_deliveryType == 'delivery' &&
-        (_deliveryFeeResult == null || !_deliveryFeeResult!.isDeliverable)) {
-      _showZoneNotServicedDialog();
-      return;
-    }
-
-    // 🆕 VERIFICA DISPONIBILITÀ DI TUTTI I PIATTI
-    final unavailableDishes = await _checkDishesAvailability();
-    if (unavailableDishes.isNotEmpty) {
-      _showUnavailableDishesDialog(unavailableDishes);
-      return; // Non procedere se piatti non disponibili
-    }
-
-    // 🆕 ONECLICK: Valida metodo di pagamento (o OneClick o standard)
-    if (!_useOneClick &&
-        (_selectedPaymentId == null || _selectedPaymentId!.isEmpty)) {
-      _showToast('Seleziona un metodo di pagamento');
-      return;
-    }
-
-    // Mostra loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) =>
-          const Center(child: CircularProgressIndicator(color: primaryColor)),
-    );
+    // true finche' il dialog di caricamento e' aperto: cosi' il catch sa
+    // se deve chiuderlo, senza mai poppare la schermata per errore.
+    bool loadingVisible = false;
 
     try {
+      // Guest-first: navigare e riempire il carrello e' libero, ma per
+      // completare l'ordine serve un account. Il carrello resta salvato,
+      // cosi' dopo l'accesso l'utente ritrova tutto.
+      final loggato = await AuthService().isLoggedIn();
+      if (!mounted) return;
+      if (!loggato) {
+        _mostraGateAccount();
+        return;
+      }
+
+      if (_selectedDate == null || _selectedTime == null) {
+        _showToast('Seleziona data e orario di consegna');
+        return;
+      }
+
+      if (_deliveryType == 'delivery' &&
+          _deliveryMode != 'current_position' &&
+          _deliveryMode != 'saved_address') {
+        _showToast('Seleziona un indirizzo di consegna');
+        return;
+      }
+
+      // Valida ordine minimo (se consegna a domicilio)
+      if (_deliveryType == 'delivery' && _deliveryFeeResult != null) {
+        final minOrder = _deliveryFeeResult!.minOrder;
+        if (_currentSubtotal < minOrder) {
+          _showMinOrderNotMetDialog();
+          return;
+        }
+      }
+
+      // Verifica zona servita
+      if (_deliveryType == 'delivery' &&
+          (_deliveryFeeResult == null || !_deliveryFeeResult!.isDeliverable)) {
+        _showZoneNotServicedDialog();
+        return;
+      }
+
+      // Metodo di pagamento (validazione sincrona, prima del loading)
+      if (!_useOneClick &&
+          (_selectedPaymentId == null || _selectedPaymentId!.isEmpty)) {
+        _showToast('Seleziona un metodo di pagamento');
+        return;
+      }
+
+      // Loading SUBITO, prima delle verifiche di rete: l'utente vede
+      // una risposta immediata al tap e non puo' ritappare.
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) =>
+            const Center(child: CircularProgressIndicator(color: primaryColor)),
+      );
+      loadingVisible = true;
+
+      // Verifica disponibilita' di tutti i piatti (in parallelo)
+      final unavailableDishes = await _checkDishesAvailability();
+      if (unavailableDishes.isNotEmpty) {
+        if (mounted && loadingVisible) {
+          Navigator.of(context).pop();
+          loadingVisible = false;
+        }
+        _showUnavailableDishesDialog(unavailableDishes);
+        return;
+      }
+
+      // Riverifica la fascia scelta: tra la selezione e la conferma puo'
+      // essersi riempita o essere stata bloccata dal pannello.
+      final slotAncoraValido = await _isSelectedSlotStillAvailable();
+      if (!slotAncoraValido) {
+        if (mounted && loadingVisible) {
+          Navigator.of(context).pop();
+          loadingVisible = false;
+        }
+        _showSlotNoLongerAvailableDialog();
+        return;
+      }
       // Prepara items per API (stesso formato usato dal preventivo)
       final items = _buildItemsPayload();
 
@@ -2217,7 +2026,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       // Chiudi loading
-      Navigator.of(context).pop();
+      if (mounted && loadingVisible) {
+        Navigator.of(context).pop();
+        loadingVisible = false;
+      }
 
       // 🆕 ONECLICK: Determina se usare Nexi (OneClick o Build)
       bool isNexiPayment = _useOneClick;
@@ -2237,17 +2049,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _showOrderConfirmation(orderId);
       }
     } catch (e) {
-      // Chiudi loading
-      Navigator.of(context).pop();
+      // Chiudi loading (solo se e' davvero aperto: mai poppare la schermata)
+      if (mounted && loadingVisible) {
+        Navigator.of(context).pop();
+        loadingVisible = false;
+      }
 
-      // Mostra errore
-      _showToast('Errore: ${e.toString()}');
+      // Messaggio pulito, senza il prefisso tecnico "Exception:"
+      final message = e.toString().replaceFirst('Exception: ', '');
+      _showToast(message);
       print('❌ [CHECKOUT] Errore creazione ordine: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isPlacingOrder = false);
+      } else {
+        _isPlacingOrder = false;
+      }
     }
   }
 
-  /// Verifica la disponibilità di tutti i piatti nel carrello
-  /// Restituisce una lista di piatti non disponibili
+  /// Verifica la disponibilità di tutti i piatti nel carrello, in parallelo:
+  /// con N piatti una sola attesa di rete invece di N in sequenza.
+  /// Restituisce una lista di piatti non disponibili.
   Future<List<Map<String, dynamic>>> _checkDishesAvailability() async {
     try {
       final availabilityService = AvailabilityService();
@@ -2255,38 +2078,138 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'yyyy-MM-dd',
       ).format(_selectedDate ?? DateTime.now());
 
-      final unavailableDishes = <Map<String, dynamic>>[];
+      final results = await Future.wait(
+        widget.cartItems.map((cartItem) async {
+          final isAvailable = await availabilityService.isDishAvailable(
+            date: dateStr,
+            restaurantId: widget.restaurant.id,
+            dishId: cartItem.menuItem.id,
+            time: _selectedTime,
+          );
 
-      for (final cartItem in widget.cartItems) {
-        final isAvailable = await availabilityService.isDishAvailable(
-          date: dateStr,
-          restaurantId: widget.restaurant.id,
-          dishId: cartItem.menuItem.id,
-          time: _selectedTime,
-        );
+          if (isAvailable) return null;
 
-        if (!isAvailable) {
           final reason = await availabilityService.getDishUnavailabilityReason(
             date: dateStr,
             restaurantId: widget.restaurant.id,
             dishId: cartItem.menuItem.id,
           );
 
-          unavailableDishes.add({
+          return {
             'id': cartItem.menuItem.id,
             'name': cartItem.menuItem.name,
             'reason': reason ?? 'Non disponibile',
-          });
-        }
-      }
+          };
+        }),
+      );
 
-      return unavailableDishes;
+      return results.whereType<Map<String, dynamic>>().toList();
     } catch (e) {
       print('❌ Errore verifica disponibilità piatti: $e');
       // In caso di errore, permetti di procedere
       // (il backend gestirà eventuali errori di disponibilità)
       return [];
     }
+  }
+
+  /// Ricontrolla sul server che la fascia scelta sia ancora ordinabile.
+  /// true anche in caso di errore di rete: l'ultima parola resta al server
+  /// alla creazione dell'ordine, qui si intercetta solo il caso certo.
+  Future<bool> _isSelectedSlotStillAvailable() async {
+    if (_selectedDate == null || _selectedTime == null) return false;
+
+    try {
+      await _loadAvailableSlots(_selectedDate!);
+
+      final target =
+          '${_selectedTime!.hour.toString().padLeft(2, '0')}:'
+          '${_selectedTime!.minute.toString().padLeft(2, '0')}';
+
+      for (final entry in _availableSlots) {
+        // Nuovo formato: periodi con lista 'slots'; vecchio formato: slot diretti
+        final slots = entry.containsKey('slots')
+            ? (entry['slots'] as List)
+            : [entry];
+        for (final slot in slots) {
+          final startTime = (slot['start_time'] as String?) ?? '';
+          if (!startTime.startsWith(target)) continue;
+
+          final availableSpots =
+              (slot['available_spots'] as num?)?.toInt() ?? 0;
+          final isBlocked = slot['is_blocked'] == true;
+          return !isBlocked && availableSpots > 0;
+        }
+      }
+
+      // Fascia sparita dalla lista: non piu' ordinabile
+      return false;
+    } catch (e) {
+      print('⚠️ Riverifica fascia non riuscita, procedo: $e');
+      return true;
+    }
+  }
+
+  /// La fascia scelta si e' riempita (o e' stata bloccata) tra la selezione
+  /// e la conferma: lo si dice chiaramente e si riapre subito il selettore.
+  void _showSlotNoLongerAvailableDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.schedule, color: AppColors.warning),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Fascia non più disponibile',
+                style: TextStyle(
+                  color: AppColors.dark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          _selectedTimeSlotLabel != null
+              ? 'La fascia $_selectedTimeSlotLabel si è appena esaurita. '
+                    'Scegli un altro orario per completare l\'ordine.'
+              : 'La fascia selezionata non è più disponibile. '
+                    'Scegli un altro orario per completare l\'ordine.',
+          style: const TextStyle(
+            color: grayColor,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              setState(() {
+                _selectedTime = null;
+                _selectedTimeSlotLabel = null;
+              });
+              // Riapre il pannello unico giorni+fasce
+              _selectDateTime();
+            },
+            child: const Text(
+              'Scegli un altro orario',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Mostra dialog con lista di piatti non disponibili
@@ -2498,6 +2421,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                     // 🍕 RIEPILOGO PRODOTTI
                     _buildProductsList(),
+
+                    // Note per l'ordine (cucina + consegna, campo unico)
+                    _buildNotesSection(),
 
                     // 💳 PAGAMENTO (include coupon)
                     _buildPaymentMethodSection(),
@@ -2782,6 +2708,66 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     // Dopo la chiusura del bottom sheet, ricalcola delivery fee
     // perché l'utente potrebbe aver cambiato indirizzo
     await _loadDeliveryFee();
+  }
+
+  /// Note per l'ordine: campo UNICO (cucina + consegna), finisce nella
+  /// stampa comanda. Non aggiungere altri campi note separati.
+  Widget _buildNotesSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Note per l\'ordine',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: darkColor,
+              fontFamily: 'Segoe UI',
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _instructionsController,
+            maxLines: 3,
+            minLines: 2,
+            maxLength: 250,
+            textCapitalization: TextCapitalization.sentences,
+            style: const TextStyle(
+              fontSize: 14,
+              color: darkColor,
+              fontFamily: 'Segoe UI',
+            ),
+            decoration: InputDecoration(
+              hintText:
+                  'Es. pizza ben cotta, senza cipolla, '
+                  'citofono rotto: chiamami all\'arrivo...',
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: grayColor,
+                fontFamily: 'Segoe UI',
+              ),
+              counterText: '',
+              filled: true,
+              fillColor: lightGrayColor.withOpacity(0.3),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: primaryColor, width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 🍕 SEZIONE PRODOTTI - Riepilogo carrello
@@ -3210,26 +3196,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
 
-            const SizedBox(height: 14),
-
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 2.8,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              children: [
-                _buildSimpleCouponRow(
-                  code: 'SCONTO10',
-                  description: '10% di sconto sul totale',
-                ),
-                _buildSimpleCouponRow(
-                  code: 'BENVENUTO',
-                  description: '€5 di sconto sul tuo ordine',
-                ),
-              ],
-            ),
+            // Suggeriti dal server: solo coupon che questo cliente puo'
+            // ancora usare. Sezione assente se non ce ne sono.
+            if (_suggestedCoupons.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                childAspectRatio: 2.8,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                children: _suggestedCoupons.map((coupon) {
+                  final label = coupon['discount_label'] as String? ?? '';
+                  final name = coupon['name'] as String? ?? '';
+                  final description =
+                      (coupon['description'] as String?)?.isNotEmpty == true
+                      ? coupon['description'] as String
+                      : (label.isNotEmpty ? '$label $name' : name);
+                  return _buildSimpleCouponRow(
+                    code: coupon['code'] as String? ?? '',
+                    description: description,
+                  );
+                }).toList(),
+              ),
+            ],
           ] else ...[
             // Coupon applicato
             Container(
@@ -4044,10 +4035,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: SafeArea(
         top: false,
         child: ElevatedButton(
-          onPressed: _placeOrder,
+          // Disabilitato durante l'invio: doppia protezione insieme alla
+          // guardia _isPlacingOrder dentro _placeOrder.
+          onPressed: _isPlacingOrder ? null : _placeOrder,
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
+            disabledBackgroundColor: primaryColor.withOpacity(0.6),
+            disabledForegroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -4058,9 +4053,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'CONFERMA ORDINE',
-                style: TextStyle(
+              if (_isPlacingOrder) ...[
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Text(
+                _isPlacingOrder ? 'INVIO IN CORSO...' : 'CONFERMA ORDINE',
+                style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   fontFamily: 'Segoe UI',

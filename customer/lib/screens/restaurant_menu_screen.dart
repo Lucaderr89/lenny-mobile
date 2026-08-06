@@ -263,17 +263,65 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     );
   }
 
+  /// Piatto bloccato dal server per oggi (convenzione: l'etichetta di
+  /// disponibilita' inizia con "non disponibile"). I vincoli di fascia
+  /// ("Disponibile dalle 18:00") NON bloccano: decide il checkout.
+  bool _isDishUnavailable(MenuItem item) {
+    final label = item.availabilityLabel;
+    return label != null && label.toLowerCase().startsWith('non disponibile');
+  }
+
+  /// Banner "chiuso ora" sotto l'header: informa senza bloccare,
+  /// perche' con le fasce orarie si puo' comunque preordinare.
+  Widget _buildClosedBanner() {
+    final opensAt = widget.restaurant.opensAt;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFD9A0)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.schedule, size: 18, color: Color(0xFF9A6400)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              opensAt != null && opensAt.isNotEmpty
+                  ? 'Ora è chiuso: riapre alle $opensAt. '
+                        'Puoi comunque ordinare per dopo.'
+                  : 'Ora è chiuso. Puoi comunque ordinare per un altro orario.',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF9A6400),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _shareRestaurant() {
-    final ratingPercent = ((widget.restaurant.rating / 5) * 100).round();
     final deliveryCost = widget.restaurant.freeDelivery == true
         ? 'Gratis'
         : widget.restaurant.actualDeliveryFee != null
         ? '${widget.restaurant.actualDeliveryFee!.toStringAsFixed(2)} Euro'
         : widget.restaurant.deliveryCost;
 
+    // La valutazione entra nel testo solo se esiste davvero.
+    final rating = widget.restaurant.rating;
+    final String ratingLine = rating > 0
+        ? 'Valutazione: ${rating.toStringAsFixed(1)}/5\n'
+        : '';
+
     final String shareText =
         'Dai un\'occhiata a ${widget.restaurant.name}!\n\n'
-        'Valutazione: $ratingPercent%\n'
+        '$ratingLine'
         'Consegna: ${widget.restaurant.deliveryTime}\n'
         'Costo di consegna: $deliveryCost\n\n'
         'Ordina ora tramite la nostra app!';
@@ -546,6 +594,10 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               physics: const BouncingScrollPhysics(),
               slivers: [
                 _buildHeader(),
+                // Ristorante chiuso ora: lo si dice SUBITO, non al checkout.
+                // Ordinare resta possibile (preordine su fasce future).
+                if (widget.restaurant.isOpenNow == false)
+                  SliverToBoxAdapter(child: _buildClosedBanner()),
                 _buildCategoryTabs(), // Tab aderenti al box
                 if (!_isSearchActive) _buildFeaturedItems(),
                 // Dynamic menu sections from API categories
@@ -1526,6 +1578,21 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                       // Pulsante +
                       InkWell(
                         onTap: () {
+                          // Piatto non disponibile oggi: niente aggiunta
+                          if (_isDishUnavailable(item)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  item.availabilityLabel ??
+                                      'Piatto non disponibile oggi',
+                                ),
+                                backgroundColor: dangerColor,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                            return;
+                          }
+
                           // Controlla se ha varianti obbligatorie
                           final hasRequiredCustomizations = item.customizations
                               .any((group) => group.isRequired);
@@ -1554,6 +1621,21 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 // Mostra solo pulsante +
                 return GestureDetector(
                   onTap: () {
+                    // Piatto non disponibile oggi: niente aggiunta
+                    if (_isDishUnavailable(item)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            item.availabilityLabel ??
+                                'Piatto non disponibile oggi',
+                          ),
+                          backgroundColor: dangerColor,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+
                     // Controlla se ha varianti obbligatorie
                     final hasRequiredCustomizations = item.customizations.any(
                       (group) => group.isRequired,

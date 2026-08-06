@@ -251,7 +251,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: const Text(
-                                      '⭐ PREDEFINITO',
+                                      'PREDEFINITO',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 9,

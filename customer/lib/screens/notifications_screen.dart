@@ -96,24 +96,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          Consumer<NotificationProvider>(
-            builder: (context, provider, _) {
-              if (provider.notifications.isEmpty) return const SizedBox();
-              return TextButton(
-                onPressed: provider.markAllRead,
-                child: const Text(
-                  'Segna tutte',
-                  style: TextStyle(
-                    color: primaryBlue,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+        // Niente "Segna tutte": all'apertura le notifiche vengono gia'
+        // marcate lette in automatico (initState), il bottone era ridondante.
       ),
       body: Consumer<NotificationProvider>(
         builder: (context, provider, _) {

@@ -44,6 +44,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _searchQuery = ''; // Query di ricerca
   final TextEditingController _searchController = TextEditingController();
 
+  // Debounce ricerca: si filtra quando l'utente smette di digitare,
+  // non a ogni singola lettera.
+  Timer? _searchDebounce;
+
+  // Ancora per il coach-mark sul badge CONSEGNA/RITIRO
+  final GlobalKey _orderTypeBadgeKey = GlobalKey();
+
   late PageController _pageController;
   late List<ScrollController> _scrollControllers;
   final CuisineService _cuisineService = CuisineService();
@@ -120,7 +127,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  /// Mostra dialog tipo ordine se non ancora selezionato
+  /// Mostra dialog tipo ordine SOLO se non e' mai stato scelto
+  /// (la scelta e' persistita: agli avvii successivi non ricompare).
   Future<void> _showOrderTypeDialogIfNeeded() async {
     if (mounted) {
       final locationProvider = Provider.of<LocationProvider>(
@@ -136,8 +144,86 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             builder: (context) => OrderTypeDialog(),
           ),
         );
+
+        // Prima scelta appena fatta: coach-mark sul badge reale, una volta
+        // sola. Sostituisce il tutorial preventivo che stava nel dialog.
+        _maybeShowOrderTypeHint();
       }
     }
+  }
+
+  /// Coach-mark una tantum: indica il badge CONSEGNA/RITIRO come punto
+  /// dove cambiare modalita'. Mostrato solo dopo la prima scelta assoluta.
+  Future<void> _maybeShowOrderTypeHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('order_type_hint_shown') ?? false) return;
+    if (!mounted) return;
+
+    final badgeContext = _orderTypeBadgeKey.currentContext;
+    if (badgeContext == null) return;
+
+    final renderBox = badgeContext.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.attached) return;
+
+    final badgePosition = renderBox.localToGlobal(Offset.zero);
+    final badgeSize = renderBox.size;
+
+    OverlayEntry? entry;
+    void dismiss() {
+      entry?.remove();
+      entry = null;
+    }
+
+    entry = OverlayEntry(
+      builder: (context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: dismiss,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 12,
+              top: badgePosition.dy + badgeSize.height + 8,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.dark,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Da qui passi tra Consegna e Ritiro quando vuoi',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(entry!);
+    await prefs.setBool('order_type_hint_shown', true);
+
+    // Auto-chiusura se l'utente non tocca nulla
+    Future.delayed(const Duration(seconds: 6), dismiss);
   }
 
   int _previousCartCount = 0;
@@ -153,6 +239,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _fcmSubscription?.cancel();
     _pageController.dispose();
     _cartShakeController.dispose();
@@ -251,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 20),
               const Text(
-                'Il tuo carrello è vuoto! 🍕',
+                'Il tuo carrello è vuoto!',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -312,7 +399,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   scrollController: _scrollControllers[0],
                   cuisineId: _selectedCuisineId,
                   searchQuery: _searchQuery,
-                  key: ValueKey('$_selectedCuisineId-$_searchQuery'),
+                  // NIENTE key qui: una ValueKey su cucina+ricerca smontava
+                  // lo State a ogni lettera digitata, rifacendo da zero tutte
+                  // le chiamate di rete. I cambi filtro passano da
+                  // didUpdateWidget dentro RistorantiTab.
                 ),
                 ScopriTab(scrollController: _scrollControllers[1]),
                 PerTeTab(scrollController: _scrollControllers[2]),
@@ -662,13 +752,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: TextField(
                               controller: _searchController,
                               onChanged: (value) {
-                                setState(() {
-                                  _searchQuery = value;
-                                });
+                                _searchDebounce?.cancel();
+                                _searchDebounce = Timer(
+                                  const Duration(milliseconds: 300),
+                                  () {
+                                    if (mounted) {
+                                      setState(() => _searchQuery = value);
+                                    }
+                                  },
+                                );
                               },
                               style: const TextStyle(fontSize: 14),
                               decoration: InputDecoration(
-                                hintText: 'Cerca ristoranti o piatti...',
+                                // "o piatti" rimosso: la ricerca filtra solo
+                                // i ristoranti (nome/cucina/descrizione).
+                                // Ripristinarlo quando esistera' la ricerca
+                                // piatti lato server.
+                                hintText: 'Cerca ristoranti...',
                                 hintStyle: TextStyle(
                                   fontSize: 14,
                                   color: grayColor,
@@ -682,17 +782,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.mic,
-                              color: primaryBlue,
-                              size: 20,
-                            ),
-                            onPressed: () {},
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(),
-                          ),
-                          const SizedBox(width: 4),
+                          // Niente microfono: era un bottone senza funzione.
+                          // Torna quando ci sara' la ricerca vocale vera.
+                          const SizedBox(width: 12),
                         ],
                       ),
                     ),
@@ -718,6 +810,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             );
                           },
                           child: Container(
+                            key: _orderTypeBadgeKey,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,

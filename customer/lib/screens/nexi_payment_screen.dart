@@ -5,7 +5,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'payment_success_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
+import 'order_completed_screen.dart';
 import 'payment_error_screen.dart';
 
 /// Schermata WebView per pagamento Nexi
@@ -140,13 +142,23 @@ class _NexiPaymentScreenState extends State<NexiPaymentScreen> {
 
                       if (esito == 'OK') {
                         print('✅ Pagamento RIUSCITO');
-                        // Vai allo schermo di successo
+                        // Svuota il carrello: in questo flusso (retry da
+                        // errore) nessun altro lo fa.
+                        try {
+                          Provider.of<CartProvider>(
+                            context,
+                            listen: false,
+                          ).clearCart();
+                        } catch (_) {}
+                        // Stessa schermata di conferma di tutti gli altri
+                        // flussi. Qui il tipo ordine non e' noto: copy neutro.
                         Future.delayed(const Duration(milliseconds: 100), () {
                           if (mounted) {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(
-                                builder: (context) => PaymentSuccessScreen(
+                                builder: (context) => OrderCompletedScreen(
                                   orderId: widget.orderId,
+                                  deliveryType: '',
                                 ),
                               ),
                             );

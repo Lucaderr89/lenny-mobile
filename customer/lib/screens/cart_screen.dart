@@ -4,10 +4,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math' as math;
 import '../models/restaurant.dart';
 import '../models/cart_item.dart';
 import '../models/menu_item.dart';
 import '../providers/cart_provider.dart';
+import '../providers/location_provider.dart';
+import '../services/restaurant_service.dart';
 import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -33,6 +36,11 @@ class _CartScreenState extends State<CartScreen> {
   List<int> _forgottenItemIds = [];
   bool _suggestionsLoading = true;
 
+  // Regola di consegna del ristorante (fee, minimo, soglia gratuita):
+  // mostrata GIA' nel carrello, cosi' il cliente non scopre minimo
+  // d'ordine e costo consegna solo a un passo dalla conferma.
+  Map<String, dynamic>? _deliveryRule;
+
   // Colori identici al prototipo
   static const Color primaryColor = AppColors.primary;
   static const Color successColor = AppColors.success;
@@ -53,6 +61,26 @@ class _CartScreenState extends State<CartScreen> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     _cartItems = List.from(cartProvider.items);
     _loadSuggestions();
+    _loadDeliveryRule();
+  }
+
+  /// Carica la regola di consegna una volta: fee e minimo non dipendono
+  /// dal subtotale, la soglia "gratis sopra X" viene confrontata localmente.
+  Future<void> _loadDeliveryRule() async {
+    final location = Provider.of<LocationProvider>(context, listen: false);
+    if (location.isPickup) return;
+
+    final rule = await RestaurantService().getDeliveryZoneRule(
+      restaurantId: widget.restaurant.id,
+      postalCode: location.activePostalCode,
+      latitude: location.activeLatitude,
+      longitude: location.activeLongitude,
+      subtotal: 1.0,
+    );
+
+    if (mounted && rule != null) {
+      setState(() => _deliveryRule = rule);
+    }
   }
 
   @override
@@ -314,6 +342,142 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Aggiunge un piatto suggerito al carrello.
+  /// Se ha gruppi di opzioni obbligatori apre la scheda prodotto,
+  /// altrimenti aggiunge subito con quantita' 1.
+  void _addSuggestedItem(MenuItem item) {
+    final hasRequiredCustomizations = item.customizations.any(
+      (group) => group.isRequired,
+    );
+
+    if (hasRequiredCustomizations) {
+      _showSuggestedProductDetail(item);
+      return;
+    }
+
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    try {
+      cartProvider.addItem(
+        menuItem: item,
+        restaurantId: widget.restaurant.id,
+        restaurantName: widget.restaurant.name,
+        restaurantLogoUrl: widget.restaurant.logoUrl,
+        quantity: 1,
+      );
+      setState(() {
+        _cartItems = List.from(cartProvider.items);
+      });
+      _showToast('${item.name} aggiunto');
+    } catch (e) {
+      _showToast(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  /// Scheda prodotto per un suggerito con opzioni obbligatorie.
+  /// Il modal si chiude da solo dopo l'aggiunta (non e' in edit mode).
+  void _showSuggestedProductDetail(MenuItem item) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => ProductDetailModal(
+        menuItem: item,
+        restaurantId: widget.restaurant.id,
+        restaurantName: widget.restaurant.name,
+        onAddToCart: (menuItem, quantity, customizations, priceModifier) {
+          final List<Map<String, dynamic>> selectedExtras = [];
+
+          bool addOptionFromGroup(CustomizationGroup group, String optionId) {
+            for (final option in group.options) {
+              if (option.id == optionId) {
+                selectedExtras.add({
+                  'id': option.id,
+                  'name': option.label,
+                  'price': option.priceModifier,
+                });
+                return true;
+              }
+            }
+            return false;
+          }
+
+          final singleChoices = customizations['options'];
+          if (singleChoices is Map) {
+            singleChoices.forEach((groupId, optionId) {
+              for (final group in menuItem.customizations) {
+                if (group.id == groupId.toString()) {
+                  addOptionFromGroup(group, optionId.toString());
+                  break;
+                }
+              }
+            });
+          }
+
+          if (customizations['extras'] != null) {
+            for (final extraId in customizations['extras']) {
+              for (final group in menuItem.customizations) {
+                if (!group.isMultiSelect) continue;
+                if (addOptionFromGroup(group, extraId.toString())) break;
+              }
+            }
+          }
+
+          final notes = customizations['instructions'] as String?;
+
+          try {
+            cartProvider.addItem(
+              menuItem: menuItem,
+              restaurantId: widget.restaurant.id,
+              restaurantName: widget.restaurant.name,
+              restaurantLogoUrl: widget.restaurant.logoUrl,
+              quantity: quantity,
+              selectedExtras: selectedExtras.isNotEmpty ? selectedExtras : null,
+              notes: notes,
+            );
+            if (mounted) {
+              setState(() {
+                _cartItems = List.from(cartProvider.items);
+              });
+              _showToast('${menuItem.name} aggiunto');
+            }
+          } catch (e) {
+            if (mounted) {
+              _showToast(e.toString().replaceAll('Exception: ', ''));
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  /// Distanza in km tra l'indirizzo attivo del cliente e il ristorante.
+  /// Null se mancano le coordinate di uno dei due: in quel caso il
+  /// chip distanza non viene mostrato.
+  double? _distanceKm() {
+    final location = Provider.of<LocationProvider>(context, listen: false);
+    final lat1 = location.activeLatitude;
+    final lon1 = location.activeLongitude;
+    final lat2 = widget.restaurant.latitude;
+    final lon2 = widget.restaurant.longitude;
+    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
+      return null;
+    }
+
+    const earthRadiusKm = 6371.0;
+    double deg2rad(double deg) => deg * (math.pi / 180.0);
+    final dLat = deg2rad(lat2 - lat1);
+    final dLon = deg2rad(lon2 - lon1);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(deg2rad(lat1)) *
+            math.cos(deg2rad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
   void _proceedToCheckout() {
     if (_cartItems.isEmpty) {
       _showToast('Il carrello è vuoto');
@@ -561,55 +725,7 @@ class _CartScreenState extends State<CartScreen> {
                   spacing: 4,
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const FaIcon(
-                      FontAwesomeIcons.motorcycle,
-                      size: 11,
-                      color: grayColor,
-                    ),
-                    Text(
-                      widget.restaurant.deliveryTime,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: grayColor,
-                        fontFamily: 'Segoe UI',
-                      ),
-                    ),
-                    const Text(
-                      '•',
-                      style: TextStyle(color: lightGrayColor, fontSize: 13),
-                    ),
-                    const FaIcon(
-                      FontAwesomeIcons.locationDot,
-                      size: 11,
-                      color: grayColor,
-                    ),
-                    const Text(
-                      '2.5 km',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: grayColor,
-                        fontFamily: 'Segoe UI',
-                      ),
-                    ),
-                    const Text(
-                      '•',
-                      style: TextStyle(color: lightGrayColor, fontSize: 13),
-                    ),
-                    const FaIcon(
-                      FontAwesomeIcons.star,
-                      size: 11,
-                      color: grayColor,
-                    ),
-                    Text(
-                      '${widget.restaurant.rating}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: grayColor,
-                        fontFamily: 'Segoe UI',
-                      ),
-                    ),
-                  ],
+                  children: _buildRestaurantInfoSegments(),
                 ),
               ],
             ),
@@ -617,6 +733,55 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
     );
+  }
+
+  /// Segmenti della riga info ristorante: solo dati reali disponibili.
+  /// Niente valori inventati — se manca un dato, il segmento sparisce.
+  List<Widget> _buildRestaurantInfoSegments() {
+    const dot = Text(
+      '•',
+      style: TextStyle(color: lightGrayColor, fontSize: 13),
+    );
+    const infoStyle = TextStyle(
+      fontSize: 13,
+      color: grayColor,
+      fontFamily: 'Segoe UI',
+    );
+    final segments = <Widget>[];
+
+    if (widget.restaurant.deliveryTime.isNotEmpty) {
+      segments.addAll([
+        const FaIcon(
+          FontAwesomeIcons.motorcycle,
+          size: 11,
+          color: grayColor,
+        ),
+        Text(widget.restaurant.deliveryTime, style: infoStyle),
+      ]);
+    }
+
+    final distanceKm = _distanceKm();
+    if (distanceKm != null) {
+      if (segments.isNotEmpty) segments.add(dot);
+      segments.addAll([
+        const FaIcon(
+          FontAwesomeIcons.locationDot,
+          size: 11,
+          color: grayColor,
+        ),
+        Text('${distanceKm.toStringAsFixed(1)} km', style: infoStyle),
+      ]);
+    }
+
+    if (widget.restaurant.rating > 0) {
+      if (segments.isNotEmpty) segments.add(dot);
+      segments.addAll([
+        const FaIcon(FontAwesomeIcons.star, size: 11, color: grayColor),
+        Text(widget.restaurant.rating.toStringAsFixed(1), style: infoStyle),
+      ]);
+    }
+
+    return segments;
   }
 
   Widget _buildEmptyState() {
@@ -686,9 +851,155 @@ class _CartScreenState extends State<CartScreen> {
         _buildStepsIndicator(),
         _buildRestaurantInfo(),
         _buildCartItems(),
+        _buildCostsSummary(),
         _buildRecommendedItems(),
         _buildForgottenItems(),
       ],
+    );
+  }
+
+  /// Riepilogo costi GIA' nel carrello: consegna, minimo d'ordine e soglia
+  /// gratuita non devono essere una sorpresa dell'ultimo passo.
+  Widget _buildCostsSummary() {
+    final location = Provider.of<LocationProvider>(context, listen: false);
+    if (location.isPickup || _deliveryRule == null) {
+      return const SizedBox.shrink();
+    }
+
+    final rule = _deliveryRule!;
+    final isDeliverable = rule['is_deliverable'] as bool? ?? false;
+    if (!isDeliverable) return const SizedBox.shrink();
+
+    final deliveryFee = (rule['delivery_fee'] as num?)?.toDouble() ?? 0.0;
+    final minOrder = (rule['min_order'] as num?)?.toDouble() ?? 0.0;
+    final freeOver = (rule['free_over'] as num?)?.toDouble();
+
+    final freeDelivery = freeOver != null && _subtotal >= freeOver;
+    final missingForMin = minOrder - _subtotal;
+    final missingForFree = freeOver != null ? freeOver - _subtotal : null;
+
+    const labelStyle = TextStyle(
+      fontSize: 13,
+      color: grayColor,
+      fontFamily: 'Segoe UI',
+    );
+    const valueStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: darkColor,
+      fontFamily: 'Segoe UI',
+    );
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: lightColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: lightGrayColor.withOpacity(0.7)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Subtotale', style: labelStyle),
+              Text('€${_subtotal.toStringAsFixed(2)}', style: valueStyle),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Costo consegna', style: labelStyle),
+              freeDelivery
+                  ? Row(
+                      children: [
+                        if (deliveryFee > 0)
+                          Text(
+                            '€${deliveryFee.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: grayColor,
+                              decoration: TextDecoration.lineThrough,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Gratis',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: successColor,
+                            fontFamily: 'Segoe UI',
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      deliveryFee > 0
+                          ? '€${deliveryFee.toStringAsFixed(2)}'
+                          : 'Gratis',
+                      style: valueStyle,
+                    ),
+            ],
+          ),
+
+          // Avvisi progressivi: minimo d'ordine prima, poi soglia gratuita
+          if (missingForMin > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: Color(0xFF9A6400),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Ti mancano €${missingForMin.toStringAsFixed(2)} per '
+                    'il minimo d\'ordine di €${minOrder.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF9A6400),
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (!freeDelivery &&
+              missingForFree != null &&
+              missingForFree > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.local_shipping_outlined,
+                  size: 14,
+                  color: successColor,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Aggiungi €${missingForFree.toStringAsFixed(2)} e la '
+                    'consegna è gratis',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: successColor,
+                      fontFamily: 'Segoe UI',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -1019,9 +1330,8 @@ class _CartScreenState extends State<CartScreen> {
                                           size: 14,
                                           color: Colors.white,
                                         ),
-                                        onPressed: () {
-                                          _showToast('${item.name} aggiunto');
-                                        },
+                                        onPressed: () =>
+                                            _addSuggestedItem(item),
                                         padding: EdgeInsets.zero,
                                       ),
                                     ),
@@ -1179,9 +1489,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             child: IconButton(
               icon: const Icon(Icons.add, size: 14, color: Colors.white),
-              onPressed: () {
-                _showToast('${item.name} aggiunto');
-              },
+              onPressed: () => _addSuggestedItem(item),
               padding: EdgeInsets.zero,
             ),
           ),

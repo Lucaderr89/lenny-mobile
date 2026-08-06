@@ -38,6 +38,9 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Ospite o loggato: decide se l'header mostra "Esci" o "Accedi".
+  bool _isLoggedIn = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +60,10 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
     );
 
     _loadCategories();
+
+    AuthService().isLoggedIn().then((value) {
+      if (mounted) setState(() => _isLoggedIn = value);
+    });
 
     _fadeController.forward();
     _scaleController.forward();
@@ -281,30 +288,40 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
           Row(
             children: [
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Cosa ti va oggi? 😋',
-                      style: GoogleFonts.poppins(
-                        color: Colors.grey[600],
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
+                // Non e' decorativa: porta alla home cibo con la ricerca.
+                child: InkWell(
+                  onTap: () => context.go('/home'),
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Cosa ti va oggi?',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -324,16 +341,29 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                     ),
                   ],
                 ),
-                child: IconButton(
-                  onPressed: () => _handleLogout(context),
-                  icon: Image.asset(
-                    'assets/icons/icons8-uscita-32.png',
-                    width: 24,
-                    height: 24,
-                    color: AppColors.primary,
-                  ),
-                  padding: EdgeInsets.zero,
-                ),
+                // Ospite: "Accedi" (il logout di un ospite non ha senso).
+                // Loggato: "Esci" con conferma, come prima.
+                child: _isLoggedIn
+                    ? IconButton(
+                        onPressed: () => _handleLogout(context),
+                        icon: Image.asset(
+                          'assets/icons/icons8-uscita-32.png',
+                          width: 24,
+                          height: 24,
+                          color: AppColors.primary,
+                        ),
+                        padding: EdgeInsets.zero,
+                      )
+                    : IconButton(
+                        onPressed: () => context.go('/login'),
+                        icon: const Icon(
+                          Icons.person_outline,
+                          size: 26,
+                          color: AppColors.primary,
+                        ),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Accedi',
+                      ),
               ),
             ],
           ),

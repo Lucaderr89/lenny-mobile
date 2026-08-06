@@ -11,12 +11,17 @@ class PerTeTab extends StatefulWidget {
   State<PerTeTab> createState() => _PerTeTabState();
 }
 
-class _PerTeTabState extends State<PerTeTab> {
+class _PerTeTabState extends State<PerTeTab>
+    with AutomaticKeepAliveClientMixin {
   // Colori
   static const Color lightColor = Color(0xFFFFFFFF);
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // richiesto da AutomaticKeepAliveClientMixin
     return CustomScrollView(
       controller: widget.scrollController,
       slivers: [
@@ -88,16 +93,11 @@ class _PerTeTabState extends State<PerTeTab> {
           ),
           const SizedBox(height: 12),
 
-          // Risparmio
+          // Teaser: niente cifre inventate, solo la promessa del servizio.
           const Text(
-            'I risparmi che avresti avuto con Prime:',
-            style: TextStyle(fontSize: 13, color: Colors.white),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            '€47.90 questo mese',
+            'L\'abbonamento che azzera i costi di consegna',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),

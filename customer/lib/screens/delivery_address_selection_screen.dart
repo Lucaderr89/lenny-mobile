@@ -248,7 +248,7 @@ class _DeliveryAddressSelectionScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '❌ Impossibile ottenere la posizione GPS',
+              'Impossibile ottenere la posizione GPS',
               style: GoogleFonts.poppins(fontSize: 13),
             ),
             backgroundColor: AppColors.danger,

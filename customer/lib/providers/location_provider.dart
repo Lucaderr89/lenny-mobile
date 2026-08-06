@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_service.dart';
@@ -26,9 +27,16 @@ class LocationProvider extends ChangeNotifier {
   bool _isFirstLaunch = true;
   bool _hasRequestedPermission = false;
 
-  // Tipo di ordine: 'delivery' o 'pickup'
+  // Tipo di ordine: 'delivery' o 'pickup'.
+  // PERSISTITO: il cliente sceglie una volta, non a ogni avvio.
+  // Il full-screen di scelta compare solo finche' order_type_selected
+  // non e' mai stato salvato (primo avvio assoluto).
   String _orderType = 'delivery';
   bool _hasSelectedOrderType = false;
+
+  static const String _keyOrderType = 'order_type';
+  static const String _keyOrderTypeSelected = 'order_type_selected';
+  static const String _keySelectedAddressJson = 'selected_address_json';
 
   // Getters
   double? get currentLatitude => _currentLatitude;
@@ -95,6 +103,30 @@ class LocationProvider extends ChangeNotifier {
     // Se non è primo avvio, prova a caricare ultima posizione salvata
     if (!_isFirstLaunch) {
       await _loadLastKnownPosition();
+    }
+
+    // Ripristina la scelta consegna/ritiro dell'ultima sessione:
+    // se esiste, il full-screen di scelta non viene piu' mostrato.
+    _hasSelectedOrderType = prefs.getBool(_keyOrderTypeSelected) ?? false;
+    if (_hasSelectedOrderType) {
+      _orderType = prefs.getString(_keyOrderType) ?? 'delivery';
+
+      // Ripristina anche l'eventuale indirizzo salvato selezionato
+      final addressJson = prefs.getString(_keySelectedAddressJson);
+      if (addressJson != null && addressJson.isNotEmpty) {
+        try {
+          _selectedAddress = AddressModel.fromJson(
+            jsonDecode(addressJson) as Map<String, dynamic>,
+          );
+          _isUsingCurrentPosition = false;
+        } catch (e) {
+          debugPrint('⚠️ [LOCATION PROVIDER] Indirizzo salvato corrotto: $e');
+        }
+      }
+      debugPrint(
+        '✅ [LOCATION PROVIDER] Tipo ordine ripristinato: $_orderType '
+        '(indirizzo salvato: ${_selectedAddress != null})',
+      );
     }
 
     notifyListeners();
@@ -225,11 +257,16 @@ class LocationProvider extends ChangeNotifier {
     debugPrint('✅ [LOCATION PROVIDER] Flag permesso GPS salvato');
   }
 
-  /// Seleziona un indirizzo salvato (disabilita "posizione corrente")
+  /// Seleziona un indirizzo salvato (disabilita "posizione corrente").
+  /// Persistito: al prossimo avvio si riparte da questo indirizzo.
   void selectAddress(AddressModel address) {
     _selectedAddress = address;
     _isUsingCurrentPosition = false;
     notifyListeners();
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_keySelectedAddressJson, jsonEncode(address.toJson()));
+    });
   }
 
   /// Torna a usare posizione corrente
@@ -238,6 +275,9 @@ class LocationProvider extends ChangeNotifier {
     _selectedAddress = null;
     notifyListeners();
     debugPrint('📍 [LOCATION PROVIDER] Uso posizione corrente');
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keySelectedAddressJson);
 
     // Se non abbiamo coordinate, richiedi GPS
     if (_currentLatitude == null || _currentLongitude == null) {
@@ -258,23 +298,37 @@ class LocationProvider extends ChangeNotifier {
     debugPrint('✏️ [LOCATION PROVIDER] Indirizzo aggiornato: $_currentAddress');
   }
 
-  /// Imposta il tipo di ordine (pickup/delivery)
+  /// Imposta il tipo di ordine (pickup/delivery).
+  /// PERSISTITO: la scelta sopravvive al riavvio, il full-screen di scelta
+  /// non viene piu' riproposto. Si cambia dal badge in home.
   void setOrderType(String type) {
     _orderType = type;
     _hasSelectedOrderType = true;
     notifyListeners();
     debugPrint('🛒 [LOCATION PROVIDER] Tipo ordine: $type');
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_keyOrderType, type);
+      prefs.setBool(_keyOrderTypeSelected, true);
+    });
   }
 
-  /// Reset selezione tipo ordine
-  void resetOrderTypeSelection() {
+  /// Reset selezione tipo ordine (anche dalla persistenza)
+  Future<void> resetOrderTypeSelection() async {
     _hasSelectedOrderType = false;
     _orderType = 'delivery';
     notifyListeners();
     debugPrint('🔄 [LOCATION PROVIDER] Reset tipo ordine');
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyOrderType);
+    await prefs.remove(_keyOrderTypeSelected);
+    await prefs.remove(_keySelectedAddressJson);
   }
 
-  /// Reset provider (logout)
+  /// Reset provider (logout). La scelta consegna/ritiro resta persistita
+  /// (vale anche per l'ospite); l'indirizzo salvato invece e' legato
+  /// all'account e va dimenticato.
   void reset() {
     _currentLatitude = null;
     _currentLongitude = null;
@@ -283,9 +337,11 @@ class LocationProvider extends ChangeNotifier {
     _isUsingCurrentPosition = true;
     _locationError = null;
     _isLoadingLocation = false;
-    _orderType = 'delivery';
-    _hasSelectedOrderType = false;
     notifyListeners();
     debugPrint('🔄 [LOCATION PROVIDER] Reset completato');
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove(_keySelectedAddressJson);
+    });
   }
 }

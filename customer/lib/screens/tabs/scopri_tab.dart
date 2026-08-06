@@ -21,7 +21,13 @@ class ScopriTab extends StatefulWidget {
   State<ScopriTab> createState() => _ScopriTabState();
 }
 
-class _ScopriTabState extends State<ScopriTab> {
+class _ScopriTabState extends State<ScopriTab>
+    with AutomaticKeepAliveClientMixin {
+  // Il tab resta vivo nel PageView: anche solo attraversarlo scorrendo
+  // verso un altro tab innescava 4 chiamate di rete a ogni passaggio.
+  @override
+  bool get wantKeepAlive => true;
+
   // Colori (coerenti con home_screen.dart)
   static const Color primaryDarkPink = AppColors.primary;
   static const Color secondaryPink = Color(0xFFFF1A60);
@@ -120,6 +126,7 @@ class _ScopriTabState extends State<ScopriTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // richiesto da AutomaticKeepAliveClientMixin
     return RefreshIndicator(
       onRefresh: _loadAllContent,
       child: CustomScrollView(

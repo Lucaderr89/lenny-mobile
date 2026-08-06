@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/live_order.dart';
+import '../models/menu_item.dart';
+import '../models/restaurant.dart';
+import '../providers/cart_provider.dart';
 import '../services/live_order_service.dart';
+import '../services/restaurant_service.dart';
 import '../config/app_colors.dart';
+import 'cart_screen.dart';
 
 /// Screen storico ordini - Mostra ordini completati/annullati (status 5-6)
 class OrderHistoryScreen extends StatefulWidget {
@@ -42,6 +48,163 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         _errorMessage = 'Errore nel caricamento dello storico';
         _isLoading = false;
       });
+    }
+  }
+
+  /// Ricrea il carrello dai piatti di un ordine passato e apre il carrello.
+  /// I piatti vengono ripresi dal menu ATTUALE: quelli rimossi vengono
+  /// saltati (avvisando), le personalizzazioni non vengono riportate perche'
+  /// opzioni e prezzi possono essere cambiati nel frattempo.
+  Future<void> _reorder(LiveOrder order) async {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    // Carrello di un altro ristorante: chiedi prima di svuotare
+    if (cartProvider.isNotEmpty &&
+        cartProvider.restaurantId != order.restaurantId) {
+      final conferma = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Svuotare il carrello?',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          content: Text(
+            'Hai già prodotti di ${cartProvider.restaurantName ?? 'un altro ristorante'} nel carrello. '
+            'Per riordinare da ${order.restaurantName ?? 'questo ristorante'} il carrello verrà svuotato.',
+            style: const TextStyle(fontSize: 14, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annulla'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Svuota e riordina',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (conferma != true) return;
+      await cartProvider.clearCart();
+    }
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+    );
+
+    try {
+      final restaurantService = RestaurantService();
+
+      // Dati reali del ristorante + menu attuale, in parallelo
+      final results = await Future.wait([
+        restaurantService.getRestaurantDetail(order.restaurantId),
+        restaurantService.getRestaurantMenu(order.restaurantId),
+      ]);
+
+      final restaurant = results[0] as Restaurant?;
+      final menuData = results[1] as Map<String, dynamic>;
+
+      if (restaurant == null) {
+        throw Exception('Ristorante non disponibile');
+      }
+
+      // Indice piatti del menu attuale per id
+      final menuById = <int, MenuItem>{};
+      for (final cat in (menuData['categories'] as List)) {
+        for (final dishJson in (cat['dishes'] as List)) {
+          final item = MenuItem.fromJson(dishJson as Map<String, dynamic>);
+          menuById[item.id] = item;
+        }
+      }
+
+      var aggiunti = 0;
+      var saltati = 0;
+      var conExtra = false;
+
+      for (final orderItem in order.items) {
+        final menuItem =
+            orderItem.foodId != null ? menuById[orderItem.foodId] : null;
+        if (menuItem == null) {
+          saltati++;
+          continue;
+        }
+        if (orderItem.extras != null && orderItem.extras!.isNotEmpty) {
+          conExtra = true;
+        }
+        cartProvider.addItem(
+          menuItem: menuItem,
+          restaurantId: restaurant.id,
+          restaurantName: restaurant.name,
+          restaurantLogoUrl: restaurant.logoUrl,
+          quantity: orderItem.quantity,
+        );
+        aggiunti++;
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context); // chiudi loading
+
+      if (aggiunti == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'I piatti di questo ordine non sono più nel menu del ristorante',
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+
+      if (saltati > 0 || conExtra) {
+        final avvisi = <String>[];
+        if (saltati > 0) {
+          avvisi.add(
+            saltati == 1
+                ? '1 piatto non è più disponibile'
+                : '$saltati piatti non sono più disponibili',
+          );
+        }
+        if (conExtra) {
+          avvisi.add('personalizzazioni ed extra vanno riaggiunti');
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Nota: ${avvisi.join('; ')}'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CartScreen(
+            restaurant: restaurant,
+            cartItems: cartProvider.items.toList(),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // chiudi loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     }
   }
 
@@ -396,6 +559,34 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                           style: TextStyle(fontSize: 11, color: AppColors.gray),
                         ),
                       ],
+                    ),
+                  ],
+
+                  // Riordina: solo per ordini consegnati
+                  if (isDelivered) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 42,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _reorder(order),
+                        icon: const Icon(Icons.replay, size: 18),
+                        label: const Text(
+                          'Riordina',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ],

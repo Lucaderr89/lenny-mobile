@@ -1,139 +1,60 @@
-# 🎯 Sistema di Selezione Tipo Ordine
+# Sistema di Selezione Tipo Ordine
 
 ## Panoramica
-Il sistema permette al cliente di scegliere tra **RITIRO** e **CONSEGNA** prima di effettuare un ordine, con logiche differenziate per disponibilità ristoranti e regole di consegna.
+Il cliente sceglie tra **RITIRO** e **CONSEGNA**: la scelta filtra i ristoranti
+mostrati (zone consegnabili, costi per zona) ed e' una decisione di prodotto
+voluta. La scelta viene **persistita**: il full-screen di selezione compare
+solo al primo avvio assoluto; dagli avvii successivi si riparte dall'ultima
+scelta (e dall'ultimo indirizzo) e si cambia dal badge in home.
 
-## Componenti Implementati
+## Componenti
 
-### 1. **OrderTypeDialog** (`order_type_dialog.dart`)
-Dialog full-screen obbligatorio che appare all'avvio dell'app:
-- **Design**: Gradiente accattivante, icone animate, font Montserrat/Poppins
-- **Opzioni**:
-  - 🚚 **Consegna a domicilio**: Richiede selezione indirizzo → applica regole zone consegnabili
-  - 🏪 **Ritiro al ristorante**: Nessuna restrizione geografica → solo regole orarie/disponibilità
+### 1. OrderTypeDialog (`lib/widgets/order_type_dialog.dart`)
+Full-screen mostrato SOLO se non e' mai stata fatta una scelta
+(`hasSelectedOrderType` persistito falso):
+- **Consegna a domicilio**: ospite → posizione GPS (non bloccante);
+  loggato → `DeliveryAddressSelectionScreen`
+- **Ritiro al ristorante**: nessuna restrizione geografica
+- Sotto i due bottoni c'e' solo una riga informativa. Il vecchio blocco
+  tutorial (badge dimostrativi + warning) e' stato sostituito da un
+  coach-mark una tantum sul badge reale in home (`_maybeShowOrderTypeHint`).
 
-### 2. **DeliveryAddressSelectionScreen** (`delivery_address_selection_screen.dart`)
-Schermata per scegliere l'indirizzo di consegna:
-- Usa posizione corrente GPS
-- Seleziona indirizzo salvato
-- Aggiungi nuovo indirizzo
-- Design moderno con card colorate e icone
+### 2. LocationProvider (`lib/providers/location_provider.dart`)
+- `orderType`, `hasSelectedOrderType`, `isPickup`/`isDelivery`
+- `setOrderType(type)`: imposta E PERSISTE (chiavi `order_type`,
+  `order_type_selected` in SharedPreferences)
+- `selectAddress(address)`: persiste l'indirizzo scelto come JSON
+  (`selected_address_json`), ripristinato a freddo in `initialize()`
+- `resetOrderTypeSelection()`: azzera anche la persistenza
+- `reset()` (logout): dimentica l'indirizzo (legato all'account),
+  MANTIENE la scelta consegna/ritiro (vale anche per l'ospite)
 
-### 3. **LocationProvider Updates**
-Nuovi campi e metodi:
-- `orderType`: 'delivery' | 'pickup'
-- `hasSelectedOrderType`: bool
-- `isPickup` / `isDelivery`: getter di convenienza
-- `setOrderType(type)`: Imposta il tipo ordine
-- `resetOrderTypeSelection()`: Reset selezione
+### 3. Badge in home (`lib/screens/home_screen.dart`)
+- Badge GIALLO (ritiro) / BLU (consegna) nell'header, tap → riapre il dialog
+- Coach-mark una tantum dopo la prima scelta (flag `order_type_hint_shown`)
 
-### 4. **RistorantiTab Updates**
-Logica condizionale per applicazione regole:
-- **Modalità RITIRO**: Tutti i ristoranti disponibili, NO regole zone consegnabili
-- **Modalità CONSEGNA**: Applica filtri zone, calcola costi consegna, oscura ristoranti non consegnabili
-
-### 5. **HomeScreen Updates**
-Header con indicatore tipo ordine:
-- Badge colorato: GIALLO (ritiro) / BLU (consegna)
-- Indirizzo visibile solo in modalità consegna
-- Tap per cambiare tipo ordine
-
-## Flusso Utente
+## Flusso
 
 ```
-1. Apertura App
-   ↓
-2. [PRIMA VOLTA] Dialog permessi GPS
-   ↓
-3. Dialog Selezione Tipo Ordine (OBBLIGATORIO)
-   ↓
-   ├─→ RITIRO
-   │   ↓
-   │   • Tutti i ristoranti visibili
-   │   • Solo regole orarie/disponibilità
-   │   • Messaggio: "Scegli e ritira quando vuoi"
-   │   
-   └─→ CONSEGNA
-       ↓
-       • Selezione Indirizzo
-       ├─→ Posizione corrente (GPS)
-       ├─→ Indirizzo salvato
-       └─→ Nuovo indirizzo
-       ↓
-       • Filtro ristoranti per zone
-       • Calcolo costi consegna
-       • Oscuramento zone non consegnabili
+PRIMO AVVIO ASSOLUTO:
+  hub categorie → home → OrderTypeDialog (obbligatorio) → scelta persistita
+                                                        → coach-mark sul badge
+
+AVVII SUCCESSIVI:
+  hub categorie → home diretta con ultima scelta + ultimo indirizzo
+  (cambio modalita': tap sul badge in home)
 ```
 
-## Design Patterns
+## Colori reali
+- Ritiro: giallo `#F6E644` (badge) — Consegna: blu `AppColors.primary #0F4E8C`
+- Sfondo dialog: crema `#FFF8F0`, card bianca con onda (`_WaveClipper`)
 
-### Colori
-- **Ritiro**: Giallo (`accentYellow` #FFD042)
-- **Consegna**: Blu primario (`primaryBlue` #0F4BCA)
-- **Sfondo dialog**: Gradiente Primary → Dark
-
-### Fonts
-- **Titoli**: Montserrat (Bold 32px)
-- **Body**: Poppins (Regular 14-16px)
-- **Labels**: Poppins (Medium 12-13px)
-
-### Responsive
-- Font scalati per leggibilità su tutti gli schermi
-- Padding adattivo
-- Max width per contenuti
-
-## API Backend Richieste
-
-✅ `POST /delivery/calculate-fee` - Calcolo costo consegna
-✅ `GET /restaurants/{id}/delivery-zone-rule` - Regole zona per ristorante
-✅ `GET /delivery-addresses` - Lista indirizzi salvati
-
-## Testing
-
-### Scenari da testare:
-1. ✅ Primo avvio → Dialog GPS → Dialog tipo ordine
-2. ✅ Selezione RITIRO → Tutti ristoranti visibili
-3. ✅ Selezione CONSEGNA → Richiesta indirizzo
-4. ✅ Cambio tipo ordine da header → Ricarica ristoranti
-5. ✅ Ristoranti oscurati solo in modalità CONSEGNA
-6. ✅ Badge header corretto (colore + icona)
-7. ✅ Persistenza selezione tipo ordine
-
-## Note Implementative
-
-- **Non dismissible**: Dialog non chiudibile senza selezione (WillPopScope)
-- **Listener automatico**: RistorantiTab si aggiorna quando cambia orderType
-- **Graceful degradation**: Se GPS non disponibile, usa indirizzi salvati
-- **UX friendly**: Messaggi incoraggianti, icone colorate, animazioni smooth
-
-## Files Modificati/Creati
-
-### Nuovi File
-- `lib/widgets/order_type_dialog.dart`
-- `lib/screens/delivery_address_selection_screen.dart`
-
-### File Modificati
-- `lib/providers/location_provider.dart`
-- `lib/screens/tabs/ristoranti_tab.dart`
-- `lib/screens/home_screen.dart`
-
-## Comandi per Build
-
-```bash
-# Naviga alla directory customer
-cd mobile/customer
-
-# Get dependencies
-flutter pub get
-
-# Build APK release
-flutter build apk --release
-
-# Build APK debug
-flutter build apk --debug
-```
+## Note
+- Il dialog blocca il back (WillPopScope) finche' non si sceglie
+- `RistorantiTab` si aggiorna al cambio di `orderType` via listener
+- La persistenza usa SharedPreferences; nessuna chiamata di rete coinvolta
 
 ---
-**Creato**: 20 Gennaio 2026  
-**Versione**: 1.0.0  
-**Status**: ✅ Implementato e Testato
+**Aggiornato**: 6 Agosto 2026 (Fase 2 restyling: persistenza implementata
+davvero, dialog alleggerito, coach-mark; questo documento ora riflette il
+codice reale)

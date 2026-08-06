@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'payment_success_screen.dart';
 import 'payment_error_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -135,13 +134,11 @@ class _NexiBuildPaymentScreenState extends State<NexiBuildPaymentScreen> {
       print('⚠️ [NEXI BUILD] Error clearing cart: $e');
     }
 
-    // Naviga allo schermo di successo
+    // Torna al checkout con esito positivo: e' lui a mostrare la schermata
+    // di conferma unica (OrderCompletedScreen), la stessa dei pagamenti
+    // offline, con orario/indirizzo/totale che solo il checkout conosce.
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => PaymentSuccessScreen(orderId: widget.orderId),
-        ),
-      );
+      Navigator.of(context).pop('success');
     }
   }
 

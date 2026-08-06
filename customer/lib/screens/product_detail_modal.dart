@@ -153,7 +153,18 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
     return total * _quantity;
   }
 
+  /// Piatto marcato "Non disponibile oggi" dal server: l'etichetta inizia
+  /// con "non disponibile" (convenzione condivisa con la lista del menu).
+  /// In quel caso l'aggiunta e' bloccata, non solo segnalata.
+  bool get _isUnavailable {
+    final label = widget.menuItem.availabilityLabel;
+    return label != null && label.toLowerCase().startsWith('non disponibile');
+  }
+
   bool _canAddToCart() {
+    // Piatto non disponibile: mai aggiungibile, qualunque cosa sia selezionata
+    if (_isUnavailable) return false;
+
     // Check if all required groups have a selection
     for (var group in widget.menuItem.customizations) {
       if (group.isRequired) {
@@ -970,8 +981,10 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Messaggio errore se non si può aggiungere
-          if (!canAdd && missingRequirements.isNotEmpty) ...[
+          // Messaggio errore se non si può aggiungere: piatto non disponibile
+          // (prioritario) oppure gruppi obbligatori incompleti.
+          if (!canAdd &&
+              (_isUnavailable || missingRequirements.isNotEmpty)) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               margin: const EdgeInsets.only(bottom: 8),
@@ -986,7 +999,10 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      missingRequirements,
+                      _isUnavailable
+                          ? (widget.menuItem.availabilityLabel ??
+                                'Non disponibile oggi')
+                          : missingRequirements,
                       style: const TextStyle(
                         fontSize: 10,
                         color: dangerColor,

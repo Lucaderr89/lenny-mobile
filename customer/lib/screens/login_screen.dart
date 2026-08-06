@@ -281,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
             keyboardType: TextInputType.emailAddress,
             style: const TextStyle(fontSize: 15),
             decoration: InputDecoration(
-              hintText: 'Inserisci la tua e-mail',
+              hintText: 'Inserisci la tua email',
               hintStyle: TextStyle(
                 fontSize: 14,
                 color: AppColors.gray.withOpacity(0.6),

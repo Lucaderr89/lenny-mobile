@@ -421,7 +421,7 @@ class _DishMatchGameScreenState extends State<DishMatchGameScreen>
       'Ti regalo un super aiuto! 🎁\nHo abbinato 2 piatti per te,\ntrova gli altri 2!',
       'Colpo di fortuna! 🍀\nHo fatto metà del lavoro,\nabbina i rimanenti 2 piatti!',
       'Aiutino dello chef! 👨‍🍳\nTi ho già abbinato 2 piatti,\na te trovare gli ultimi 2!',
-      'Regalo speciale! ✨\nDue piatti già abbinati,\ncompl eta gli altri 2!',
+      'Regalo speciale! ✨\nDue piatti già abbinati,\ncompleta gli altri 2!',
     ];
 
     final hint = hints[_failedAttempts % hints.length];

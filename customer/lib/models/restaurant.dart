@@ -132,7 +132,8 @@ class Restaurant {
       name: json['name'] as String,
       cuisine: cuisine,
       cuisineId: cuisineId,
-      rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
+      // 0 = nessun rating: la UI nasconde la stella. Mai un default inventato.
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       deliveryTime: deliveryTime,
       deliveryCost: deliveryCost,
       minOrder: minOrder,
