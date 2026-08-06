@@ -389,8 +389,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: Column(
         children: [
           _buildHeader(),
-          _buildSectionNav(),
-          if (!_isHeaderCollapsed && _selectedTab == 0) ...[_buildCategories()],
+          // Header compatto sulla tab Ristoranti: spariscono le 3 tab e
+          // restano le CATEGORIE cucina, cosi' a meta' di una lista di 40
+          // ristoranti si puo' filtrare senza risalire. Le altre tab
+          // restano raggiungibili con lo swipe orizzontale (e tornando su).
+          if (!(_isHeaderCollapsed && _selectedTab == 0)) _buildSectionNav(),
+          if (_selectedTab == 0) _buildCategories(),
           Expanded(
             child: PageView(
               controller: _pageController,

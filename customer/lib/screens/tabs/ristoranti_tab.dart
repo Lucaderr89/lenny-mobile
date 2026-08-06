@@ -868,8 +868,10 @@ class _RistorantiTabState extends State<RistorantiTab>
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
                   child: _buildSectionHeader(
+                    // "Risultati" generico: la query la scrive il cliente
+                    // e puo' essere lunga quanto vuole, niente overflow
                     widget.searchQuery.isNotEmpty
-                        ? 'Risultati per "${widget.searchQuery}"'
+                        ? 'Risultati'
                         : 'Tutti i ristoranti',
                     'assets/icons/icons8-ristorante-32.png',
                   ),
@@ -1003,14 +1005,19 @@ class _RistorantiTabState extends State<RistorantiTab>
   Widget _buildSectionHeader(String title, String iconPath) {
     return Row(
       children: [
-        ImageIcon(AssetImage(iconPath), size: 24, color: primaryDarkPink),
+        AppIcon(iconPath, size: 24, color: primaryDarkPink),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: darkColor,
+        // Expanded + ellipsis: 'Risultati per "<parola lunga>"' sfondava
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: darkColor,
+            ),
           ),
         ),
       ],

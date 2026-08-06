@@ -1485,19 +1485,51 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                AppIcon(iconPath, size: 14, color: primaryColor),
-                const SizedBox(width: 6),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: darkColor,
+            // Banda di sezione BEN visibile: scorrendo un menu lungo si
+            // deve capire a colpo d'occhio in che categoria si e' entrati
+            // (barra colorata + fondo tinto + conteggio piatti).
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  AppIcon(iconPath, size: 16, color: primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: darkColor,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${items.length}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: grayColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             ...items.map((item) => _buildMenuItem(item)),
