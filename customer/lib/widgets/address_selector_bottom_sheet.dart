@@ -448,10 +448,9 @@ class _AddressSelectorBottomSheetState
     }
 
     return ListTile(
-      leading: Image.asset(
+      leading: AppIcon(
         iconPath,
-        width: 32,
-        height: 32,
+        size: 32,
         color: AppColors.primary,
       ),
       title: Row(

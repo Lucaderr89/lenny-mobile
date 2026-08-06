@@ -3208,7 +3208,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
-                childAspectRatio: 2.8,
+                // 2.4 (non 2.8): con la descrizione su due righe le celle
+                // piu' basse sforavano di ~14px sui display stretti
+                childAspectRatio: 2.4,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
                 children: _suggestedCoupons.map((coupon) {
@@ -3325,14 +3327,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              description,
-              style: const TextStyle(
-                fontSize: 11,
-                color: grayColor,
+            // Flexible: la cella della griglia ha altezza fissa, il testo
+            // si adatta invece di sfondare
+            Flexible(
+              child: Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: grayColor,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -3832,10 +3838,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
+            AppIcon(
               icon,
-              width: 18,
-              height: 18,
+              size: 18,
               color: isSelected ? primaryColor : grayColor,
             ),
             const SizedBox(width: 6),

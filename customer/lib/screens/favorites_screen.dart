@@ -139,9 +139,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             return _buildEmptyState();
           }
 
+          // Niente banner introduttivo: qui vivono insieme ristoranti e
+          // piatti preferiti, la lista parla da sola.
           return Column(
             children: [
-              _buildInfoBanner(),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () =>
@@ -167,52 +168,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildInfoBanner() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            primaryColor.withValues(alpha: 0.08),
-            primaryColor.withValues(alpha: 0.03),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primaryColor.withValues(alpha: 0.15), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.info_outline,
-              color: primaryColor,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Tocca un piatto preferito per ordinarlo subito!',
-              style: TextStyle(
-                fontSize: 13,
-                color: darkColor.withValues(alpha: 0.8),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -295,12 +295,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         context,
         MaterialPageRoute(
           builder: (context) => CartScreen(
+            // Scheletro: solo id/nome/logo. Il carrello carica da solo i
+            // dati veri (coordinate, tempi) via API — niente "30 min" finti.
             restaurant: Restaurant(
               id: cartProvider.restaurantId!,
               name: cartProvider.restaurantName!,
               cuisine: 'Vario',
               rating: 0.0,
-              deliveryTime: '30 min',
+              deliveryTime: '',
               deliveryCost: '€0',
               minOrder: '0',
               imageUrl: '',
@@ -393,13 +395,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: PageView(
               controller: _pageController,
               onPageChanged: (index) {
-                setState(() => _selectedTab = index);
+                // Il collasso dell'header segue la tab VISIBILE: senza questo
+                // ricalcolo, arrivando da una tab scrollata la barra di
+                // ricerca e le categorie restavano nascoste (schermo "vuoto").
+                final offset = _scrollControllers[index].hasClients
+                    ? _scrollControllers[index].offset
+                    : 0.0;
+                setState(() {
+                  _selectedTab = index;
+                  _isHeaderCollapsed = offset > 50;
+                });
               },
               children: [
                 RistorantiTab(
                   scrollController: _scrollControllers[0],
                   cuisineId: _selectedCuisineId,
                   searchQuery: _searchQuery,
+                  onClearSearch: () {
+                    setState(() {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    });
+                  },
                   // NIENTE key qui: una ValueKey su cucina+ricerca smontava
                   // lo State a ogni lettera digitata, rifacendo da zero tutte
                   // le chiamate di rete. I cambi filtro passano da
@@ -410,9 +427,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   // Chip di Scopri (meteo/eventi) → ricerca ristoranti:
                   // imposta la query e torna alla tab Ristoranti.
                   onSearchSuggestion: (query) {
+                    if (_scrollControllers[0].hasClients) {
+                      _scrollControllers[0].jumpTo(0);
+                    }
                     setState(() {
                       _searchController.text = query;
                       _searchQuery = query;
+                      _isHeaderCollapsed = false;
                     });
                     _pageController.animateToPage(
                       0,
@@ -1202,10 +1223,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           icon is String
-              ? Image.asset(
+              ? AppIcon(
                   icon,
-                  width: 20,
-                  height: 20,
+                  size: 20,
                   color: isActive ? primaryBlue : grayColor,
                 )
               : Icon(icon, color: isActive ? primaryBlue : grayColor, size: 20),

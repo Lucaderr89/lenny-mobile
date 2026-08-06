@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_colors.dart';
 import 'wave_clipper.dart';
+import 'app_icon.dart';
 import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 import '../services/auth_service.dart';
@@ -290,11 +291,12 @@ class _OrderTypeButton extends StatelessWidget {
                   color: textColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Image.asset(
-                  iconPath,
-                  width: 26,
-                  height: 26,
-                  color: textColor,
+                child: Center(
+                  child: AppIcon(
+                    iconPath,
+                    size: 26,
+                    color: textColor,
+                  ),
                 ),
               ),
 

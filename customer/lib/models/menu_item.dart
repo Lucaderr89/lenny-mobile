@@ -4,6 +4,10 @@ class MenuItem {
   final String description;
   final double price;
   final String? imageUrl;
+
+  /// Variante piccola (150px) per le righe del menu: l'originale a piena
+  /// risoluzione rendeva la lista lentissima da caricare.
+  final String? thumbnailUrl;
   final String category;
   final List<String> badges;
   final bool hasAR;
@@ -22,6 +26,7 @@ class MenuItem {
     required this.description,
     required this.price,
     this.imageUrl,
+    this.thumbnailUrl,
     required this.category,
     this.badges = const [],
     this.hasAR = false,
@@ -41,6 +46,7 @@ class MenuItem {
       'description': description,
       'price': price,
       'image_url': imageUrl,
+      'thumbnail_url': thumbnailUrl,
       'category': category,
       'badges': badges,
       'has_ar': hasAR,
@@ -78,6 +84,11 @@ class MenuItem {
           ? (json['discounted_price'] as num).toDouble()
           : (json['price'] as num).toDouble(),
       imageUrl: _extractImageUrl(json),
+      thumbnailUrl: _extractImageUrl(
+        json,
+        preferite: const ['thumbnail', 'medium', 'large'],
+        fallbackKey: 'thumbnail_url',
+      ),
       category: json['category_name'] as String? ?? 'Altro',
       badges: badges,
       hasAR: json['has_ar'] as bool? ?? false,
@@ -105,18 +116,35 @@ class MenuItem {
     );
   }
 
-  /// Estrae l'URL dell'immagine dal JSON (supporta cover_image da API)
-  static String? _extractImageUrl(Map<String, dynamic> json) {
+  /// Estrae l'URL dell'immagine dal JSON (supporta cover_image da API).
+  /// Preferisce le VARIANTI ridimensionate (medium 400px per la scheda,
+  /// thumbnail 150px per le righe): l'URL base e' l'originale a piena
+  /// risoluzione, che pesa centinaia di KB per foto.
+  static String? _extractImageUrl(
+    Map<String, dynamic> json, {
+    List<String> preferite = const ['medium', 'large'],
+    String fallbackKey = 'image_url',
+  }) {
     // Prova con cover_image (struttura API)
     if (json['cover_image'] != null && json['cover_image'] is Map) {
       final coverImage = json['cover_image'] as Map<String, dynamic>;
+      final variants = coverImage['variants'];
+      if (variants is Map) {
+        for (final key in preferite) {
+          final v = variants[key];
+          if (v is Map && v['url'] != null) {
+            final url = v['url'].toString();
+            if (url.isNotEmpty) return url;
+          }
+        }
+      }
       // Usa 'url' se disponibile (URL Firebase), altrimenti 'file_path'
       return coverImage['url']?.toString() ??
           coverImage['file_path']?.toString();
     }
 
-    // Fallback a image_url diretto
-    return json['image_url'] as String?;
+    // Fallback ai campi diretti (es. carrello salvato in locale)
+    return json[fallbackKey] as String? ?? json['image_url'] as String?;
   }
 }
 

@@ -519,10 +519,9 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
               ),
               if (currentTier?.slug != null &&
                   _getTierIconPath(currentTier!.slug) != null)
-                Image.asset(
+                AppIcon(
                   _getTierIconPath(currentTier.slug)!,
-                  width: 48,
-                  height: 48,
+                  size: 48,
                   color: Colors.white,
                 ),
             ],
@@ -572,7 +571,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
       ),
       child: Column(
         children: [
-          Image.asset(iconPath, width: 20, height: 20, color: Colors.white),
+          AppIcon(iconPath, size: 20, color: Colors.white),
           const SizedBox(height: 8),
           Text(
             value,
@@ -622,10 +621,9 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                 ),
               ),
               if (_getTierIconPath(nextTier.slug) != null)
-                Image.asset(
+                AppIcon(
                   _getTierIconPath(nextTier.slug)!,
-                  width: 24,
-                  height: 24,
+                  size: 24,
                 )
               else if (nextTier.icon != null)
                 Icon(
@@ -806,10 +804,9 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
             child: Row(
               children: [
                 if (_getTierIconPath(tier.slug) != null)
-                  Image.asset(
+                  AppIcon(
                     _getTierIconPath(tier.slug)!,
-                    width: 40,
-                    height: 40,
+                    size: 40,
                   ),
                 const SizedBox(width: 10),
                 Expanded(

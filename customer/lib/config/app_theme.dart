@@ -17,9 +17,15 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.background,
 
+      // TUTTO Poppins, anche gli slot non ridefiniti sotto: senza questa
+      // famiglia di default gli slot mancanti (labelMedium, titleSmall...)
+      // ricadevano sul Roboto di sistema e alcune schermate (es. notifiche)
+      // apparivano con un font diverso.
+      fontFamily: GoogleFonts.poppins().fontFamily,
+
       // Text Theme — UNA sola famiglia (Poppins): la gerarchia la fanno
       // corpi e pesi, non un secondo font. Scala: 28/22/17/15/13/11.
-      textTheme: TextTheme(
+      textTheme: GoogleFonts.poppinsTextTheme().copyWith(
         displayLarge: GoogleFonts.poppins(
           fontSize: 32,
           fontWeight: FontWeight.w800,

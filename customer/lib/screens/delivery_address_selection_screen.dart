@@ -338,11 +338,12 @@ class _AddressOptionCard extends StatelessWidget {
                   color: iconColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Image.asset(
-                  iconPath,
-                  width: 22,
-                  height: 22,
-                  color: iconColor,
+                child: Center(
+                  child: AppIcon(
+                    iconPath,
+                    size: 22,
+                    color: iconColor,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -428,11 +429,12 @@ class _SavedAddressCard extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Image.asset(
-                  _getAddressIconPath(),
-                  width: 22,
-                  height: 22,
-                  color: AppColors.primary,
+                child: Center(
+                  child: AppIcon(
+                    _getAddressIconPath(),
+                    size: 22,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),

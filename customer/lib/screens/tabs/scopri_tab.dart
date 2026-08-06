@@ -773,6 +773,14 @@ class _ScopriTabState extends State<ScopriTab>
       }
     }
 
+    // Il colore lo decide chi configura l'evento: su tinte chiare il testo
+    // bianco sparisce. Testo e chip si adattano alla luminanza dello sfondo.
+    final bool sfondoChiaro = baseColor.computeLuminance() > 0.45;
+    final Color testoEvento = sfondoChiaro ? AppColors.dark : Colors.white;
+    final Color chipEvento = sfondoChiaro
+        ? AppColors.dark.withValues(alpha: 0.10)
+        : Colors.white.withValues(alpha: 0.3);
+
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 12, 15, 8),
       padding: const EdgeInsets.all(15),
@@ -794,16 +802,16 @@ class _ScopriTabState extends State<ScopriTab>
               children: [
                 Text(
                   event.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: testoEvento,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   event.description,
-                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                  style: TextStyle(fontSize: 13, color: testoEvento),
                 ),
                 if (event.suggestions != null &&
                     event.suggestions!.isNotEmpty) ...[
@@ -824,15 +832,15 @@ class _ScopriTabState extends State<ScopriTab>
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.3),
+                                color: chipEvento,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 suggestion,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                                  color: testoEvento,
                                 ),
                               ),
                             ),
@@ -861,7 +869,7 @@ class _ScopriTabState extends State<ScopriTab>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: sfondoChiaro ? AppColors.dark : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
@@ -869,7 +877,7 @@ class _ScopriTabState extends State<ScopriTab>
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: baseColor,
+                          color: sfondoChiaro ? Colors.white : baseColor,
                         ),
                       ),
                     ),
@@ -1010,17 +1018,23 @@ class _ScopriTabState extends State<ScopriTab>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (iconAsset != null)
-              Image.asset(iconAsset, width: 24, height: 24, color: Colors.white)
+              AppIcon(iconAsset, size: 24, color: Colors.white)
             else
               Text(icon, style: const TextStyle(fontSize: 24)),
             const SizedBox(width: 8),
-            Text(
-              title.replaceAll('\n', ' '),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+            // Flexible + maxLines: sui display stretti il titolo lungo
+            // ("Il Prezzo è Giusto?") sfondava la card di ~19px.
+            Flexible(
+              child: Text(
+                title.replaceAll('\n', ' '),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ),
             if (badge != null) ...[

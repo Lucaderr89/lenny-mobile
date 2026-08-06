@@ -22,7 +22,6 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
   // Colori (coerenti con scopri_tab.dart e dish_match_game_screen.dart)
   static const Color primaryDarkPink = AppColors.primary;
   static const Color accentYellow = AppColors.accent;
-  static const Color warningOrange = AppColors.warning;
   static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
   static const Color grayColor = AppColors.grayDark;
@@ -98,7 +97,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
   void _showError(String message) {
     setState(() => _isLoading = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppColors.danger),
     );
   }
 
@@ -177,18 +176,15 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                primaryDarkPink.withValues(alpha: 0.95),
-                warningOrange.withValues(alpha: 0.95),
-              ],
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryEnd],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppRadius.sheet),
             boxShadow: [
               BoxShadow(
-                color: primaryDarkPink.withValues(alpha: 0.5),
+                color: AppColors.primary.withValues(alpha: 0.4),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -220,7 +216,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                       ),
                       child: const Icon(
                         Icons.favorite,
-                        color: Colors.red,
+                        color: AppColors.danger,
                         size: 50,
                       ),
                     ),
@@ -536,10 +532,15 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Stesso linguaggio di Piatto Segreto e Prezzo Giusto: fondo crema,
+    // barra crema con titolo scuro centrato, contatore di sessione a destra.
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.cream,
       appBar: AppBar(
         toolbarHeight: 56,
+        backgroundColor: AppColors.cream,
+        elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: AppIcon(
 'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
@@ -549,28 +550,26 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(
-'assets/icons/icons8-cuore-cucito-48.png',
-              width: 24,
-              height: 24,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Foodder',
-              style: TextStyle(
-                color: darkColor,
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
+        title: const Text(
+          'Foodder',
+          style: TextStyle(
+            color: darkColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        actions: [
+          if (_likesCount > 0)
+            Center(
+              child: Text(
+                '$_likesCount like',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
             ),
-          ],
-        ),
-        backgroundColor: lightColor,
-        elevation: 0,
-        actions: [
           IconButton(
             icon: AppIcon(
 'assets/icons/icons8-informazioni-32.png',
@@ -659,12 +658,12 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
             children: [
               _buildActionButton(
                 icon: Icons.close,
-                color: Colors.red,
+                color: AppColors.danger,
                 onTap: () => _swipeCard(false),
               ),
               _buildActionButton(
                 icon: Icons.favorite,
-                color: Colors.green,
+                color: AppColors.success,
                 onTap: () => _swipeCard(true),
               ),
             ],
@@ -682,26 +681,23 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.card),
             color: Colors.white,
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
+              AppColors.cardShadow,
               // Glow colorato in base allo swipe
               if (isActive && _isDragging && dragProgress.abs() > 0.05)
                 BoxShadow(
-                  color: (dragProgress > 0 ? Colors.green : Colors.red)
-                      .withValues(alpha: dragProgress.abs() * 0.6),
+                  color:
+                      (dragProgress > 0 ? AppColors.success : AppColors.danger)
+                          .withValues(alpha: dragProgress.abs() * 0.6),
                   blurRadius: 40,
                   spreadRadius: 5,
                 ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.card),
             child: Column(
               children: [
                 // Immagine piatto
@@ -830,13 +826,18 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: dragProgress > 0 ? Colors.green : Colors.red,
+                      color: dragProgress > 0
+                          ? AppColors.success
+                          : AppColors.danger,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.white, width: 4),
                       boxShadow: [
                         BoxShadow(
-                          color: (dragProgress > 0 ? Colors.green : Colors.red)
-                              .withValues(alpha: 0.8),
+                          color:
+                              (dragProgress > 0
+                                      ? AppColors.success
+                                      : AppColors.danger)
+                                  .withValues(alpha: 0.8),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),

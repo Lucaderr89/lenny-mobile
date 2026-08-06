@@ -33,6 +33,13 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   late List<CartItem> _cartItems;
+
+  // Il carrello puo' essere aperto con un Restaurant "scheletro" (solo id,
+  // nome e logo, es. dall'icona carrello in home): niente coordinate ne'
+  // tempi. I dati veri arrivano dall'API e sostituiscono lo scheletro,
+  // cosi' distanza e tempo di consegna sono sempre reali, mai inventati.
+  Restaurant? _restaurantDetail;
+  Restaurant get _rest => _restaurantDetail ?? widget.restaurant;
   List<int> _recommendedItemIds = [];
   List<int> _forgottenItemIds = [];
   bool _suggestionsLoading = true;
@@ -63,6 +70,17 @@ class _CartScreenState extends State<CartScreen> {
     _cartItems = List.from(cartProvider.items);
     _loadSuggestions();
     _loadDeliveryRule();
+    _loadRestaurantDetailSeIncompleto();
+  }
+
+  Future<void> _loadRestaurantDetailSeIncompleto() async {
+    if (widget.restaurant.latitude != null) return;
+    final detail = await RestaurantService().getRestaurantDetail(
+      widget.restaurant.id,
+    );
+    if (mounted && detail != null) {
+      setState(() => _restaurantDetail = detail);
+    }
   }
 
   /// Carica la regola di consegna una volta: fee e minimo non dipendono
@@ -72,7 +90,7 @@ class _CartScreenState extends State<CartScreen> {
     if (location.isPickup) return;
 
     final rule = await RestaurantService().getDeliveryZoneRule(
-      restaurantId: widget.restaurant.id,
+      restaurantId: _rest.id,
       postalCode: location.activePostalCode,
       latitude: location.activeLatitude,
       longitude: location.activeLongitude,
@@ -107,7 +125,7 @@ class _CartScreenState extends State<CartScreen> {
           .join(',');
 
       final url = Uri.parse(
-        '$apiBaseUrl/restaurants/${widget.restaurant.id}/suggestions'
+        '$apiBaseUrl/restaurants/${_rest.id}/suggestions'
         '${cartFoodIds.isNotEmpty ? '?cart_items=$cartFoodIds' : ''}',
       );
 
@@ -253,8 +271,8 @@ class _CartScreenState extends State<CartScreen> {
       backgroundColor: Colors.transparent,
       builder: (modalContext) => ProductDetailModal(
         menuItem: item.menuItem,
-        restaurantId: widget.restaurant.id,
-        restaurantName: widget.restaurant.name,
+        restaurantId: _rest.id,
+        restaurantName: _rest.name,
         initialQuantity: item.quantity,
         initialCustomizations: item.customizationData,
         isEditMode: true,
@@ -360,9 +378,9 @@ class _CartScreenState extends State<CartScreen> {
     try {
       cartProvider.addItem(
         menuItem: item,
-        restaurantId: widget.restaurant.id,
-        restaurantName: widget.restaurant.name,
-        restaurantLogoUrl: widget.restaurant.logoUrl,
+        restaurantId: _rest.id,
+        restaurantName: _rest.name,
+        restaurantLogoUrl: _rest.logoUrl,
         quantity: 1,
       );
       setState(() {
@@ -385,8 +403,8 @@ class _CartScreenState extends State<CartScreen> {
       backgroundColor: Colors.transparent,
       builder: (modalContext) => ProductDetailModal(
         menuItem: item,
-        restaurantId: widget.restaurant.id,
-        restaurantName: widget.restaurant.name,
+        restaurantId: _rest.id,
+        restaurantName: _rest.name,
         onAddToCart: (menuItem, quantity, customizations, priceModifier) {
           final List<Map<String, dynamic>> selectedExtras = [];
 
@@ -430,9 +448,9 @@ class _CartScreenState extends State<CartScreen> {
           try {
             cartProvider.addItem(
               menuItem: menuItem,
-              restaurantId: widget.restaurant.id,
-              restaurantName: widget.restaurant.name,
-              restaurantLogoUrl: widget.restaurant.logoUrl,
+              restaurantId: _rest.id,
+              restaurantName: _rest.name,
+              restaurantLogoUrl: _rest.logoUrl,
               quantity: quantity,
               selectedExtras: selectedExtras.isNotEmpty ? selectedExtras : null,
               notes: notes,
@@ -460,8 +478,8 @@ class _CartScreenState extends State<CartScreen> {
     final location = Provider.of<LocationProvider>(context, listen: false);
     final lat1 = location.activeLatitude;
     final lon1 = location.activeLongitude;
-    final lat2 = widget.restaurant.latitude;
-    final lon2 = widget.restaurant.longitude;
+    final lat2 = _rest.latitude;
+    final lon2 = _rest.longitude;
     if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
       return null;
     }
@@ -490,7 +508,7 @@ class _CartScreenState extends State<CartScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => CheckoutScreen(
-          restaurant: widget.restaurant,
+          restaurant: _rest,
           cartItems: _cartItems,
           subtotal: _subtotal,
         ),
@@ -688,9 +706,9 @@ class _CartScreenState extends State<CartScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: widget.restaurant.logoUrl != null
+              child: _rest.logoUrl != null
                   ? Image.network(
-                      widget.restaurant.logoUrl!,
+                      _rest.logoUrl!,
                       width: 35,
                       height: 35,
                       fit: BoxFit.contain,
@@ -709,7 +727,7 @@ class _CartScreenState extends State<CartScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.restaurant.name,
+                  _rest.name,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -744,14 +762,14 @@ class _CartScreenState extends State<CartScreen> {
     );
     final segments = <Widget>[];
 
-    if (widget.restaurant.deliveryTime.isNotEmpty) {
+    if (_rest.deliveryTime.isNotEmpty) {
       segments.addAll([
         const FaIcon(
           FontAwesomeIcons.motorcycle,
           size: 11,
           color: grayColor,
         ),
-        Text(widget.restaurant.deliveryTime, style: infoStyle),
+        Text(_rest.deliveryTime, style: infoStyle),
       ]);
     }
 
@@ -768,11 +786,11 @@ class _CartScreenState extends State<CartScreen> {
       ]);
     }
 
-    if (widget.restaurant.rating > 0) {
+    if (_rest.rating > 0) {
       if (segments.isNotEmpty) segments.add(dot);
       segments.addAll([
         const FaIcon(FontAwesomeIcons.star, size: 11, color: grayColor),
-        Text(widget.restaurant.rating.toStringAsFixed(1), style: infoStyle),
+        Text(_rest.rating.toStringAsFixed(1), style: infoStyle),
       ]);
     }
 
@@ -1490,7 +1508,7 @@ class _CartScreenState extends State<CartScreen> {
   Future<List<MenuItem>> _loadRestaurantMenu() async {
     try {
       final url = Uri.parse(
-        '$apiBaseUrl/restaurants/${widget.restaurant.id}/menu',
+        '$apiBaseUrl/restaurants/${_rest.id}/menu',
       );
       final response = await http.get(url);
 

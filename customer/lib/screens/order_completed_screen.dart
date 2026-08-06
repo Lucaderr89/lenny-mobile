@@ -237,6 +237,14 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
           SafeArea(
             child: Column(
               children: [
+                // Parte alta scrollabile: sugli schermi bassi il blocco
+                // fisso (logo + card riepilogo) sforava di ~16px.
+                // I bottoni restano ancorati in fondo.
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
                 const SizedBox(height: 10),
 
                 // Logo "ordine confermato" con animazione
@@ -319,7 +327,11 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                   ),
                 ),
 
-                const Spacer(),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
 
                 // Bottoni con bounce animation
                 ScaleTransition(

@@ -64,8 +64,9 @@ class Restaurant {
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
-    // Formatta delivery time
-    String deliveryTime = '30 min';
+    // Formatta delivery time. NIENTE default inventato: senza un tempo
+    // configurato il chip non viene mostrato (la UI controlla isNotEmpty).
+    String deliveryTime = '';
     if (json['delivery_settings'] != null &&
         json['delivery_settings']['estimated_time'] != null) {
       final time = json['delivery_settings']['estimated_time'];
@@ -110,22 +111,30 @@ class Restaurant {
       tags.add('In evidenza');
     }
 
-    // Estrai URL immagini Firebase
-    String? coverUrl;
-    if (json['cover_image'] != null && json['cover_image'] is Map) {
+    // Estrai URL immagini Firebase. Preferisce le VARIANTI ridimensionate
+    // (large 800px basta per card e header): l'originale a piena
+    // risoluzione pesa centinaia di KB per foto e rallenta i feed.
+    String? variantUrl(dynamic image, List<String> preferite) {
+      if (image is! Map) return null;
+      final variants = image['variants'];
+      if (variants is Map) {
+        for (final key in preferite) {
+          final v = variants[key];
+          if (v is Map && v['url'] != null) {
+            final url = v['url'].toString();
+            if (url.isNotEmpty) return url;
+          }
+        }
+      }
       // Usa 'url' se disponibile (URL pubblico Firebase), altrimenti 'file_path'
-      coverUrl =
-          json['cover_image']['url']?.toString() ??
-          json['cover_image']['file_path']?.toString();
+      return image['url']?.toString() ?? image['file_path']?.toString();
     }
 
-    String? logoUrl;
-    if (json['logo_image'] != null && json['logo_image'] is Map) {
-      // Usa 'url' se disponibile (URL pubblico Firebase), altrimenti 'file_path'
-      logoUrl =
-          json['logo_image']['url']?.toString() ??
-          json['logo_image']['file_path']?.toString();
-    }
+    final coverUrl = variantUrl(json['cover_image'], const ['large', 'medium']);
+    final logoUrl = variantUrl(json['logo_image'], const [
+      'medium',
+      'thumbnail',
+    ]);
 
     return Restaurant(
       id: json['id'] as int,

@@ -580,10 +580,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                   // Pagamento
                   Row(
                     children: [
-                      Image.asset(
+                      AppIcon(
                         _getPaymentMethodIcon(order.paymentMethodSlug),
-                        width: 16,
-                        height: 16,
+                        size: 16,
                         color: AppColors.gray,
                       ),
                       const SizedBox(width: 6),
@@ -1041,10 +1040,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                   // Pagamento
                   Row(
                     children: [
-                      Image.asset(
+                      AppIcon(
                         _getPaymentMethodIcon(order.paymentMethodSlug),
-                        width: 16,
-                        height: 16,
+                        size: 16,
                         color: AppColors.gray,
                       ),
                       const SizedBox(width: 6),

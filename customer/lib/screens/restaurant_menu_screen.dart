@@ -390,7 +390,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     final String shareText =
         'Dai un\'occhiata a ${widget.restaurant.name}!\n\n'
         '$ratingLine'
-        'Consegna: ${widget.restaurant.deliveryTime}\n'
+        '${widget.restaurant.deliveryTime.isNotEmpty ? 'Consegna: ${widget.restaurant.deliveryTime}\n' : ''}'
         'Costo di consegna: $deliveryCost\n\n'
         'Ordina ora tramite la nostra app!';
 
@@ -671,12 +671,20 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               ],
             ),
           ),
-          // Barra di navigazione FISSA - pulsanti che non si muovono durante il pull
-          // IMPORTANTE: Posizionata DOPO CustomScrollView per essere in primo piano
-          Positioned(
-            top: 40,
-            left: 0,
-            right: 0,
+          // Pulsanti sull'header: scorrono via col contenuto invece di
+          // restare fissi sopra le tab categorie. Per tornare indietro,
+          // oltre al pulsante (visibile a inizio pagina), c'e' il gesto
+          // di sistema (swipe dal bordo).
+          AnimatedBuilder(
+            animation: _scrollController,
+            builder: (context, child) {
+              final scrollOffset = _scrollController.hasClients
+                  ? _scrollController.offset
+                  : 0.0;
+              final top = 40.0 - scrollOffset;
+              if (top < -50) return const SizedBox.shrink();
+              return Positioned(top: top, left: 0, right: 0, child: child!);
+            },
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1024,11 +1032,13 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         const SizedBox(height: 12),
 
         // Chip informative: consegna, tempo, minimo ordine, distanza, rating.
-        // Tutti dati gia' presenti nel modello che prima non venivano mostrati.
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
+        // SEMPRE su una riga: se non ci stanno si scorre in orizzontale,
+        // niente chip che vanno a capo.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            spacing: 8,
+            children: [
             _buildGlovoChip(
               icon: Icons.directions_bike,
               text: deliveryCostText,
@@ -1060,7 +1070,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 text: widget.restaurant.rating.toStringAsFixed(1),
                 backgroundColor: const Color(0xFFF5F5F5),
               ),
-          ],
+            ],
+          ),
         ),
 
         // Orari di oggi: aperto/chiuso con orario di riferimento
@@ -1463,12 +1474,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           children: [
             Row(
               children: [
-                Image.asset(
-                  iconPath,
-                  width: 14,
-                  height: 14,
-                  color: primaryColor,
-                ),
+                AppIcon(iconPath, size: 14, color: primaryColor),
                 const SizedBox(width: 6),
                 Text(
                   title,
@@ -1489,6 +1495,10 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   }
 
   Widget _buildMenuItem(MenuItem item) {
+    // Piatto bloccato per oggi: tutta la riga si spegne, cosi' si vede
+    // a colpo d'occhio SENZA dover tentare l'aggiunta (il badge rosso
+    // con l'etichetta resta comunque visibile).
+    final nonDisponibile = _isDishUnavailable(item);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.only(bottom: 12),
@@ -1497,7 +1507,9 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           bottom: BorderSide(color: lightGrayColor.withValues(alpha: 0.5)),
         ),
       ),
-      child: Row(
+      child: Opacity(
+        opacity: nonDisponibile ? 0.45 : 1.0,
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
@@ -1658,7 +1670,11 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
             GestureDetector(
               onTap: () => _showProductDetail(item),
-              child: _MenuItemImage(imageUrl: item.imageUrl!),
+              // Nella riga basta la thumbnail 150px (13KB): l'originale
+              // da centinaia di KB rendeva il menu lentissimo.
+              child: _MenuItemImage(
+                imageUrl: item.thumbnailUrl ?? item.imageUrl!,
+              ),
             ),
 
           const SizedBox(width: 8),
@@ -1814,6 +1830,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
             },
           ),
         ],
+        ),
       ),
     );
   }

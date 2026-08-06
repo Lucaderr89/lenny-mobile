@@ -74,13 +74,14 @@ class AppRouter {
             listen: false,
           );
 
-          // Crea un Restaurant dai dati del CartProvider
+          // Scheletro dai dati del CartProvider: il carrello carica da solo
+          // i dati veri via API — niente "30 min" finti.
           final restaurant = Restaurant(
             id: cartProvider.restaurantId ?? 0,
             name: cartProvider.restaurantName ?? 'Carrello',
             cuisine: '',
             rating: 0.0,
-            deliveryTime: '30 min',
+            deliveryTime: '',
             deliveryCost: 'Gratis',
             minOrder: '€0',
             imageUrl: '',

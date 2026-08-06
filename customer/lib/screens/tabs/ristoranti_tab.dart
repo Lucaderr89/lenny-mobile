@@ -15,12 +15,14 @@ class RistorantiTab extends StatefulWidget {
   final ScrollController scrollController;
   final int? cuisineId; // Filtro cucina (null = tutti)
   final String searchQuery; // Ricerca per nome o piatti
+  final VoidCallback? onClearSearch; // Azzera la ricerca (campo in HomeScreen)
 
   const RistorantiTab({
     super.key,
     required this.scrollController,
     this.cuisineId,
     this.searchQuery = '',
+    this.onClearSearch,
   });
 
   @override
@@ -747,56 +749,61 @@ class _RistorantiTabState extends State<RistorantiTab>
       child: CustomScrollView(
         controller: widget.scrollController,
         slivers: [
-          // 🎯 SEZIONE 1: Offerte in corso (Sconto)
-          // Senza emptyMessage la sezione SPARISCE finché non c'è nulla da
-          // mostrare, invece di presentare un titolo con sotto "nessuna offerta".
-          // La logica offerte non è ancora implementata: la lista resta vuota e
-          // la sezione non occupa spazio, così la home non appare mai povera.
-          SliverToBoxAdapter(
-            child: _buildSection(
-              title: 'Offerte in corso',
-              iconPath: 'assets/icons/icons8-sconto-32.png',
-              restaurants: const [], // TODO: logica coupon/offerte
+          // Con la ricerca attiva le sezioni editoriali spariscono: resta solo
+          // il feed dei risultati (o lo stato vuoto). Prima una ricerca senza
+          // match nascondeva TUTTE le sezioni e la tab restava bianca.
+          if (widget.searchQuery.isEmpty) ...[
+            // 🎯 SEZIONE 1: Offerte in corso (Sconto)
+            // Senza emptyMessage la sezione SPARISCE finché non c'è nulla da
+            // mostrare, invece di presentare un titolo con sotto "nessuna offerta".
+            // La logica offerte non è ancora implementata: la lista resta vuota e
+            // la sezione non occupa spazio, così la home non appare mai povera.
+            SliverToBoxAdapter(
+              child: _buildSection(
+                title: 'Offerte in corso',
+                iconPath: 'assets/icons/icons8-sconto-32.png',
+                restaurants: const [], // TODO: logica coupon/offerte
+              ),
             ),
-          ),
 
-          // 🎯 SEZIONE 2: In evidenza (Premium)
-          SliverToBoxAdapter(
-            child: Consumer<LocationProvider>(
-              builder: (context, locationProvider, child) {
-                // 🎯 FILTRO CONDIZIONALE: solo NON consegnabili esclusi in CONSEGNA
-                // null = regole non ancora caricate → ottimisticamente visibile
-                final filteredFeatured = locationProvider.isPickup
-                    ? _featuredRestaurants
-                    : _featuredRestaurants
-                          .where((r) => r.isDeliverable != false)
-                          .toList();
+            // 🎯 SEZIONE 2: In evidenza (Premium)
+            SliverToBoxAdapter(
+              child: Consumer<LocationProvider>(
+                builder: (context, locationProvider, child) {
+                  // 🎯 FILTRO CONDIZIONALE: solo NON consegnabili esclusi in CONSEGNA
+                  // null = regole non ancora caricate → ottimisticamente visibile
+                  final filteredFeatured = locationProvider.isPickup
+                      ? _featuredRestaurants
+                      : _featuredRestaurants
+                            .where((r) => r.isDeliverable != false)
+                            .toList();
 
-                // 🆕 Priorità ai ristoranti aperti: aperti prima, chiusi dopo
-                final sortedFeatured = _sortByOpenFirst(filteredFeatured);
+                  // 🆕 Priorità ai ristoranti aperti: aperti prima, chiusi dopo
+                  final sortedFeatured = _sortByOpenFirst(filteredFeatured);
 
-                return _buildSection(
-                  title: 'In evidenza',
-                  iconPath: 'assets/icons/icons8-premium-32.png',
-                  restaurants: sortedFeatured,
-                  isLoading: _isLoadingFeatured,
-                );
-              },
+                  return _buildSection(
+                    title: 'In evidenza',
+                    iconPath: 'assets/icons/icons8-premium-32.png',
+                    restaurants: sortedFeatured,
+                    isLoading: _isLoadingFeatured,
+                  );
+                },
+              ),
             ),
-          ),
 
-          // 🎯 SEZIONE 3: Novità (News)
-          SliverToBoxAdapter(
-            child: Consumer<LocationProvider>(
-              builder: (context, locationProvider, child) {
-                return _buildSection(
-                  title: 'Novità',
-                  iconPath: 'assets/icons/icons8-news-32.png',
-                  restaurants: _getNewRestaurants(),
-                );
-              },
+            // 🎯 SEZIONE 3: Novità (News)
+            SliverToBoxAdapter(
+              child: Consumer<LocationProvider>(
+                builder: (context, locationProvider, child) {
+                  return _buildSection(
+                    title: 'Novità',
+                    iconPath: 'assets/icons/icons8-news-32.png',
+                    restaurants: _getNewRestaurants(),
+                  );
+                },
+              ),
             ),
-          ),
+          ],
 
           // 🎯 SEZIONE 4: TUTTI I RISTORANTI — feed verticale completo.
           // Prima la home era solo caroselli cappati a 10 ("I + vicini",
@@ -808,12 +815,17 @@ class _RistorantiTabState extends State<RistorantiTab>
               builder: (context, locationProvider, child) {
                 final all = _getAllRestaurantsForFeed();
                 if (all.isEmpty && !_isLoadingFeatured) {
+                  if (widget.searchQuery.isNotEmpty) {
+                    return _buildSearchEmptyState();
+                  }
                   return const SizedBox.shrink();
                 }
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
                   child: _buildSectionHeader(
-                    'Tutti i ristoranti',
+                    widget.searchQuery.isNotEmpty
+                        ? 'Risultati per "${widget.searchQuery}"'
+                        : 'Tutti i ristoranti',
                     'assets/icons/icons8-ristorante-32.png',
                   ),
                 );
@@ -830,6 +842,48 @@ class _RistorantiTabState extends State<RistorantiTab>
 
           // Padding finale
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        ],
+      ),
+    );
+  }
+
+  /// Stato vuoto della ricerca: senza questo, una query senza match
+  /// lasciava la tab completamente bianca.
+  Widget _buildSearchEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(40, 60, 40, 20),
+      child: Column(
+        children: [
+          const Icon(Icons.search_off, size: 48, color: grayColor),
+          const SizedBox(height: 14),
+          Text(
+            'Nessun ristorante per "${widget.searchQuery}"',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: darkColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Prova con un altro nome o tipo di cucina.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: grayColor),
+          ),
+          const SizedBox(height: 16),
+          if (widget.onClearSearch != null)
+            OutlinedButton(
+              onPressed: widget.onClearSearch,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryDarkPink,
+                side: const BorderSide(color: primaryDarkPink),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+              child: const Text('Cancella ricerca'),
+            ),
         ],
       ),
     );
