@@ -1,6 +1,10 @@
 /// Modello per piatti trending (popolare ora)
 class TrendingDish {
   final int dishId;
+
+  /// Id del ristorante: serve per aprire il piatto nel suo menu
+  /// (card trending tappabile). 0 se l'API non lo fornisce.
+  final int restaurantId;
   final String dishName;
   final double price;
   final String? imageUrl;
@@ -12,6 +16,7 @@ class TrendingDish {
 
   TrendingDish({
     required this.dishId,
+    this.restaurantId = 0,
     required this.dishName,
     required this.price,
     this.imageUrl,
@@ -68,6 +73,7 @@ class TrendingDish {
 
     return TrendingDish(
       dishId: json['dish_id'] as int,
+      restaurantId: (json['restaurant_id'] as num?)?.toInt() ?? 0,
       dishName: json['dish_name'] as String,
       price: (json['price'] as num).toDouble(),
       imageUrl: _extractImageUrl(json),

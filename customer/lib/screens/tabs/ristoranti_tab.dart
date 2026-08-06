@@ -310,73 +310,103 @@ class _RistorantiTabState extends State<RistorantiTab>
   }
 
   /// 🎯 Ordina ristoranti per distanza (più vicini prima)
-  List<Restaurant> _getSortedByDistance() {
+  /// Feed "Tutti i ristoranti": IL catalogo completo, senza take(10).
+  /// Ricerca applicata, non consegnabili esclusi in modalita' consegna,
+  /// aperti prima, ordinati per distanza (chi non ha coordinate in coda).
+  List<Restaurant> _getAllRestaurantsForFeed() {
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
     );
 
-    final userLat = locationProvider.activeLatitude;
-    final userLng = locationProvider.activeLongitude;
-
-    // 🎯 Usa lista filtrata se c'è una ricerca attiva, altrimenti usa tutti
     final restaurantsToUse = widget.searchQuery.isNotEmpty
         ? _filteredRestaurants
         : _allRestaurants;
 
-    // 🎯 FILTRO CONDIZIONALE: solo NON consegnabili esclusi in CONSEGNA
     // null = regole non ancora caricate → ottimisticamente visibile
-    final filteredRestaurants = locationProvider.isPickup
-        ? restaurantsToUse
+    final filtered = locationProvider.isPickup
+        ? List<Restaurant>.from(restaurantsToUse)
         : restaurantsToUse.where((r) => r.isDeliverable != false).toList();
 
-    // Se non abbiamo coordinate utente, mostra i primi 10 ristoranti
-    if (userLat == null || userLng == null) {
-      return filteredRestaurants.take(10).toList();
-    }
+    final userLat = locationProvider.activeLatitude;
+    final userLng = locationProvider.activeLongitude;
 
-    // Separa ristoranti con e senza coordinate
-    final restaurantsWithCoords = <Map<String, dynamic>>[];
-    final restaurantsWithoutCoords = <Restaurant>[];
-
-    for (var restaurant in filteredRestaurants) {
-      if (restaurant.latitude != null &&
-          restaurant.longitude != null &&
-          restaurant.latitude != 0 &&
-          restaurant.longitude != 0) {
-        final distance = _calculateDistance(
-          userLat,
-          userLng,
-          restaurant.latitude!,
-          restaurant.longitude!,
-        );
-        restaurantsWithCoords.add({
-          'restaurant': restaurant,
-          'distance': distance,
-        });
-      } else {
-        restaurantsWithoutCoords.add(restaurant);
+    if (userLat != null && userLng != null) {
+      double distanza(Restaurant r) {
+        if (r.latitude == null ||
+            r.longitude == null ||
+            r.latitude == 0 ||
+            r.longitude == 0) {
+          return double.maxFinite; // senza coordinate: in fondo
+        }
+        return _calculateDistance(userLat, userLng, r.latitude!, r.longitude!);
       }
+
+      filtered.sort((a, b) => distanza(a).compareTo(distanza(b)));
     }
 
-    // Ordina quelli con coordinate per distanza
-    restaurantsWithCoords.sort(
-      (a, b) => (a['distance'] as double).compareTo(b['distance'] as double),
+    return _sortByOpenFirst(filtered);
+  }
+
+  /// Apre il menu di un ristorante con tutti i controlli del caso:
+  /// chiuso oggi, zona non servita (solo consegna), conflitto carrello.
+  /// Unico punto di ingresso per card compatte e feed verticale.
+  Future<void> _openRestaurantMenu(Restaurant restaurant) async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
     );
 
-    // Prendi i primi 10 con coordinate
-    final sorted = restaurantsWithCoords
-        .take(10)
-        .map((item) => item['restaurant'] as Restaurant)
-        .toList();
+    final isOpenNow = restaurant.isOpenNow ?? true;
+    final opensAt = restaurant.opensAt;
+    final isDeliverable = restaurant.isDeliverable != false;
 
-    // Se abbiamo meno di 10, aggiungi quelli senza coordinate per riempire
-    if (sorted.length < 10) {
-      sorted.addAll(restaurantsWithoutCoords.take(10 - sorted.length));
+    // Blocca solo se chiuso oggi (senza orario di apertura).
+    // Se opensAt != null, consenti PREORDINE anche se non è ancora aperto.
+    if (!isOpenNow && opensAt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Il ristorante è chiuso oggi'),
+          backgroundColor: primaryDarkPink,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
     }
 
-    // 🆕 Priorità ai ristoranti aperti: aperti prima, chiusi dopo
-    return _sortByOpenFirst(sorted);
+    // Solo in modalità CONSEGNA mostriamo il dialog di zona non servita
+    if (!locationProvider.isPickup && !isDeliverable) {
+      _showZoneNotServicedDialog(restaurant);
+      return;
+    }
+
+    // CONTROLLO CARRELLO: prodotti di un altro ristorante?
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    if (cartProvider.isNotEmpty && cartProvider.restaurantId != restaurant.id) {
+      await showCartConflictDialog(
+        context: context,
+        currentRestaurantName:
+            cartProvider.restaurantName ?? 'un altro ristorante',
+        onClearCart: () {
+          cartProvider.clearCart();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RestaurantMenuScreen(restaurant: restaurant),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RestaurantMenuScreen(restaurant: restaurant),
+      ),
+    );
   }
 
   /// � Ordina ristoranti mettendo prima quelli aperti, poi quelli chiusi
@@ -413,34 +443,273 @@ class _RistorantiTabState extends State<RistorantiTab>
     return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 
-  /// 🎯 Ordina ristoranti per popolarità (rating + ordini)
-  List<Restaurant> _getMostLovedRestaurants() {
+  /// Card full-width del feed "Tutti i ristoranti": foto grande che vende,
+  /// stato apertura e costi di consegna nella stessa card.
+  Widget _buildFullWidthCard(Restaurant restaurant) {
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
     );
 
-    // 🎯 Usa lista filtrata se c'è una ricerca attiva, altrimenti usa tutti
-    final restaurantsToUse = widget.searchQuery.isNotEmpty
-        ? _filteredRestaurants
-        : _allRestaurants;
+    final isOpenNow = restaurant.isOpenNow ?? true;
+    final opensAt = restaurant.opensAt;
+    final isDeliverable = restaurant.isDeliverable != false;
+    final available = locationProvider.isPickup
+        ? isOpenNow
+        : (isDeliverable && isOpenNow);
 
-    // 🎯 FILTRO CONDIZIONALE: solo NON consegnabili esclusi in CONSEGNA
-    // null = regole non ancora caricate → ottimisticamente visibile
-    final filteredRestaurants = locationProvider.isPickup
-        ? restaurantsToUse
-        : restaurantsToUse.where((r) => r.isDeliverable != false).toList();
+    final deliveryFeeText = restaurant.freeDelivery == true
+        ? 'Gratis'
+        : restaurant.actualDeliveryFee != null
+        ? '€${restaurant.actualDeliveryFee!.toStringAsFixed(2)}'
+        : null;
 
-    final sorted = List<Restaurant>.from(filteredRestaurants);
-    sorted.sort((a, b) {
-      // Ordina per rating decrescente
-      final ratingA = double.tryParse(a.rating.toString()) ?? 0.0;
-      final ratingB = double.tryParse(b.rating.toString()) ?? 0.0;
-      return ratingB.compareTo(ratingA);
-    });
-    // 🆕 Priorità ai ristoranti aperti: aperti prima, chiusi dopo
-    final withOpenPriority = _sortByOpenFirst(sorted);
-    return withOpenPriority.take(10).toList();
+    String? distanceText;
+    final userLat = locationProvider.activeLatitude;
+    final userLng = locationProvider.activeLongitude;
+    if (userLat != null &&
+        userLng != null &&
+        restaurant.latitude != null &&
+        restaurant.longitude != null &&
+        restaurant.latitude != 0 &&
+        restaurant.longitude != 0) {
+      final d = _calculateDistance(
+        userLat,
+        userLng,
+        restaurant.latitude!,
+        restaurant.longitude!,
+      );
+      distanceText = '${d.toStringAsFixed(1)} km';
+    }
+
+    return GestureDetector(
+      onTap: () => _openRestaurantMenu(restaurant),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+        decoration: BoxDecoration(
+          color: lightColor,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Foto grande 16:9 con stato sovraimpresso
+            Stack(
+              children: [
+                Opacity(
+                  opacity: available ? 1.0 : 0.55,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: restaurant.imageUrl.isNotEmpty
+                          ? Image.network(
+                              restaurant.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: lightGrayColor,
+                                child: const Icon(
+                                  Icons.restaurant,
+                                  size: 40,
+                                  color: grayColor,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: lightGrayColor,
+                              child: const Icon(
+                                Icons.restaurant,
+                                size: 40,
+                                color: grayColor,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+
+                // Chiuso ora: riapertura o chiuso oggi
+                if (!isOpenNow)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.45),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                      ),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: opensAt != null
+                                ? primaryDarkPink
+                                : const Color(0xFFB71C1C),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            opensAt != null
+                                ? 'Apre alle $opensAt · Preordina'
+                                : 'Chiuso oggi',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Distanza in alto a destra
+                if (distanceText != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primaryDarkPink,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        distanceText,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Consegna gratis sopra soglia
+                if (!locationProvider.isPickup &&
+                    restaurant.actualFreeOver != null)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Gratis da €${restaurant.actualFreeOver!.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            // Testi
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          restaurant.name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: darkColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (restaurant.rating > 0) ...[
+                        const SizedBox(width: 6),
+                        const ImageIcon(
+                          AssetImage('assets/icons/icons8-stella-32.png'),
+                          size: 12,
+                          color: accentYellow,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          restaurant.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: darkColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    restaurant.cuisine,
+                    style: const TextStyle(fontSize: 11, color: grayColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!locationProvider.isPickup && deliveryFeeText != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.delivery_dining,
+                          size: 13,
+                          color: grayColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Consegna $deliveryFeeText',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: grayColor,
+                          ),
+                        ),
+                        if (restaurant.actualMinOrder != null &&
+                            restaurant.actualMinOrder! > 0) ...[
+                          const SizedBox(width: 10),
+                          Text(
+                            'Min €${restaurant.actualMinOrder!.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: grayColor,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 🎯 Filtra ristoranti nuovi (ordinati per updated_at da backend)
@@ -490,34 +759,7 @@ class _RistorantiTabState extends State<RistorantiTab>
             ),
           ),
 
-          // 🎯 SEZIONE 2: I + vicini (Vicino a me)
-          SliverToBoxAdapter(
-            child: Consumer<LocationProvider>(
-              builder: (context, locationProvider, child) {
-                return _buildSection(
-                  title: 'I + vicini',
-                  iconPath: 'assets/icons/icons8-vicino-a-me-32.png',
-                  restaurants: _getSortedByDistance(),
-                  showDistance: true,
-                );
-              },
-            ),
-          ),
-
-          // 🎯 SEZIONE 3: Novità (News)
-          SliverToBoxAdapter(
-            child: Consumer<LocationProvider>(
-              builder: (context, locationProvider, child) {
-                return _buildSection(
-                  title: 'Novità',
-                  iconPath: 'assets/icons/icons8-news-32.png',
-                  restaurants: _getNewRestaurants(),
-                );
-              },
-            ),
-          ),
-
-          // 🎯 SEZIONE 4: In evidenza (Premium)
+          // 🎯 SEZIONE 2: In evidenza (Premium)
           SliverToBoxAdapter(
             child: Consumer<LocationProvider>(
               builder: (context, locationProvider, child) {
@@ -542,17 +784,47 @@ class _RistorantiTabState extends State<RistorantiTab>
             ),
           ),
 
-          // 🎯 SEZIONE 5: I + amati (Più amati)
+          // 🎯 SEZIONE 3: Novità (News)
           SliverToBoxAdapter(
             child: Consumer<LocationProvider>(
               builder: (context, locationProvider, child) {
                 return _buildSection(
-                  title: 'I + amati',
-                  iconPath: 'assets/icons/icons8-piu_amati-32.png',
-                  restaurants: _getMostLovedRestaurants(),
+                  title: 'Novità',
+                  iconPath: 'assets/icons/icons8-news-32.png',
+                  restaurants: _getNewRestaurants(),
                 );
               },
             ),
+          ),
+
+          // 🎯 SEZIONE 4: TUTTI I RISTORANTI — feed verticale completo.
+          // Prima la home era solo caroselli cappati a 10 ("I + vicini",
+          // "I + amati"...) che mostravano gli stessi locali con etichette
+          // diverse: un ristorante fuori dai primi 10 era irraggiungibile.
+          // Qui c'e' TUTTO il catalogo, aperti prima, ordinato per distanza.
+          SliverToBoxAdapter(
+            child: Consumer<LocationProvider>(
+              builder: (context, locationProvider, child) {
+                final all = _getAllRestaurantsForFeed();
+                if (all.isEmpty && !_isLoadingFeatured) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+                  child: _buildSectionHeader(
+                    'Tutti i ristoranti',
+                    'assets/icons/icons8-ristorante-32.png',
+                  ),
+                );
+              },
+            ),
+          ),
+          SliverList.builder(
+            itemCount: _getAllRestaurantsForFeed().length,
+            itemBuilder: (context, index) {
+              final restaurant = _getAllRestaurantsForFeed()[index];
+              return _buildFullWidthCard(restaurant);
+            },
           ),
 
           // Padding finale
@@ -691,58 +963,7 @@ class _RistorantiTabState extends State<RistorantiTab>
         : (isDeliverable && isOpenNow);
 
     return GestureDetector(
-      onTap: () async {
-        // 🎯 Blocca solo se chiuso oggi (senza orario di apertura)
-        // Se opensAt != null, consenti PREORDINE anche se non è ancora aperto
-        if (!isOpenNow && opensAt == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Il ristorante è chiuso oggi'),
-              backgroundColor: primaryDarkPink,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          return;
-        }
-
-        // 🎯 Solo in modalità CONSEGNA mostriamo il dialog di zona non servita
-        if (!locationProvider.isPickup && !isDeliverable) {
-          _showZoneNotServicedDialog(restaurant);
-          return;
-        }
-
-        // 🎯 CONTROLLO CARRELLO: Verifica se ci sono prodotti di un altro ristorante
-        final cartProvider = Provider.of<CartProvider>(context, listen: false);
-        if (cartProvider.isNotEmpty &&
-            cartProvider.restaurantId != restaurant.id) {
-          // Mostra dialog di conflitto carrello
-          await showCartConflictDialog(
-            context: context,
-            currentRestaurantName:
-                cartProvider.restaurantName ?? 'un altro ristorante',
-            onClearCart: () {
-              cartProvider.clearCart();
-              // Apri il menu dopo aver svuotato il carrello
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      RestaurantMenuScreen(restaurant: restaurant),
-                ),
-              );
-            },
-          );
-          return;
-        }
-
-        // Carrello vuoto o stesso ristorante - apri il menu
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RestaurantMenuScreen(restaurant: restaurant),
-          ),
-        );
-      },
+      onTap: () => _openRestaurantMenu(restaurant),
       child: Container(
         width: 200,
         margin: const EdgeInsets.only(right: 12),

@@ -404,7 +404,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   // le chiamate di rete. I cambi filtro passano da
                   // didUpdateWidget dentro RistorantiTab.
                 ),
-                ScopriTab(scrollController: _scrollControllers[1]),
+                ScopriTab(
+                  scrollController: _scrollControllers[1],
+                  // Chip di Scopri (meteo/eventi) → ricerca ristoranti:
+                  // imposta la query e torna alla tab Ristoranti.
+                  onSearchSuggestion: (query) {
+                    setState(() {
+                      _searchController.text = query;
+                      _searchQuery = query;
+                    });
+                    _pageController.animateToPage(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                ),
                 PerTeTab(scrollController: _scrollControllers[2]),
               ],
             ),

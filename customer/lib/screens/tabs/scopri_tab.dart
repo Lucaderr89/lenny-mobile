@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import '../../config/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/discover_content.dart';
+import '../../models/restaurant.dart';
 import '../../models/trending_dish.dart';
 import '../../models/food_event.dart';
 import '../../models/weather_suggestion.dart';
 import '../../services/discovery_service.dart';
+import '../../services/restaurant_service.dart';
+import '../restaurant_menu_screen.dart';
 import '../games/dish_match_game_screen.dart';
 import '../games/food_swipe_game_screen.dart';
 import '../games/pizza_match_game_screen.dart';
@@ -15,7 +18,15 @@ import '../games/recipe_scrambler_game_screen.dart';
 class ScopriTab extends StatefulWidget {
   final ScrollController scrollController;
 
-  const ScopriTab({super.key, required this.scrollController});
+  /// Deep-link verso la ricerca della home: i chip suggerimento (meteo,
+  /// eventi) portano ai ristoranti invece di essere decorazione.
+  final void Function(String query)? onSearchSuggestion;
+
+  const ScopriTab({
+    super.key,
+    required this.scrollController,
+    this.onSearchSuggestion,
+  });
 
   @override
   State<ScopriTab> createState() => _ScopriTabState();
@@ -240,24 +251,41 @@ class _ScopriTabState extends State<ScopriTab>
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
+                  // Chip TAPPABILI: portano alla ricerca ristoranti con il
+                  // suggerimento come query (prima erano pura decorazione)
                   children: weather.suggestions
                       .take(3)
                       .map(
-                        (suggestion) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            suggestion,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                        (suggestion) => GestureDetector(
+                          onTap: () =>
+                              widget.onSearchSuggestion?.call(suggestion),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  suggestion,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -388,8 +416,55 @@ class _ScopriTabState extends State<ScopriTab>
     );
   }
 
+  /// Apre il piatto trending nel menu del suo ristorante: la card
+  /// diventa conversione, non solo vetrina.
+  Future<void> _openTrendingDish(TrendingDish dish) async {
+    if (dish.restaurantId <= 0) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: primaryDarkPink),
+      ),
+    );
+
+    Restaurant? restaurant;
+    try {
+      restaurant = await RestaurantService().getRestaurantDetail(
+        dish.restaurantId,
+      );
+    } catch (_) {
+      restaurant = null;
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context); // chiudi loading
+
+    if (restaurant == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ristorante non disponibile al momento'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RestaurantMenuScreen(
+          restaurant: restaurant!,
+          openDishId: dish.dishId,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTrendingCard(TrendingDish dish) {
-    return Container(
+    return GestureDetector(
+      onTap: () => _openTrendingDish(dish),
+      child: Container(
       width: 170,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
@@ -504,6 +579,7 @@ class _ScopriTabState extends State<ScopriTab>
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -686,23 +762,26 @@ class _ScopriTabState extends State<ScopriTab>
 
     final event = _todayEvent!;
 
+    // Colore dal server con GUARDIA: un hex malformato non deve far
+    // crashare la build della home (int.parse senza try lo faceva).
+    Color baseColor = accentYellow;
+    Color endColor = warningOrange;
+    if (event.backgroundColor != null) {
+      final parsed = int.tryParse(
+        event.backgroundColor!.replaceFirst('#', '0xFF'),
+      );
+      if (parsed != null) {
+        baseColor = Color(parsed);
+        endColor = Color(parsed).withOpacity(0.7);
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(15, 12, 15, 8),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            event.backgroundColor != null
-                ? Color(
-                    int.parse(event.backgroundColor!.replaceFirst('#', '0xFF')),
-                  )
-                : accentYellow,
-            event.backgroundColor != null
-                ? Color(
-                    int.parse(event.backgroundColor!.replaceFirst('#', '0xFF')),
-                  ).withOpacity(0.7)
-                : warningOrange,
-          ],
+          colors: [baseColor, endColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -735,29 +814,68 @@ class _ScopriTabState extends State<ScopriTab>
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
+                    // Chip tappabili verso la ricerca ristoranti
                     children: event.suggestions!
                         .take(3)
                         .map(
-                          (suggestion) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              suggestion,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                          (suggestion) => GestureDetector(
+                            onTap: () =>
+                                widget.onSearchSuggestion?.call(suggestion),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                suggestion,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
                         )
                         .toList(),
+                  ),
+                ],
+
+                // CTA dell'evento: c'era nel modello (actionText) ma non
+                // veniva mai renderizzata. Porta ai suggerimenti dell'evento.
+                if (event.actionText != null &&
+                    event.actionText!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () {
+                      final target =
+                          (event.suggestions?.isNotEmpty ?? false)
+                          ? event.suggestions!.first
+                          : event.title;
+                      widget.onSearchSuggestion?.call(target);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        event.actionText!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: baseColor,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ],

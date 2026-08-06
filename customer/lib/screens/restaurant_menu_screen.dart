@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+// RenderAbstractViewport (scroll-spy): non e' esportato da material
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import '../config/app_colors.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +12,7 @@ import '../services/restaurant_service.dart';
 import '../providers/cart_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/favorites_provider.dart';
+import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 
@@ -39,6 +42,15 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   bool _isLoadingMenu = true;
   double _overScrollOffset = 0.0; // Per l'effetto pull-to-reveal
   String _searchQuery = '';
+
+  // Scroll-spy: il menu scorre TUTTO in continuo; le tab sono ancore.
+  // Una GlobalKey stabile per sezione permette di calcolare la posizione
+  // di ogni categoria e di evidenziare quella visibile durante lo scroll.
+  final Map<String, GlobalKey> _sectionKeys = {};
+  bool _isAutoScrolling = false;
+
+  // Altezza tab pinnate + respiro: le sezioni si fermano sotto le tab
+  static const double _tabsOffset = 52.0;
 
   // Menu data from API
   List<Map<String, dynamic>> _menuCategories = [];
@@ -166,8 +178,63 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     super.dispose();
   }
 
+  /// Scroll-spy: evidenzia nella tab bar la categoria attualmente visibile.
+  /// Attiva = ultima sezione il cui inizio e' passato sopra la linea delle
+  /// tab pinnate. Disattivato durante lo scroll programmatico da tab.
   void _onScroll() {
-    // Update active category based on scroll position
+    if (_isAutoScrolling || _isSearchActive) return;
+    if (!_scrollController.hasClients || _sectionKeys.isEmpty) return;
+
+    final offset = _scrollController.offset;
+    String? active;
+
+    for (final category in _menuCategories) {
+      final id = category['id'].toString();
+      final ctx = _sectionKeys[id]?.currentContext;
+      if (ctx == null) continue;
+      final box = ctx.findRenderObject();
+      if (box is! RenderBox || !box.attached) continue;
+
+      final reveal = RenderAbstractViewport.of(
+        box,
+      ).getOffsetToReveal(box, 0.0).offset;
+      if (reveal - _tabsOffset - 8 <= offset) {
+        active = id;
+      } else {
+        break;
+      }
+    }
+
+    if (active != null && active != _selectedCategory) {
+      setState(() => _selectedCategory = active!);
+    }
+  }
+
+  /// Tap su una tab: scrolla alla sezione corrispondente (ancora).
+  void _scrollToCategory(String categoryId) {
+    setState(() => _selectedCategory = categoryId);
+
+    final ctx = _sectionKeys[categoryId]?.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject();
+    if (box is! RenderBox || !box.attached) return;
+
+    final reveal = RenderAbstractViewport.of(
+      box,
+    ).getOffsetToReveal(box, 0.0).offset;
+    final target = (reveal - _tabsOffset).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+
+    _isAutoScrolling = true;
+    _scrollController
+        .animateTo(
+          target,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        )
+        .whenComplete(() => _isAutoScrolling = false);
   }
 
   void _showOptionsMenu() {
@@ -409,14 +476,17 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         notes: null,
       );
     } catch (e) {
-      // Mostra errore (es: ristorante diverso)
+      // Conflitto carrello: STESSO dialog brandizzato usato ovunque
+      // (prima qui c'era una snackbar nuda senza via d'uscita)
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            duration: const Duration(seconds: 3),
-            backgroundColor: dangerColor,
-          ),
+        showCartConflictDialog(
+          context: context,
+          currentRestaurantName:
+              cartProvider.restaurantName ?? 'un altro ristorante',
+          onClearCart: () {
+            cartProvider.clearCart();
+            _quickAddToCart(item, cartProvider);
+          },
         );
       }
     }
@@ -486,29 +556,23 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         notes: notes,
       );
     } catch (e) {
-      // Mostra errore (es: ristorante diverso)
+      // Conflitto carrello: dialog brandizzato unico, con retry automatico
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            duration: const Duration(seconds: 3),
-            backgroundColor: dangerColor,
-            action: SnackBarAction(
-              label: 'Svuota carrello',
-              textColor: Colors.white,
-              onPressed: () {
-                cartProvider.clearCart();
-                // Riprova ad aggiungere
-                _addToCart(
-                  item,
-                  quantity,
-                  customizations,
-                  priceModifier,
-                  cartProvider,
-                );
-              },
-            ),
-          ),
+        showCartConflictDialog(
+          context: context,
+          currentRestaurantName:
+              cartProvider.restaurantName ?? 'un altro ristorante',
+          onClearCart: () {
+            cartProvider.clearCart();
+            // Riprova ad aggiungere
+            _addToCart(
+              item,
+              quantity,
+              customizations,
+              priceModifier,
+              cartProvider,
+            );
+          },
         );
       }
     }
@@ -841,7 +905,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   Widget _buildHeader() {
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 250, // Altezza totale: spazio per immagine + logo + nome + chip
+        // Spazio per immagine + logo + nome + chip + orari + indirizzo
+        height: 300,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -957,7 +1022,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Chip informative: solo costo consegna, minimo ordine e distanza
+        // Chip informative: consegna, tempo, minimo ordine, distanza, rating.
+        // Tutti dati gia' presenti nel modello che prima non venivano mostrati.
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -967,10 +1033,16 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               text: deliveryCostText,
               backgroundColor: const Color(0xFFF5F5F5),
             ),
+            if (widget.restaurant.deliveryTime.isNotEmpty)
+              _buildGlovoChip(
+                icon: Icons.schedule,
+                text: widget.restaurant.deliveryTime,
+                backgroundColor: const Color(0xFFF5F5F5),
+              ),
             if (minOrderText != null)
               _buildGlovoChip(
                 icon: Icons.shopping_bag,
-                text: minOrderText,
+                text: 'Min $minOrderText',
                 backgroundColor: const Color(0xFFF5F5F5),
               ),
             if (distanceText != null)
@@ -979,8 +1051,73 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 text: distanceText,
                 backgroundColor: const Color(0xFFF5F5F5),
               ),
+            // Stella solo con un rating reale (oggi nessuna recensione:
+            // si accendera' da sola quando esisteranno)
+            if (widget.restaurant.rating > 0)
+              _buildGlovoChip(
+                icon: Icons.star,
+                text: widget.restaurant.rating.toStringAsFixed(1),
+                backgroundColor: const Color(0xFFF5F5F5),
+              ),
           ],
         ),
+
+        // Orari di oggi: aperto/chiuso con orario di riferimento
+        if (widget.restaurant.isOpenNow != null) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: widget.restaurant.isOpenNow == true
+                      ? successColor
+                      : const Color(0xFFB3261E),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.restaurant.isOpenNow == true
+                    ? (widget.restaurant.closesAt != null &&
+                              widget.restaurant.closesAt!.isNotEmpty
+                          ? 'Aperto ora · chiude alle ${widget.restaurant.closesAt}'
+                          : 'Aperto ora')
+                    : (widget.restaurant.opensAt != null &&
+                              widget.restaurant.opensAt!.isNotEmpty
+                          ? 'Chiuso ora · riapre alle ${widget.restaurant.opensAt}'
+                          : 'Chiuso ora'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: widget.restaurant.isOpenNow == true
+                      ? successColor
+                      : const Color(0xFFB3261E),
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        // Indirizzo del locale (utile soprattutto per il ritiro)
+        if (widget.restaurant.address.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.place_outlined, size: 14, color: grayColor),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  widget.restaurant.address,
+                  style: const TextStyle(fontSize: 12, color: grayColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1036,9 +1173,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         categories: _categories,
         categoryLabels: _categoryLabels,
         selectedCategory: _selectedCategory,
-        onCategorySelected: (category) {
-          setState(() => _selectedCategory = category);
-        },
+        // Le tab sono ANCORE: portano alla sezione, non filtrano il menu
+        onCategorySelected: _scrollToCategory,
       ),
     );
   }
@@ -1251,14 +1387,10 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       return [];
     }
 
-    // Se c'è una ricerca attiva, mostra tutte le categorie che hanno risultati
-    // Altrimenti filtra per mostrare solo la categoria selezionata
-    final selectedCategories = _searchQuery.isNotEmpty
-        ? _menuCategories
-        : _menuCategories.where((category) {
-            final categoryId = category['id'].toString();
-            return categoryId == _selectedCategory;
-          }).toList();
+    // Scroll continuo: si mostrano SEMPRE tutte le categorie in sequenza.
+    // Le tab sono ancore di scorrimento, non filtri (la ricerca continua
+    // a filtrare i piatti riga per riga dentro ogni sezione).
+    final selectedCategories = _menuCategories;
 
     // Map category names to appropriate icons
     final iconMap = {
@@ -1321,6 +1453,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
 
     return SliverToBoxAdapter(
       child: Container(
+        // Ancora per tab-spy e scroll programmatico
+        key: _sectionKeys.putIfAbsent(categoryId, () => GlobalKey()),
         color: Colors.white,
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -1516,6 +1650,16 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               ),
             ),
           ),
+
+          // Foto del piatto: il primo driver di conversione di un menu.
+          // Solo se esiste (niente placeholder grigi a vuoto); il widget
+          // sparisce da solo se l'immagine non si carica.
+          if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
+            GestureDetector(
+              onTap: () => _showProductDetail(item),
+              child: _MenuItemImage(imageUrl: item.imageUrl!),
+            ),
+
           const SizedBox(width: 8),
           // Pulsanti +/- per aggiunta rapida al carrello
           Consumer<CartProvider>(
@@ -1691,25 +1835,45 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   }
 
   Widget _buildCartBar() {
+    // La barra COMPARE dal primo articolo: uno stato "0 articoli €0.00"
+    // sempre visibile occupava 60px di menu per mostrare il nulla.
     return Positioned(
       bottom: 0,
       left: 0,
       right: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Consumer<CartProvider>(
-          builder: (context, cart, child) {
-            return ElevatedButton(
+      child: Consumer<CartProvider>(
+        builder: (context, cart, child) {
+          return AnimatedSlide(
+            offset: cart.itemCount > 0 ? Offset.zero : const Offset(0, 1.2),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            child: cart.itemCount == 0
+                ? const SizedBox.shrink()
+                : Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: _buildCartBarButton(cart),
+                  ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCartBarButton(CartProvider cart) {
+    return ElevatedButton(
               onPressed: cart.itemCount > 0
                   ? () {
                       Navigator.push(
@@ -1777,10 +1941,6 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 ],
               ),
             );
-          },
-        ),
-      ),
-    );
   }
 }
 

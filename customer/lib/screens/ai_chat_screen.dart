@@ -7,6 +7,7 @@ import '../providers/cart_provider.dart';
 import '../providers/location_provider.dart';
 import '../models/menu_item.dart';
 import '../config/app_colors.dart';
+import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
 import 'restaurant_menu_screen.dart';
 
@@ -393,33 +394,17 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   void _showCartConflictDialog(AIDish dish) {
-    showDialog(
+    // Dialog brandizzato UNICO per il conflitto carrello, lo stesso di
+    // home e menu (prima la chat aveva un AlertDialog tutto suo).
+    final cartProvider = context.read<CartProvider>();
+    showCartConflictDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Carrello non vuoto'),
-        content: const Text(
-          'Hai già articoli di un altro ristorante nel carrello. '
-          'Svuota il carrello per ordinare da questo ristorante.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annulla'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<CartProvider>().clearCart();
-              _handleAddDish(dish);
-            },
-            child: const Text(
-              'Svuota e aggiungi',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      currentRestaurantName:
+          cartProvider.restaurantName ?? 'un altro ristorante',
+      onClearCart: () {
+        cartProvider.clearCart();
+        _handleAddDish(dish);
+      },
     );
   }
 

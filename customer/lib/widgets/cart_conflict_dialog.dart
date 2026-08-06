@@ -71,7 +71,9 @@ Future<bool?> showCartConflictDialog({
                     ),
                   ),
                   const TextSpan(
-                    text: '.\n\nNon puoi ordinare da 2 ristoranti differenti.',
+                    text:
+                        '.\n\nNon puoi ordinare da ristoranti diversi '
+                        'nello stesso carrello.',
                   ),
                 ],
               ),

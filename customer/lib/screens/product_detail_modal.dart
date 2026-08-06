@@ -80,11 +80,14 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
       _instructionsController.text =
           widget.initialCustomizations?['instructions']?.toString() ?? '';
     } else {
-      // Pre-select default options for required groups (only for new items)
+      // Preselezione dei gruppi obbligatori a scelta singola SOLO se la
+      // prima opzione costa zero: preselezionare un'opzione con sovrapprezzo
+      // significherebbe addebitarla senza che l'utente abbia scelto nulla.
       for (var group in widget.menuItem.customizations) {
         if (group.isRequired &&
             !group.isMultiSelect &&
-            group.options.isNotEmpty) {
+            group.options.isNotEmpty &&
+            group.options.first.priceModifier == 0) {
           _selectedOptions[group.id] = group.options.first.id;
         }
       }
@@ -223,38 +226,39 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   double _calculateModalHeight(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Parti fisse
+    // Le stime sono in "pixel a scala testo 1.0": con il text scaling di
+    // sistema attivo i testi crescono ma le stime no, e il contenuto
+    // finiva tagliato. Si scala tutta la parte testuale con lo stesso
+    // fattore del sistema.
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+
+    // Parti fisse (non testuali)
     double fixedHeight = 90 + 50; // Immagine visibile (90) + spazio onda (50)
     double footerHeight = 120; // Altezza approssimativa del footer
-    double productInfoBaseHeight = 100; // Titolo + prezzo
 
-    double contentHeight = fixedHeight + footerHeight + productInfoBaseHeight;
+    double textHeight = 100; // Titolo + prezzo
 
     // Aggiungi altezza per descrizione
     if (widget.menuItem.description.isNotEmpty) {
-      // Stima circa 60px per la descrizione
-      contentHeight += 60;
+      textHeight += 60;
     }
 
     // Aggiungi altezza per allergeni/caratteristiche
     if (widget.menuItem.allergens.isNotEmpty ||
         widget.menuItem.dietaryOptions.isNotEmpty) {
-      contentHeight += 80;
+      textHeight += 80;
     }
 
     // Aggiungi altezza per personalizzazioni
     if (widget.menuItem.customizations.isNotEmpty) {
       for (var group in widget.menuItem.customizations) {
-        // Circa 60px per l'header del gruppo
-        contentHeight += 60;
-        // Circa 50px per ogni opzione (stima media)
-        int optionCount = group.options.length;
-        contentHeight += (optionCount * 50).clamp(
-          0,
-          250,
-        ); // Max 250px per gruppo
+        textHeight += 60; // header del gruppo
+        final optionCount = group.options.length;
+        textHeight += (optionCount * 50).clamp(0, 250); // max 250 per gruppo
       }
     }
+
+    final contentHeight = fixedHeight + footerHeight + textHeight * textScale;
 
     // Limita tra un minimo e il massimo (90% dello schermo)
     return contentHeight.clamp(400, screenHeight * 0.9);
@@ -430,25 +434,41 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Gerarchia corretta: il NOME domina, il prezzo accompagna
+          // (prima il prezzo a 22px sovrastava il nome a 18px).
+          Text(
+            widget.menuItem.name,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: darkColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Prezzo con eventuale sconto: il barrato visto in lista
+          // non deve sparire aprendo la scheda.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
-                child: Text(
-                  widget.menuItem.name,
+              if (widget.menuItem.hasDiscount) ...[
+                Text(
+                  '€${widget.menuItem.originalPrice!.toStringAsFixed(2)}',
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: darkColor,
+                    fontSize: 13,
+                    color: grayColor,
+                    decoration: TextDecoration.lineThrough,
                   ),
                 ),
-              ),
+                const SizedBox(width: 6),
+              ],
               Text(
                 '€${widget.menuItem.price.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 22,
+                style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: primaryColor,
+                  color: widget.menuItem.hasDiscount
+                      ? AppColors.success
+                      : primaryColor,
                 ),
               ),
             ],

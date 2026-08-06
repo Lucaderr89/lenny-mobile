@@ -1914,10 +1914,25 @@ class _ProfileScreenState extends State<ProfileScreen>
       await _loadLoyaltyData();
 
       if (mounted) {
+        // Deep-link al wallet: il premio riscattato diventa spesso un
+        // credito spendibile, e prima l'utente non aveva modo di vederlo.
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Premio riscattato con successo!'),
+          SnackBar(
+            content: const Text('Premio riscattato con successo!'),
             backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Vai al wallet',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WalletScreen(),
+                  ),
+                );
+              },
+            ),
           ),
         );
       }
@@ -1925,7 +1940,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore: ${e.toString()}'),
+            content: Text('Errore: ${e.toString().replaceFirst('Exception: ', '')}'),
             backgroundColor: AppColors.danger,
           ),
         );

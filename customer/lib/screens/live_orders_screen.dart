@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../models/live_order.dart';
 import '../services/live_order_service.dart';
@@ -364,7 +365,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                   ),
                   Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white,
+                    // Colore della card, non bianco: su header chiaro la
+                    // chevron bianca era quasi invisibile
+                    color: cardColor,
                     size: 28,
                   ),
                 ],
@@ -593,6 +596,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
               ),
             ),
 
+            _buildSupportRow(order),
+
             // Bottone annulla (solo se possibile) - PICKUP
             if (order.canCancel)
               Padding(
@@ -616,6 +621,41 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
               ),
           ],
         ],
+      ),
+    );
+  }
+
+  /// Contatto WhatsApp AZIENDALE per problemi sull'ordine (niente numero
+  /// del driver: il canale di assistenza e' quello di Lenny).
+  Future<void> _contattaSupporto(LiveOrder order) async {
+    final testo = Uri.encodeComponent(
+      'Ciao! Ho bisogno di aiuto con l\'ordine #${order.id}',
+    );
+    final uri = Uri.parse('https://wa.me/393346841489?text=$testo');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Riga assistenza mostrata nelle card espanse
+  Widget _buildSupportRow(LiveOrder order) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => _contattaSupporto(order),
+          icon: const Icon(Icons.support_agent, size: 16),
+          label: const Text(
+            'Serve aiuto? Scrivici su WhatsApp',
+            style: TextStyle(fontSize: 12),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.primary, width: 1),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+        ),
       ),
     );
   }
@@ -728,7 +768,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                   ),
                   Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white,
+                    // Colore della card, non bianco: su header chiaro la
+                    // chevron bianca era quasi invisibile
+                    color: cardColor,
                     size: 28,
                   ),
                 ],
@@ -1016,6 +1058,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             ),
 
             // Bottone annulla (solo se possibile)
+            _buildSupportRow(order),
+
             if (order.canCancel)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),

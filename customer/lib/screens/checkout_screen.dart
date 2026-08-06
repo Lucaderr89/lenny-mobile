@@ -109,6 +109,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _useAppCredits = false;
   double _availableCredits = 0.0;
 
+  // Punti fedelta': regola di accumulo dal server per mostrare
+  // "con quest'ordine guadagni N punti" nel riepilogo. 0 = non caricata
+  // (ospite o errore) e la riga non compare.
+  double _pointsPerEuro = 0.0;
+  double _pointsMultiplier = 1.0;
+
   // Costi - valori caricati dinamicamente dal backend
   double _serviceFeePercent = 3.5; // Default, verrà sovrascritto
 
@@ -161,6 +167,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // Coupon suggeriti (personalizzati per cliente)
       await _loadSuggestedCoupons();
+
+      // Regola punti fedelta' (non bloccante)
+      await _loadLoyaltyEarnRate();
 
       // 🔑 DEFAULT: Se NON ha carte salvate, seleziona "contanti" (cash)
       if (!_hasSavedCard && _paymentMethods.isNotEmpty) {
@@ -227,6 +236,51 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('❌ [CHECKOUT] Errore caricamento config: $e');
       // Usa valore di default in caso di errore
     }
+  }
+
+  /// Regola di accumulo punti fedelta' del cliente (per_euro e
+  /// moltiplicatore tier): serve solo alla riga informativa nel riepilogo.
+  /// Errore o ospite = riga assente, nessun blocco del checkout.
+  Future<void> _loadLoyaltyEarnRate() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.keyApiToken);
+      if (token == null || token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/api/customer/loyalty'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-API-Token': token,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          if (mounted) {
+            setState(() {
+              _pointsPerEuro =
+                  (data['data']['points_per_euro'] as num?)?.toDouble() ?? 0.0;
+              _pointsMultiplier =
+                  (data['data']['points_multiplier'] as num?)?.toDouble() ??
+                  1.0;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('⚠️ [CHECKOUT] Regola punti non disponibile: $e');
+    }
+  }
+
+  /// Punti che questo ordine fara' guadagnare (stessa formula del server:
+  /// floor(subtotale * per_euro) * moltiplicatore tier)
+  int get _earnedPoints {
+    if (_pointsPerEuro <= 0) return 0;
+    return ((_currentSubtotal * _pointsPerEuro).floor() * _pointsMultiplier)
+        .toInt();
   }
 
   /// Carica dal server i coupon suggeribili a questo cliente.
@@ -3357,6 +3411,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
           const SizedBox(height: 14),
+
+          // Il programma fedelta' entra nel momento della decisione:
+          // prima era visibile solo aprendo il profilo.
+          if (_earnedPoints > 0)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: primaryColor.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.stars, size: 16, color: primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Con quest\'ordine guadagni $_earnedPoints '
+                      '${_earnedPoints == 1 ? 'punto' : 'punti'} fedeltà',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                        fontFamily: 'Segoe UI',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           _buildSummaryRow('Subtotale', _currentSubtotal),
 
