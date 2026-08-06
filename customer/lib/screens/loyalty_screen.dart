@@ -8,6 +8,7 @@ import '../models/loyalty_reward.dart';
 import '../models/loyalty_redemption.dart';
 import 'wallet_screen.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Programma fedelta': punti, tier e premi.
 /// Estratta dal vecchio ProfileScreen (che la teneva come corpo
@@ -927,7 +928,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(12),
                     ),
-                    child: Image.network(
+                    child: FotoRete(
                       reward.imageUrl!,
                       height: 120,
                       width: double.infinity,

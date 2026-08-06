@@ -15,6 +15,7 @@ import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 import 'package:flutter/foundation.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Cart Screen - Basato sul prototipo 8-carrello.html
 class CartScreen extends StatefulWidget {
@@ -707,7 +708,7 @@ class _CartScreenState extends State<CartScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: _rest.logoUrl != null
-                  ? Image.network(
+                  ? FotoRete(
                       _rest.logoUrl!,
                       width: 35,
                       height: 35,
@@ -1258,7 +1259,7 @@ class _CartScreenState extends State<CartScreen> {
                               top: Radius.circular(12),
                             ),
                             child: item.imageUrl != null
-                                ? Image.network(
+                                ? FotoRete(
                                     item.imageUrl!,
                                     width: 140,
                                     height: 100,
@@ -1417,7 +1418,7 @@ class _CartScreenState extends State<CartScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: item.imageUrl != null
-                ? Image.network(
+                ? FotoRete(
                     item.imageUrl!,
                     width: 50,
                     height: 50,

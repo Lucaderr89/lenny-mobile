@@ -12,6 +12,7 @@ import '../models/app_category.dart';
 import '../services/app_category_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Schermata di selezione categorie in stile Glovo
 /// Mostra le varie sezioni dell'app: Cibo, Spesa, Negozi, etc.
@@ -622,7 +623,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                   Positioned(
                     top: size * 0.02,
                     child: iconPath.startsWith('http')
-                        ? Image.network(
+                        ? FotoRete(
                             iconPath,
                             width: size * 0.65,
                             height: size * 0.65,

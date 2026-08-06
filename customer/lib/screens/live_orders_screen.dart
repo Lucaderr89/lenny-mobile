@@ -8,6 +8,7 @@ import '../config/app_colors.dart';
 import '../services/auth_service.dart';
 import '../widgets/guest_gate.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Screen ordini attivi - Mostra ordini in corso (status 1-4)
 class LiveOrdersScreen extends StatefulWidget {
@@ -395,7 +396,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       if (order.restaurantImage != null)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
+                          child: FotoRete(
                             order.restaurantImage!,
                             width: 40,
                             height: 40,
@@ -819,7 +820,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       if (order.restaurantImage != null)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
+                          child: FotoRete(
                             order.restaurantImage!,
                             width: 40,
                             height: 40,

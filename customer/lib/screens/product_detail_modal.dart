@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/menu_item.dart';
 import '../providers/favorites_provider.dart';
 import '../widgets/wheel_extra_selector.dart';
+import '../widgets/foto_rete.dart';
 
 /// Product Detail Modal - Modal a mezzo schermo per customizzazione completa del prodotto
 class ProductDetailModal extends StatefulWidget {
@@ -282,7 +283,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
               child: SizedBox(
                 height: 200,
                 child: widget.menuItem.imageUrl != null
-                    ? Image.network(
+                    ? FotoRete(
                         widget.menuItem.imageUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(

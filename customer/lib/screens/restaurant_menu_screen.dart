@@ -16,6 +16,7 @@ import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Restaurant Menu Screen - Basato sul prototipo 7-menu.html
 class RestaurantMenuScreen extends StatefulWidget {
@@ -603,7 +604,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                   Positioned.fill(
                     child: Transform.scale(
                       scale: imageScale,
-                      child: Image.network(
+                      child: FotoRete(
                         widget.restaurant.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
@@ -912,68 +913,79 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   }
 
   Widget _buildHeader() {
+    // Altezza ADATTIVA: la parte alta (immagine + onda + logo) e' fissa,
+    // le info sotto occupano solo lo spazio che serve. Con l'altezza
+    // fissa di prima (300) restava una fascia bianca vuota tra "Aperto
+    // ora" e le tab categorie.
     return SliverToBoxAdapter(
-      child: SizedBox(
-        // Spazio per immagine + logo + nome + chip + orari + indirizzo
-        height: 300,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Container con onda che parte da 90px e riempie il resto
-            Positioned(
-              top: 90, // Posizionato a 90px, lascia visibili 90px di immagine
-              left: 0,
-              right: 0,
-              bottom: 0, // Si estende fino in fondo allo Stack
-              child: ClipPath(
-                clipper: _WaveTopClipper(),
-                child: Container(width: double.infinity, color: Colors.white),
-              ),
-            ),
-
-            // Logo del ristorante - in primo piano a sinistra
-            if (widget.restaurant.logoUrl != null)
-              Positioned(
-                top: 110,
-                left: 20,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      widget.restaurant.logoUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.restaurant,
-                        color: grayColor,
-                        size: 28,
-                      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 176,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Container con onda che parte da 90px e riempie il resto
+                Positioned(
+                  top: 90, // lascia visibili 90px di immagine
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ClipPath(
+                    clipper: _WaveTopClipper(),
+                    child: Container(
+                      width: double.infinity,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              ),
 
-            // Info ristorante sotto la copertina
-            Positioned(
-              top: 170,
-              left: 20,
-              right: 20,
-              child: _buildRestaurantInfoContent(),
+                // Logo del ristorante - in primo piano a sinistra
+                if (widget.restaurant.logoUrl != null)
+                  Positioned(
+                    top: 110,
+                    left: 20,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FotoRete(
+                          widget.restaurant.logoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.restaurant,
+                                color: grayColor,
+                                size: 28,
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          // Info ristorante sotto la copertina: altezza naturale
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: _buildRestaurantInfoContent(),
+          ),
+        ],
       ),
     );
   }
@@ -1282,7 +1294,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
-                  child: Image.network(
+                  child: FotoRete(
                     item.imageUrl ?? '',
                     width: double.infinity,
                     height: 100,
@@ -1468,7 +1480,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         // Ancora per tab-spy e scroll programmatico
         key: _sectionKeys.putIfAbsent(categoryId, () => GlobalKey()),
         color: Colors.white,
-        padding: const EdgeInsets.all(20),
+        // Verticale stretto: tra due categorie il bianco era 20+20=40px
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2059,7 +2072,7 @@ class _MenuItemImageState extends State<_MenuItemImage> {
       margin: const EdgeInsets.only(left: 12),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: Image.network(
+        child: FotoRete(
           widget.imageUrl,
           fit: BoxFit.cover,
           loadingBuilder: (context, child, loadingProgress) {

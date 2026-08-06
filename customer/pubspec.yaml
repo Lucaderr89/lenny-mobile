@@ -63,6 +63,10 @@ dependencies:
 
   # Icone vettoriali del set custom "Lenny Icons" (assets/icons_svg)
   flutter_svg: ^2.0.10
+
+  # Cache su disco per le foto (menu, ristoranti, giochi): senza,
+  # ogni riavvio dell'app riscaricava tutto da Firebase Storage
+  cached_network_image: ^3.4.1
   
   # Image picker for profile
   image_picker: ^1.0.7

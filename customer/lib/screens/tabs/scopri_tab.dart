@@ -13,6 +13,7 @@ import '../games/food_swipe_game_screen.dart';
 import '../games/piatto_segreto_screen.dart';
 import '../games/prezzo_giusto_screen.dart';
 import '../../widgets/app_icon.dart';
+import '../../widgets/foto_rete.dart';
 
 /// Tab "Scopri" - Discovery con contenuti esterni e gamification
 class ScopriTab extends StatefulWidget {
@@ -485,7 +486,7 @@ class _ScopriTabState extends State<ScopriTab>
                   top: Radius.circular(15),
                 ),
                 child: dish.imageUrl != null
-                    ? Image.network(
+                    ? FotoRete(
                         dish.imageUrl!,
                         width: double.infinity,
                         height: 100,
@@ -670,7 +671,7 @@ class _ScopriTabState extends State<ScopriTab>
                     top: Radius.circular(15),
                   ),
                   child: content.imageUrl != null
-                      ? Image.network(
+                      ? FotoRete(
                           content.imageUrl!,
                           width: double.infinity,
                           height: 120,

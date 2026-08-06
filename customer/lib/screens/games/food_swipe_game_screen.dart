@@ -6,6 +6,7 @@ import '../../services/games_service.dart';
 import '../../services/restaurant_service.dart';
 import '../restaurant_menu_screen.dart';
 import '../../widgets/app_icon.dart';
+import '../../widgets/foto_rete.dart';
 
 /// Food Swipe Game - Tinder-style per piatti
 /// Swipe destra = Like, Swipe sinistra = Nope
@@ -706,7 +707,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
+                      FotoRete(
                         card.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {

@@ -5,6 +5,7 @@ import '../../models/restaurant.dart';
 import '../../services/games_service.dart';
 import '../../services/restaurant_service.dart';
 import '../restaurant_menu_screen.dart';
+import '../../widgets/foto_rete.dart';
 
 /// IL PREZZO E' GIUSTO? — round infiniti di scoperta del menu.
 ///
@@ -215,7 +216,7 @@ class _PrezzoGiustoScreenState extends State<PrezzoGiustoScreen> {
                   ),
                   child: AspectRatio(
                     aspectRatio: 16 / 10,
-                    child: Image.network(
+                    child: FotoRete(
                       dish['image_url'] as String? ?? '',
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) =>

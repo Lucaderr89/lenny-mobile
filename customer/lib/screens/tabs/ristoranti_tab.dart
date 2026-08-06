@@ -9,6 +9,7 @@ import '../../providers/location_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../../widgets/app_icon.dart';
+import '../../widgets/foto_rete.dart';
 
 /// Tab "Ristoranti" - ESATTAMENTE come HTML: Ristoranti in evidenza + Tutti i ristoranti
 class RistorantiTab extends StatefulWidget {
@@ -151,9 +152,39 @@ class _RistorantiTabState extends State<RistorantiTab>
       // Il filtro cucina lo applica l'API: una ricarica per tap categoria
       _loadRestaurants();
     } else if (searchChanged) {
-      // La ricerca e' SOLO client-side: zero chiamate di rete
+      // Filtro locale immediato (nome/cucina/descrizione), poi il server
+      // aggiunge i ristoranti che hanno la parola NEL MENU: i chip di
+      // Scopri suggeriscono cibi, e "frullati" non e' il nome di nessuno.
       setState(_filterRestaurants);
+      _cercaAncheNeiPiatti(widget.searchQuery);
     }
+  }
+
+  // Ristoranti trovati dal server per piatto (merge coi risultati locali)
+  Set<int> _dishMatchIds = {};
+  bool _cercandoPiatti = false;
+
+  Future<void> _cercaAncheNeiPiatti(String query) async {
+    if (query.length < 2) {
+      if (_dishMatchIds.isNotEmpty && mounted) {
+        setState(() {
+          _dishMatchIds = {};
+          _filterRestaurants();
+        });
+      }
+      return;
+    }
+
+    setState(() => _cercandoPiatti = true);
+    final ids = await _restaurantService.searchRestaurantsByDish(query);
+    // La query puo' essere cambiata mentre la richiesta era in volo
+    if (!mounted || widget.searchQuery != query) return;
+
+    setState(() {
+      _cercandoPiatti = false;
+      _dishMatchIds = ids;
+      _filterRestaurants();
+    });
   }
 
   /// Applica filtro cucina e ricerca sui master data (client-side, nessuna API)
@@ -299,7 +330,8 @@ class _RistorantiTabState extends State<RistorantiTab>
       // Nessuna ricerca - mostra tutti i ristoranti
       _filteredRestaurants = _allRestaurants;
     } else {
-      // Filtra per nome ristorante, cucina o descrizione
+      // Filtra per nome ristorante, cucina o descrizione, PIU' i
+      // ristoranti che hanno la parola nel menu (match server-side)
       final query = widget.searchQuery.toLowerCase();
       _filteredRestaurants = _allRestaurants.where((restaurant) {
         final nameMatch = restaurant.name.toLowerCase().contains(query);
@@ -307,7 +339,8 @@ class _RistorantiTabState extends State<RistorantiTab>
         final descriptionMatch = restaurant.description.toLowerCase().contains(
           query,
         );
-        return nameMatch || cuisineMatch || descriptionMatch;
+        final dishMatch = _dishMatchIds.contains(restaurant.id);
+        return nameMatch || cuisineMatch || descriptionMatch || dishMatch;
       }).toList();
     }
   }
@@ -515,7 +548,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                     child: AspectRatio(
                       aspectRatio: 16 / 9,
                       child: restaurant.imageUrl.isNotEmpty
-                          ? Image.network(
+                          ? FotoRete(
                               restaurant.imageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) => Container(
@@ -816,6 +849,18 @@ class _RistorantiTabState extends State<RistorantiTab>
                 final all = _getAllRestaurantsForFeed();
                 if (all.isEmpty && !_isLoadingFeatured) {
                   if (widget.searchQuery.isNotEmpty) {
+                    // Il server sta ancora cercando nei menu: niente
+                    // "nessun risultato" prematuro
+                    if (_cercandoPiatti) {
+                      return const Padding(
+                        padding: EdgeInsets.all(60),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: primaryDarkPink,
+                          ),
+                        ),
+                      );
+                    }
                     return _buildSearchEmptyState();
                   }
                   return const SizedBox.shrink();
@@ -857,7 +902,7 @@ class _RistorantiTabState extends State<RistorantiTab>
           const Icon(Icons.search_off, size: 48, color: grayColor),
           const SizedBox(height: 14),
           Text(
-            'Nessun ristorante per "${widget.searchQuery}"',
+            'Nessun risultato per "${widget.searchQuery}"',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 15,
@@ -867,7 +912,8 @@ class _RistorantiTabState extends State<RistorantiTab>
           ),
           const SizedBox(height: 6),
           const Text(
-            'Prova con un altro nome o tipo di cucina.',
+            'Abbiamo cercato tra ristoranti, cucine e piatti dei menu. '
+            'Prova con un\'altra parola.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: grayColor),
           ),
@@ -1046,7 +1092,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                       top: Radius.circular(12),
                     ),
                     child: restaurant.imageUrl.isNotEmpty
-                        ? Image.network(
+                        ? FotoRete(
                             restaurant.imageUrl,
                             width: 200,
                             height: 110,

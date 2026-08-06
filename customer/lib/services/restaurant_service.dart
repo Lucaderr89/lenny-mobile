@@ -13,6 +13,33 @@ class RestaurantService {
     'Accept': 'application/json',
   };
 
+  /// Ristoranti che hanno nel MENU un piatto che matcha [query].
+  /// Usato dalla ricerca: i chip di Scopri suggeriscono cibi
+  /// ("frullati", "zuppa"), non nomi di ristoranti. Ritorna gli id;
+  /// in caso di errore un insieme vuoto (la ricerca locale resta valida).
+  Future<Set<int>> searchRestaurantsByDish(String query) async {
+    try {
+      final uri = Uri.parse(
+        '$baseUrl/restaurants/search-dishes',
+      ).replace(queryParameters: {'q': query});
+
+      final response = await http
+          .get(uri, headers: _headers)
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final ids = data['data']['restaurant_ids'] as List<dynamic>? ?? [];
+          return ids.map((e) => (e as num).toInt()).toSet();
+        }
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
+
   /// Recupera lista ristoranti
   ///
   /// Parametri opzionali:

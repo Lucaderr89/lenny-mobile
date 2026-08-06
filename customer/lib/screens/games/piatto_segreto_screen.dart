@@ -5,6 +5,7 @@ import '../../models/restaurant.dart';
 import '../../services/games_service.dart';
 import '../../services/restaurant_service.dart';
 import '../restaurant_menu_screen.dart';
+import '../../widgets/foto_rete.dart';
 
 /// IL PIATTO SEGRETO — il gioco GIORNALIERO di Lenny.
 ///
@@ -358,7 +359,7 @@ class _PiattoSegretoScreenState extends State<PiattoSegretoScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.card),
-                        child: Image.network(
+                        child: FotoRete(
                           c['image_url'] as String? ?? '',
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
@@ -433,7 +434,7 @@ class _PiattoSegretoScreenState extends State<PiattoSegretoScreen> {
                   ),
                   child: AspectRatio(
                     aspectRatio: 16 / 10,
-                    child: Image.network(
+                    child: FotoRete(
                       segreto['image_url'] as String? ?? '',
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) =>

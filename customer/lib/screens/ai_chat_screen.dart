@@ -10,6 +10,7 @@ import '../config/app_colors.dart';
 import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
 import 'restaurant_menu_screen.dart';
+import '../widgets/foto_rete.dart';
 
 /// Schermata chat con assistente AI (Google Gemini)
 class AIChatScreen extends StatefulWidget {
@@ -722,7 +723,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               height: 64,
               width: double.infinity,
               child: (dish.imageUrl != null && dish.imageUrl!.isNotEmpty)
-                  ? Image.network(
+                  ? FotoRete(
                       dish.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => _segnapostoPiatto(),

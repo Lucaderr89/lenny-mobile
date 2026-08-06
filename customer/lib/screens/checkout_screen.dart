@@ -25,6 +25,7 @@ import 'nexi_build_payment_screen.dart';
 import 'restaurant_menu_screen.dart';
 import 'order_completed_screen.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Checkout Screen - Basato sul prototipo 9-checkout.html
 class CheckoutScreen extends StatefulWidget {
@@ -1460,8 +1461,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         totalSlots != null &&
         totalSlots > 0) {
       final baseColor = periodColors[period] ?? primaryColor;
-      // Calcola l'opacità in base all'indice (gradiente dal chiaro allo scuro)
-      final opacity = 0.08 + (slotIndex / (totalSlots - 1)) * 0.25;
+      // Gradiente dal chiaro allo scuro in base all'indice. Con UNA sola
+      // fascia nel periodo la vecchia formula divideva per zero (NaN) e
+      // la fascia veniva renderizzata bianca, senza colore.
+      final double posizione = totalSlots > 1
+          ? slotIndex / (totalSlots - 1)
+          : 0.5;
+      final opacity = 0.08 + posizione * 0.25;
       slotColor = baseColor.withValues(alpha: opacity);
     }
 
@@ -2901,7 +2907,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child:
                 item.menuItem.imageUrl != null &&
                     item.menuItem.imageUrl!.isNotEmpty
-                ? Image.network(
+                ? FotoRete(
                     item.menuItem.imageUrl!,
                     width: 45,
                     height: 45,

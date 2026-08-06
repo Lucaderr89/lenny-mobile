@@ -7,6 +7,7 @@ import '../models/restaurant.dart';
 import '../services/restaurant_service.dart';
 import 'restaurant_menu_screen.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/foto_rete.dart';
 
 /// Screen Preferiti - Lista ristoranti e piatti preferiti raggruppati
 class FavoritesScreen extends StatefulWidget {
@@ -273,7 +274,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
+                        child: FotoRete(
                           restaurant.imageUrl ?? '',
                           width: 70,
                           height: 70,
@@ -446,7 +447,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: dish.imageUrl != null
-                            ? Image.network(
+                            ? FotoRete(
                                 dish.imageUrl!,
                                 width: 60,
                                 height: 60,
