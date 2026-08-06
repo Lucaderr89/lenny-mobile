@@ -5,6 +5,7 @@ import '../services/nominatim_service.dart';
 import '../services/location_service.dart';
 import '../services/address_service.dart';
 import '../config/app_colors.dart';
+import '../widgets/app_icon.dart';
 
 /// Schermata per aggiungere o modificare un indirizzo
 class AddAddressScreen extends StatefulWidget {
@@ -313,16 +314,16 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   hintStyle: const TextStyle(fontSize: 13),
                   prefixIcon: Padding(
                     padding: const EdgeInsets.all(12),
-                    child: Image.asset(
-                      'assets/icons/icons8-indirizzo-32.png',
+                    child: AppIcon(
+'assets/icons/icons8-indirizzo-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
                     ),
                   ),
                   suffixIcon: IconButton(
-                    icon: Image.asset(
-                      'assets/icons/icons8-mirino-32.png',
+                    icon: AppIcon(
+'assets/icons/icons8-mirino-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -400,8 +401,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               hintStyle: const TextStyle(fontSize: 13),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Image.asset(
-                  'assets/icons/icons8-città-32.png',
+                child: AppIcon(
+'assets/icons/icons8-città-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.primary,
@@ -424,8 +425,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               labelStyle: const TextStyle(fontSize: 13),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Image.asset(
-                  'assets/icons/icons8-cap-32.png',
+                child: AppIcon(
+'assets/icons/icons8-cap-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.primary,
@@ -456,8 +457,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 value: 'Casa',
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/icons/icons8-casetta-32.png',
+                    AppIcon(
+'assets/icons/icons8-casetta-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -471,8 +472,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 value: 'Lavoro',
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/icons/icons8-ufficio2-32.png',
+                    AppIcon(
+'assets/icons/icons8-ufficio2-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -486,8 +487,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 value: 'Altro',
                 child: Row(
                   children: [
-                    Image.asset(
-                      'assets/icons/icons8-mappa-32.png',
+                    AppIcon(
+'assets/icons/icons8-mappa-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -518,8 +519,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               hintStyle: const TextStyle(fontSize: 13),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Image.asset(
-                  'assets/icons/icons8-carta-32.png',
+                child: AppIcon(
+'assets/icons/icons8-carta-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.primary,

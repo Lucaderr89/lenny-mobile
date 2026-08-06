@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../widgets/app_icon.dart';
 
 /// Support Screen - Contatti e informazioni per assistenza clienti
 class SupportScreen extends StatelessWidget {
@@ -36,8 +37,8 @@ class SupportScreen extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: 56,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -71,8 +72,8 @@ class SupportScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Image.asset(
-                    'assets/icons/icons8-supporto-32.png',
+                  child: AppIcon(
+'assets/icons/icons8-supporto-32.png',
                     width: 40,
                     height: 40,
                     color: AppColors.primary,
@@ -145,8 +146,8 @@ class SupportScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-telephone-32.png',
+              AppIcon(
+'assets/icons/icons8-telephone-32.png',
                 width: 24,
                 height: 24,
                 color: AppColors.primary,
@@ -179,8 +180,8 @@ class SupportScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/icons/icons8-telephone-32.png',
+                AppIcon(
+'assets/icons/icons8-telephone-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.dark,
@@ -206,8 +207,8 @@ class SupportScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _makePhoneCall,
-                  icon: Image.asset(
-                    'assets/icons/icons8-telephone-32.png',
+                  icon: AppIcon(
+'assets/icons/icons8-telephone-32.png',
                     width: 20,
                     height: 20,
                     color: AppColors.light,
@@ -273,8 +274,8 @@ class SupportScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-indirizzo-32.png',
+              AppIcon(
+'assets/icons/icons8-indirizzo-32.png',
                 width: 24,
                 height: 24,
                 color: AppColors.primary,
@@ -332,8 +333,8 @@ class SupportScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-orologio-32.png',
+              AppIcon(
+'assets/icons/icons8-orologio-32.png',
                 width: 24,
                 height: 24,
                 color: AppColors.primary,

@@ -26,6 +26,7 @@ import 'favorites_screen.dart';
 import 'ai_chat_screen.dart';
 import 'notifications_screen.dart';
 import '../providers/notification_provider.dart';
+import '../widgets/app_icon.dart';
 
 /// Home Screen basata sul prototipo 6-HOME DEFINITIVA.html
 class HomeScreen extends StatefulWidget {
@@ -460,8 +461,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           children: [
                             // Pulsante indietro per tornare alle categorie
                             IconButton(
-                              icon: Image.asset(
-                                'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+                              icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
                                 width: 22,
                                 height: 22,
                                 color: darkColor,
@@ -631,8 +632,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               return Stack(
                                 children: [
                                   IconButton(
-                                    icon: Image.asset(
-                                      'assets/icons/icons8-allarme-32.png',
+                                    icon: AppIcon(
+'assets/icons/icons8-allarme-32.png',
                                       width: 22,
                                       height: 22,
                                       color: darkColor,
@@ -699,8 +700,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           0,
                                         ),
                                         child: IconButton(
-                                          icon: Image.asset(
-                                            'assets/icons/icons8-cart-32.png',
+                                          icon: AppIcon(
+'assets/icons/icons8-cart-32.png',
                                             width: 22,
                                             height: 22,
                                             color: darkColor,

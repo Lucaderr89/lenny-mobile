@@ -24,6 +24,7 @@ import '../widgets/address_selector_bottom_sheet.dart';
 import 'nexi_build_payment_screen.dart';
 import 'restaurant_menu_screen.dart';
 import 'order_completed_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Checkout Screen - Basato sul prototipo 9-checkout.html
 class CheckoutScreen extends StatefulWidget {
@@ -2494,8 +2495,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: Center(
                   child: isPickup
                       ? const Icon(Icons.store, color: Colors.white, size: 20)
-                      : Image.asset(
-                          'assets/icons/icons8-in-transito-32.png',
+                      : AppIcon(
+'assets/icons/icons8-in-transito-32.png',
                           width: 20,
                           height: 20,
                           color: Colors.white,
@@ -2583,8 +2584,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Image.asset(
-                    'assets/icons/icons8-piu-di-32.png',
+                  AppIcon(
+'assets/icons/icons8-piu-di-32.png',
                     width: 16,
                     height: 16,
                     color: primaryColor,
@@ -2608,8 +2609,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset(
-                    'assets/icons/icons8-ripeti-32.png',
+                  AppIcon(
+'assets/icons/icons8-ripeti-32.png',
                     width: 14,
                     height: 14,
                     color: primaryColor,
@@ -2808,8 +2809,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                 ),
-                Image.asset(
-                  'assets/icons/icons8-piu-di-32.png',
+                AppIcon(
+'assets/icons/icons8-piu-di-32.png',
                   width: 16,
                   height: 16,
                   color: primaryColor,
@@ -3035,8 +3036,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (_availableCredits > 0) ...[
             Row(
               children: [
-                Image.asset(
-                  'assets/icons/icons8-ottieni-denaro-32.png',
+                AppIcon(
+'assets/icons/icons8-ottieni-denaro-32.png',
                   width: 18,
                   height: 18,
                 ),
@@ -3303,8 +3304,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Row(
               children: [
-                Image.asset(
-                  'assets/icons/icons8-copia-32.png',
+                AppIcon(
+'assets/icons/icons8-copia-32.png',
                   width: 14,
                   height: 14,
                   color: primaryColor,
@@ -3898,8 +3899,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         child: Row(
           children: [
-            Image.asset(
-              'assets/icons/icons8-card-32.png',
+            AppIcon(
+'assets/icons/icons8-card-32.png',
               width: 20,
               height: 20,
               color: isSelected ? primaryColor : grayColor,
@@ -3981,8 +3982,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               children: [
                 Row(
                   children: [
-                    Image.asset(
-                      'assets/icons/icons8-card-32.png',
+                    AppIcon(
+'assets/icons/icons8-card-32.png',
                       width: 16,
                       height: 16,
                       color: isSelected ? primaryColor : grayColor,

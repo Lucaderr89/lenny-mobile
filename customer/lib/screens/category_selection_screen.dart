@@ -11,6 +11,7 @@ import '../widgets/first_launch_location_dialog.dart';
 import '../models/app_category.dart';
 import '../services/app_category_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_icon.dart';
 
 /// Schermata di selezione categorie in stile Glovo
 /// Mostra le varie sezioni dell'app: Cibo, Spesa, Negozi, etc.
@@ -151,8 +152,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                   color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Image.asset(
-                  'assets/icons/icons8-uscita-32.png',
+                child: AppIcon(
+'assets/icons/icons8-uscita-32.png',
                   width: 48,
                   height: 48,
                   color: AppColors.primary,
@@ -346,8 +347,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 child: _isLoggedIn
                     ? IconButton(
                         onPressed: () => _handleLogout(context),
-                        icon: Image.asset(
-                          'assets/icons/icons8-uscita-32.png',
+                        icon: AppIcon(
+'assets/icons/icons8-uscita-32.png',
                           width: 24,
                           height: 24,
                           color: AppColors.primary,
@@ -759,8 +760,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                         ),
                         child: Row(
                           children: [
-                            Image.asset(
-                              'assets/icons/icons8-location-32.png',
+                            AppIcon(
+'assets/icons/icons8-location-32.png',
                               width: 20,
                               height: 20,
                               color: AppColors.primary,

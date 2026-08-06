@@ -7,6 +7,7 @@ import '../models/loyalty_data.dart';
 import '../models/loyalty_reward.dart';
 import '../models/loyalty_redemption.dart';
 import 'wallet_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Programma fedelta': punti, tier e premi.
 /// Estratta dal vecchio ProfileScreen (che la teneva come corpo
@@ -127,8 +128,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
         backgroundColor: AppColors.light,
         elevation: 0,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
           ),
@@ -161,8 +162,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset(
-                        'assets/icons/icons8-stella-32.png',
+                      AppIcon(
+'assets/icons/icons8-stella-32.png',
                         width: 16,
                         height: 16,
                       ),
@@ -176,8 +177,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset(
-                        'assets/icons/icons8-premi-32.png',
+                      AppIcon(
+'assets/icons/icons8-premi-32.png',
                         width: 16,
                         height: 16,
                       ),

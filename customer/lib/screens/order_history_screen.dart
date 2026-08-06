@@ -9,6 +9,7 @@ import '../services/live_order_service.dart';
 import '../services/restaurant_service.dart';
 import '../config/app_colors.dart';
 import 'cart_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Screen storico ordini - Mostra ordini completati/annullati (status 5-6)
 class OrderHistoryScreen extends StatefulWidget {
@@ -215,8 +216,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       appBar: AppBar(
         toolbarHeight: 56,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -236,8 +237,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         iconTheme: const IconThemeData(color: AppColors.dark),
         actions: [
           IconButton(
-            icon: Image.asset(
-              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+            icon: AppIcon(
+'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,

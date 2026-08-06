@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_icon.dart';
 
 /// Registration Screen - Modale all'80%
 class RegistrationScreen extends StatefulWidget {
@@ -249,8 +250,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-user-male-32.png',
+                child: AppIcon(
+'assets/icons/icons8-user-male-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -309,8 +310,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-user-male-32.png',
+                child: AppIcon(
+'assets/icons/icons8-user-male-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -370,8 +371,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-email-32.png',
+                child: AppIcon(
+'assets/icons/icons8-email-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -434,8 +435,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-telephone-32.png',
+                child: AppIcon(
+'assets/icons/icons8-telephone-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -498,16 +499,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-password-32.png',
+                child: AppIcon(
+'assets/icons/icons8-password-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
                 ),
               ),
               suffixIcon: IconButton(
-                icon: Image.asset(
-                  'assets/icons/icons8-hide-32.png',
+                icon: AppIcon(
+'assets/icons/icons8-hide-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -572,8 +573,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-location-32.png',
+                child: AppIcon(
+'assets/icons/icons8-location-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -628,8 +629,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-card-32.png',
+                child: AppIcon(
+'assets/icons/icons8-card-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,

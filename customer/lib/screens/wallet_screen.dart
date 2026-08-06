@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/saved_card.dart';
 import '../services/wallet_service.dart';
 import '../config/app_colors.dart';
+import '../widgets/app_icon.dart';
 
 /// Screen Wallet - Gestione carte salvate e crediti Lenny
 class WalletScreen extends StatefulWidget {
@@ -124,8 +125,8 @@ class _WalletScreenState extends State<WalletScreen> {
       appBar: AppBar(
         toolbarHeight: 56,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -145,8 +146,8 @@ class _WalletScreenState extends State<WalletScreen> {
         iconTheme: const IconThemeData(color: AppColors.dark),
         actions: [
           IconButton(
-            icon: Image.asset(
-              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+            icon: AppIcon(
+'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,
@@ -185,8 +186,8 @@ class _WalletScreenState extends State<WalletScreen> {
       children: [
         Row(
           children: [
-            Image.asset(
-              'assets/icons/icons8-ottieni-denaro-32.png',
+            AppIcon(
+'assets/icons/icons8-ottieni-denaro-32.png',
               width: 20,
               height: 20,
             ),
@@ -277,7 +278,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
-                child: Image.asset(credit.sourceIcon, width: 20, height: 20),
+                child: AppIcon(credit.sourceIcon, width: 20, height: 20),
               ),
             ),
             const SizedBox(width: 12),
@@ -377,7 +378,7 @@ class _WalletScreenState extends State<WalletScreen> {
               // Header con icona e tipo
               Row(
                 children: [
-                  Image.asset(credit.sourceIcon, width: 28, height: 28),
+                  AppIcon(credit.sourceIcon, width: 28, height: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -502,8 +503,8 @@ class _WalletScreenState extends State<WalletScreen> {
       children: [
         Row(
           children: [
-            Image.asset(
-              'assets/icons/icons8-portafoglio-32.png',
+            AppIcon(
+'assets/icons/icons8-portafoglio-32.png',
               width: 20,
               height: 20,
             ),
@@ -580,8 +581,8 @@ class _WalletScreenState extends State<WalletScreen> {
           children: [
             Row(
               children: [
-                Image.asset(
-                  'assets/icons/icons8-card-32.png',
+                AppIcon(
+'assets/icons/icons8-card-32.png',
                   width: 24,
                   height: 24,
                 ),

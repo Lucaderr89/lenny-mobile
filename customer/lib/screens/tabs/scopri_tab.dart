@@ -12,6 +12,7 @@ import '../restaurant_menu_screen.dart';
 import '../games/food_swipe_game_screen.dart';
 import '../games/piatto_segreto_screen.dart';
 import '../games/prezzo_giusto_screen.dart';
+import '../../widgets/app_icon.dart';
 
 /// Tab "Scopri" - Discovery con contenuti esterni e gamification
 class ScopriTab extends StatefulWidget {
@@ -312,8 +313,8 @@ class _ScopriTabState extends State<ScopriTab>
             padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
             child: Row(
               children: [
-                Image.asset(
-                  'assets/icons/icons8-piu_amati-32.png',
+                AppIcon(
+'assets/icons/icons8-piu_amati-32.png',
                   width: 20,
                   height: 20,
                 ),
@@ -380,8 +381,8 @@ class _ScopriTabState extends State<ScopriTab>
           padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
           child: Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-piu_amati-32.png',
+              AppIcon(
+'assets/icons/icons8-piu_amati-32.png',
                 width: 20,
                 height: 20,
               ),
@@ -513,8 +514,8 @@ class _ScopriTabState extends State<ScopriTab>
                         dish.orderCount >= 10 ? 3 : (dish.orderCount >= 5 ? 2 : 1),
                         (index) => Padding(
                           padding: EdgeInsets.only(left: index > 0 ? 2 : 0),
-                          child: Image.asset(
-                            'assets/icons/icons8-piu_amati-32.png',
+                          child: AppIcon(
+'assets/icons/icons8-piu_amati-32.png',
                             width: 12,
                             height: 12,
                             color: Colors.white,
@@ -598,8 +599,8 @@ class _ScopriTabState extends State<ScopriTab>
           padding: const EdgeInsets.fromLTRB(20, 12, 15, 4),
           child: Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-cappello-dello-chef-32.png',
+              AppIcon(
+'assets/icons/icons8-cappello-dello-chef-32.png',
                 width: 20,
                 height: 20,
               ),
@@ -892,8 +893,8 @@ class _ScopriTabState extends State<ScopriTab>
           padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
           child: Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-sala-giochi-di-mele-32.png',
+              AppIcon(
+'assets/icons/icons8-sala-giochi-di-mele-32.png',
                 width: 20,
                 height: 20,
               ),

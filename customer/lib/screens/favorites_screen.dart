@@ -6,6 +6,7 @@ import '../models/favorite.dart';
 import '../models/restaurant.dart';
 import '../services/restaurant_service.dart';
 import 'restaurant_menu_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Screen Preferiti - Lista ristoranti e piatti preferiti raggruppati
 class FavoritesScreen extends StatefulWidget {
@@ -90,8 +91,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       appBar: AppBar(
         toolbarHeight: 56,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -111,8 +112,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         iconTheme: const IconThemeData(color: AppColors.dark),
         actions: [
           IconButton(
-            icon: Image.asset(
-              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+            icon: AppIcon(
+'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,

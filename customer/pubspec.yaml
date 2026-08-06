@@ -60,6 +60,9 @@ dependencies:
   
   # Font Awesome icons
   font_awesome_flutter: ^10.7.0
+
+  # Icone vettoriali del set custom "Lenny Icons" (assets/icons_svg)
+  flutter_svg: ^2.0.10
   
   # Image picker for profile
   image_picker: ^1.0.7
@@ -136,6 +139,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/icons_svg/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

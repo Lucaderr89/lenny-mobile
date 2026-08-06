@@ -7,6 +7,7 @@ import '../services/live_order_service.dart';
 import '../config/app_colors.dart';
 import '../services/auth_service.dart';
 import '../widgets/guest_gate.dart';
+import '../widgets/app_icon.dart';
 
 /// Screen ordini attivi - Mostra ordini in corso (status 1-4)
 class LiveOrdersScreen extends StatefulWidget {
@@ -135,8 +136,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       appBar: AppBar(
         toolbarHeight: 56,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -156,8 +157,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         iconTheme: const IconThemeData(color: AppColors.dark),
         actions: [
           IconButton(
-            icon: Image.asset(
-              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+            icon: AppIcon(
+'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,
@@ -311,8 +312,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       children: [
                         Row(
                           children: [
-                            Image.asset(
-                              'assets/icons/icons8-borsa-della-spesa-32.png',
+                            AppIcon(
+'assets/icons/icons8-borsa-della-spesa-32.png',
                               color: cardColor,
                               width: 16,
                               height: 16,

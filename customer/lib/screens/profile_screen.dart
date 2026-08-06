@@ -11,6 +11,7 @@ import 'loyalty_screen.dart';
 import 'order_history_screen.dart';
 import 'support_screen.dart';
 import 'wallet_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Profilo a LISTA PIATTA: account in alto, voci sotto, tutto visibile.
 ///
@@ -462,8 +463,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: AppColors.light,
         elevation: 0,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
           ),
@@ -508,8 +509,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: Image.asset(
-                          'assets/icons/icons8-modifica-32.png',
+                        icon: AppIcon(
+'assets/icons/icons8-modifica-32.png',
                           width: 20,
                           height: 20,
                           color: Colors.white,

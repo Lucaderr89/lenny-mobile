@@ -6,6 +6,7 @@ import '../services/address_service.dart';
 import '../services/auth_service.dart';
 import '../models/address_model.dart';
 import '../screens/add_address_screen.dart';
+import 'app_icon.dart';
 
 /// Bottom sheet per selezionare indirizzo di consegna
 class AddressSelectorBottomSheet extends StatefulWidget {
@@ -220,8 +221,8 @@ class _AddressSelectorBottomSheetState
     final hasLocation = locationProvider.currentLatitude != null;
 
     return ListTile(
-      leading: Image.asset(
-        'assets/icons/icons8-codice-regione-32.png',
+      leading: AppIcon(
+'assets/icons/icons8-codice-regione-32.png',
         width: 32,
         height: 32,
         color: AppColors.primary,

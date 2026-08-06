@@ -4,6 +4,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
 import '../services/auth_service.dart';
+import '../widgets/app_icon.dart';
 
 /// Onboarding v5: Clean Modern Style
 /// Ispirato al design con illustrazioni grandi, sfondo bianco e sezione colorata
@@ -333,8 +334,8 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
                               onTap: _nextPage,
                               borderRadius: BorderRadius.circular(32),
                               child: Center(
-                                child: Image.asset(
-                                  'assets/icons/icons8-arrow-WHITE-32.png',
+                                child: AppIcon(
+'assets/icons/icons8-arrow-WHITE-32.png',
                                   width: 24,
                                   height: 24,
                                 ),

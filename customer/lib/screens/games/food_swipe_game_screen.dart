@@ -5,6 +5,7 @@ import '../../models/food_swipe_card.dart';
 import '../../services/games_service.dart';
 import '../../services/restaurant_service.dart';
 import '../restaurant_menu_screen.dart';
+import '../../widgets/app_icon.dart';
 
 /// Food Swipe Game - Tinder-style per piatti
 /// Swipe destra = Like, Swipe sinistra = Nope
@@ -540,8 +541,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
       appBar: AppBar(
         toolbarHeight: 56,
         leading: IconButton(
-          icon: Image.asset(
-            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+          icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: darkColor,
@@ -551,8 +552,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              'assets/icons/icons8-cuore-cucito-48.png',
+            AppIcon(
+'assets/icons/icons8-cuore-cucito-48.png',
               width: 24,
               height: 24,
             ),
@@ -571,8 +572,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
         elevation: 0,
         actions: [
           IconButton(
-            icon: Image.asset(
-              'assets/icons/icons8-informazioni-32.png',
+            icon: AppIcon(
+'assets/icons/icons8-informazioni-32.png',
               width: 24,
               height: 24,
             ),

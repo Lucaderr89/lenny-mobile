@@ -15,6 +15,7 @@ import '../providers/favorites_provider.dart';
 import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Restaurant Menu Screen - Basato sul prototipo 7-menu.html
 class RestaurantMenuScreen extends StatefulWidget {
@@ -1904,8 +1905,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 children: [
                   Row(
                     children: [
-                      Image.asset(
-                        'assets/icons/icons8-basket-2-32.png',
+                      AppIcon(
+'assets/icons/icons8-basket-2-32.png',
                         width: 20,
                         height: 20,
                         color: Colors.white,
@@ -1930,8 +1931,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Image.asset(
-                        'assets/icons/icons8-arrow-WHITE-32.png',
+                      AppIcon(
+'assets/icons/icons8-arrow-WHITE-32.png',
                         width: 16,
                         height: 16,
                       ),

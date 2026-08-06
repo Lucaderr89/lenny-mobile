@@ -7,6 +7,7 @@ import '../providers/location_provider.dart';
 import '../models/address_model.dart';
 import '../services/address_service.dart';
 import 'add_address_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Schermata per selezionare l'indirizzo di consegna
 class DeliveryAddressSelectionScreen extends StatefulWidget {
@@ -74,8 +75,8 @@ class _DeliveryAddressSelectionScreenState
                       top: 10,
                       child: IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: Image.asset(
-                          'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+                        icon: AppIcon(
+'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
                           width: 24,
                           height: 24,
                           color: AppColors.dark,

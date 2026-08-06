@@ -8,6 +8,7 @@ import '../../services/restaurant_service.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
+import '../../widgets/app_icon.dart';
 
 /// Tab "Ristoranti" - ESATTAMENTE come HTML: Ristoranti in evidenza + Tutti i ristoranti
 class RistorantiTab extends StatefulWidget {
@@ -648,8 +649,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                       ),
                       if (restaurant.rating > 0) ...[
                         const SizedBox(width: 6),
-                        const ImageIcon(
-                          AssetImage('assets/icons/icons8-stella-32.png'),
+                        AppIcon(
+'assets/icons/icons8-stella-32.png',
                           size: 12,
                           color: accentYellow,
                         ),
@@ -1126,8 +1127,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(
-                                  'assets/icons/icons8-orologio-32.png',
+                                AppIcon(
+'assets/icons/icons8-orologio-32.png',
                                   width: 12,
                                   height: 12,
                                   color: Colors.white,
@@ -1195,8 +1196,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset(
-                              'assets/icons/icons8-cancella-32.png',
+                            AppIcon(
+'assets/icons/icons8-cancella-32.png',
                               width: 12,
                               height: 12,
                               color: Colors.white,
@@ -1264,8 +1265,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                       // non si mostra nulla, mai un numero inventato.
                       if (restaurant.rating > 0) ...[
                         const SizedBox(width: 4),
-                        const ImageIcon(
-                          AssetImage('assets/icons/icons8-stella-32.png'),
+                        AppIcon(
+'assets/icons/icons8-stella-32.png',
                           size: 11,
                           color: accentYellow,
                         ),
@@ -1285,8 +1286,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                   // Cucina
                   Row(
                     children: [
-                      const ImageIcon(
-                        AssetImage('assets/icons/icons8-ristorante-32.png'),
+                      AppIcon(
+'assets/icons/icons8-ristorante-32.png',
                         size: 10,
                         color: grayColor,
                       ),
@@ -1331,10 +1332,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                           )
                         : Row(
                             children: [
-                              const ImageIcon(
-                                AssetImage(
-                                  'assets/icons/icons8-in-transito-32.png',
-                                ),
+                              AppIcon(
+'assets/icons/icons8-in-transito-32.png',
                                 size: 10,
                                 color: grayColor,
                               ),
@@ -1395,8 +1394,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                   color: primaryDarkPink.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const ImageIcon(
-                  AssetImage('assets/icons/icons8-marcatore-spento-32.png'),
+                child: AppIcon(
+'assets/icons/icons8-marcatore-spento-32.png',
                   size: 48,
                   color: primaryDarkPink,
                 ),

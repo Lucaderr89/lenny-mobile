@@ -3,6 +3,7 @@ import '../config/app_colors.dart';
 import '../models/address_model.dart';
 import '../services/address_service.dart';
 import 'add_address_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Schermata per visualizzare e gestire gli indirizzi salvati
 class AddressesScreen extends StatefulWidget {
@@ -213,7 +214,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                           color: AppColors.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Image.asset(
+                        child: AppIcon(
                           _getAddressIconPath(address),
                           width: 22,
                           height: 22,

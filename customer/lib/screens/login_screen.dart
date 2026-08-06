@@ -6,6 +6,7 @@ import '../config/app_constants.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 import 'registration_screen.dart';
+import '../widgets/app_icon.dart';
 
 /// Login Screen basato sul prototipo 1-loginpage.html
 class LoginScreen extends StatefulWidget {
@@ -288,8 +289,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-email-32.png',
+                child: AppIcon(
+'assets/icons/icons8-email-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -354,16 +355,16 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/icons/icons8-password-32.png',
+                child: AppIcon(
+'assets/icons/icons8-password-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
                 ),
               ),
               suffixIcon: IconButton(
-                icon: Image.asset(
-                  'assets/icons/icons8-hide-32.png',
+                icon: AppIcon(
+'assets/icons/icons8-hide-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,

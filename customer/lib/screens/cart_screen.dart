@@ -14,6 +14,7 @@ import '../services/restaurant_service.dart';
 import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 import 'package:flutter/foundation.dart';
+import '../widgets/app_icon.dart';
 
 /// Cart Screen - Basato sul prototipo 8-carrello.html
 class CartScreen extends StatefulWidget {
@@ -996,8 +997,8 @@ class _CartScreenState extends State<CartScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              Image.asset(
-                'assets/icons/icons8-basket-2-32.png',
+              AppIcon(
+'assets/icons/icons8-basket-2-32.png',
                 width: 16,
                 height: 16,
                 color: primaryColor,
@@ -1552,8 +1553,8 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 Row(
                   children: [
-                    Image.asset(
-                      'assets/icons/icons8-basket-2-32.png',
+                    AppIcon(
+'assets/icons/icons8-basket-2-32.png',
                       width: 20,
                       height: 20,
                       color: Colors.white,
@@ -1578,8 +1579,8 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Image.asset(
-                      'assets/icons/icons8-arrow-WHITE-32.png',
+                    AppIcon(
+'assets/icons/icons8-arrow-WHITE-32.png',
                       width: 16,
                       height: 16,
                     ),
