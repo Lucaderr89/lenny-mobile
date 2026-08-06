@@ -213,9 +213,9 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.white.withOpacity(0.7),
-                        Colors.white.withOpacity(0.5),
-                        Colors.white.withOpacity(0.7),
+                        Colors.white.withValues(alpha: 0.7),
+                        Colors.white.withValues(alpha: 0.5),
+                        Colors.white.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
@@ -262,15 +262,15 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                     child: Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 25,
                             offset: const Offset(0, 10),
                           ),
@@ -353,7 +353,7 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               elevation: 8,
-                              shadowColor: primaryColor.withOpacity(0.4),
+                              shadowColor: primaryColor.withValues(alpha: 0.4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),

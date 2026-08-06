@@ -281,7 +281,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             Icon(
               Icons.history,
               size: 80,
-              color: AppColors.gray.withOpacity(0.5),
+              color: AppColors.gray.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -323,10 +323,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cardColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: cardColor.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -353,7 +353,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               decoration: BoxDecoration(
-                color: cardColor.withOpacity(0.15),
+                color: cardColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(11),
                   topRight: const Radius.circular(11),
@@ -394,7 +394,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: cardColor.withOpacity(0.2),
+                                color: cardColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -417,7 +417,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                 ).format(DateTime.parse(order.dateOrder)),
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.black.withOpacity(0.7),
+                            color: Colors.black.withValues(alpha: 0.7),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

@@ -196,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
+                        color: Colors.black.withValues(alpha: 0.25),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -327,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: accentYellow.withOpacity(0.2),
+                  color: accentYellow.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -934,7 +934,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: primaryBlue.withOpacity(0.1),
+                              color: primaryBlue.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -1104,28 +1104,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           MaterialPageRoute(builder: (context) => const AIChatScreen()),
         );
       },
-      // Il pulsante piu' in vista della home era rimasto rosa acceso, colore
-      // del marchio precedente. Ora prende il blu e il ciano del cappellino,
-      // con un alone che lo stacca dallo sfondo chiaro.
+      // DISCRETO per scelta di prodotto: l'assistente e' in evidenza ma non
+      // sopra il cibo. Tinta unita, niente gradiente ne' glow, ombra card.
       child: Container(
-        width: 50,
-        height: 50,
+        width: 46,
+        height: 46,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.secondary],
-          ),
+          color: AppColors.primary,
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.40),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          boxShadow: [AppColors.cardShadow],
         ),
-        child: const Icon(FontAwesomeIcons.robot, color: lightColor, size: 24),
+        child: const Icon(FontAwesomeIcons.robot, color: lightColor, size: 20),
       ),
     );
   }
@@ -1140,7 +1129,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: lightColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

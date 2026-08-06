@@ -141,7 +141,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.5),
+      backgroundColor: Colors.black.withValues(alpha: 0.5),
       body: SafeArea(
         child: Stack(
           children: [
@@ -164,7 +164,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 20,
                       offset: const Offset(0, -4),
                     ),
@@ -245,7 +245,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: 'Mario',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -257,7 +257,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -305,7 +305,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: 'Rossi',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -317,7 +317,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -366,7 +366,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: 'mario.rossi@email.com',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -378,7 +378,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -430,7 +430,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: '(+39) 555-0101',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -442,7 +442,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -494,7 +494,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: '••••••••',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -517,7 +517,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 },
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -568,7 +568,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: 'Via Roma 123 (opzionale)',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -580,7 +580,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -624,7 +624,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               hintText: 'SMAC (opzionale)',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -637,7 +637,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               counterText: '',
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

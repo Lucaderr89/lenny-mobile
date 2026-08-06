@@ -210,7 +210,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
+                          color: AppColors.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Image.asset(
@@ -273,7 +273,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(
                                     0xFFFFD042,
-                                  ).withOpacity(0.3),
+                                  ).withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
                                     color: const Color(0xFFFFD042),

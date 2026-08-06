@@ -286,7 +286,7 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.red.withOpacity(0.2),
+                                color: Colors.red.withValues(alpha: 0.2),
                                 blurRadius: 15,
                                 spreadRadius: 3,
                               ),

@@ -20,8 +20,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
     with TickerProviderStateMixin {
   // Colori (coerenti con scopri_tab.dart e dish_match_game_screen.dart)
   static const Color primaryDarkPink = AppColors.primary;
-  static const Color accentYellow = Color(0xFFFFD042);
-  static const Color warningOrange = Color(0xFFE67700);
+  static const Color accentYellow = AppColors.accent;
+  static const Color warningOrange = AppColors.warning;
   static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
   static const Color grayColor = AppColors.grayDark;
@@ -178,8 +178,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                primaryDarkPink.withOpacity(0.95),
-                warningOrange.withOpacity(0.95),
+                primaryDarkPink.withValues(alpha: 0.95),
+                warningOrange.withValues(alpha: 0.95),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -187,7 +187,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: primaryDarkPink.withOpacity(0.5),
+                color: primaryDarkPink.withValues(alpha: 0.5),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -211,7 +211,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: accentYellow.withOpacity(0.6),
+                            color: accentYellow.withValues(alpha: 0.6),
                             blurRadius: 15,
                             spreadRadius: 3,
                           ),
@@ -241,7 +241,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                 'Hai matchato con',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -252,7 +252,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -270,7 +270,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                 'da ${card.restaurantName}',
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
@@ -552,7 +552,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
-              'assets/icons/icons8-tinder-48.png',
+              'assets/icons/icons8-cuore-cucito-48.png',
               width: 24,
               height: 24,
             ),
@@ -685,7 +685,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -693,7 +693,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
               if (isActive && _isDragging && dragProgress.abs() > 0.05)
                 BoxShadow(
                   color: (dragProgress > 0 ? Colors.green : Colors.red)
-                      .withOpacity(dragProgress.abs() * 0.6),
+                      .withValues(alpha: dragProgress.abs() * 0.6),
                   blurRadius: 40,
                   spreadRadius: 5,
                 ),
@@ -740,7 +740,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.7),
+                              Colors.black.withValues(alpha: 0.7),
                             ],
                           ),
                         ),
@@ -835,7 +835,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                       boxShadow: [
                         BoxShadow(
                           color: (dragProgress > 0 ? Colors.green : Colors.red)
-                              .withOpacity(0.8),
+                              .withValues(alpha: 0.8),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
@@ -880,7 +880,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                 border: Border.all(color: color, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.4),
+                    color: color.withValues(alpha: 0.4),
                     blurRadius: 20 * _buttonPulseAnimation.value,
                     spreadRadius: 2,
                     offset: const Offset(0, 5),

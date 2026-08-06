@@ -271,7 +271,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
             count: _pages.length,
             effect: ExpandingDotsEffect(
               activeDotColor: Colors.black87,
-              dotColor: Colors.black.withOpacity(0.2),
+              dotColor: Colors.black.withValues(alpha: 0.2),
               dotHeight: 8,
               dotWidth: 8,
               expansionFactor: 4,
@@ -321,7 +321,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
                             color: Colors.black87,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),
@@ -371,7 +371,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
                           backgroundColor: Colors.black87,
                           foregroundColor: Colors.white,
                           elevation: 8,
-                          shadowColor: Colors.black.withOpacity(0.3),
+                          shadowColor: Colors.black.withValues(alpha: 0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
                           ),

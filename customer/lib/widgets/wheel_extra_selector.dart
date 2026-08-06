@@ -101,10 +101,10 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: successColor.withOpacity(0.1),
+                          color: successColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: successColor.withOpacity(0.3),
+                            color: successColor.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -246,11 +246,11 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                       decoration: BoxDecoration(
                         border: Border(
                           left: BorderSide(
-                            color: primaryColor.withOpacity(0.3),
+                            color: primaryColor.withValues(alpha: 0.3),
                             width: 2,
                           ),
                           right: BorderSide(
-                            color: primaryColor.withOpacity(0.3),
+                            color: primaryColor.withValues(alpha: 0.3),
                             width: 2,
                           ),
                         ),
@@ -322,7 +322,7 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                       gradient: LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: [Colors.white, Colors.white.withOpacity(0)],
+                        colors: [Colors.white, Colors.white.withValues(alpha: 0)],
                       ),
                     ),
                   ),
@@ -339,7 +339,7 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                       gradient: LinearGradient(
                         begin: Alignment.centerRight,
                         end: Alignment.centerLeft,
-                        colors: [Colors.white, Colors.white.withOpacity(0)],
+                        colors: [Colors.white, Colors.white.withValues(alpha: 0)],
                       ),
                     ),
                   ),
@@ -422,7 +422,7 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: (isCurrent && isSelected)
-                ? successColor.withOpacity(0.15)
+                ? successColor.withValues(alpha: 0.15)
                 : null,
             borderRadius: BorderRadius.circular(8),
           ),

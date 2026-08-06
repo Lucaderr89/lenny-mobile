@@ -9,10 +9,9 @@ import '../../models/weather_suggestion.dart';
 import '../../services/discovery_service.dart';
 import '../../services/restaurant_service.dart';
 import '../restaurant_menu_screen.dart';
-import '../games/dish_match_game_screen.dart';
 import '../games/food_swipe_game_screen.dart';
-import '../games/pizza_match_game_screen.dart';
-import '../games/recipe_scrambler_game_screen.dart';
+import '../games/piatto_segreto_screen.dart';
+import '../games/prezzo_giusto_screen.dart';
 
 /// Tab "Scopri" - Discovery con contenuti esterni e gamification
 class ScopriTab extends StatefulWidget {
@@ -41,10 +40,7 @@ class _ScopriTabState extends State<ScopriTab>
 
   // Colori (coerenti con home_screen.dart)
   static const Color primaryDarkPink = AppColors.primary;
-  static const Color secondaryPink = AppColors.danger; // era il rosa del vecchio brand
   static const Color accentYellow = AppColors.accent;
-  static const Color successGold = AppColors.accent;
-  static const Color warningOrange = AppColors.warning;
   static const Color darkColor = AppColors.dark;
   static const Color lightColor = Color(0xFFFFFFFF);
   static const Color grayColor = AppColors.grayDark;
@@ -170,7 +166,7 @@ class _ScopriTabState extends State<ScopriTab>
   Widget _buildWeatherBanner() {
     if (_isLoadingWeather) {
       return Container(
-        margin: const EdgeInsets.fromLTRB(15, 15, 15, 8),
+        margin: const EdgeInsets.fromLTRB(20, 15, 15, 8),
         height: 120,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -178,7 +174,7 @@ class _ScopriTabState extends State<ScopriTab>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
@@ -193,7 +189,7 @@ class _ScopriTabState extends State<ScopriTab>
     final weather = _weatherSuggestion!;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(15, 15, 15, 8),
+      margin: const EdgeInsets.fromLTRB(20, 15, 15, 8),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -201,7 +197,7 @@ class _ScopriTabState extends State<ScopriTab>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Row(
         children: [
@@ -209,7 +205,7 @@ class _ScopriTabState extends State<ScopriTab>
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -265,7 +261,7 @@ class _ScopriTabState extends State<ScopriTab>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
+                              color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -313,7 +309,7 @@ class _ScopriTabState extends State<ScopriTab>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(15, 12, 15, 8),
+            padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
             child: Row(
               children: [
                 Image.asset(
@@ -335,11 +331,11 @@ class _ScopriTabState extends State<ScopriTab>
           ),
           Container(
             height: 140,
-            margin: const EdgeInsets.symmetric(horizontal: 15),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: lightGrayColor.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(15),
+              color: lightGrayColor.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(AppRadius.card),
               border: Border.all(color: lightGrayColor, width: 1.5),
             ),
             child: Center(
@@ -349,7 +345,7 @@ class _ScopriTabState extends State<ScopriTab>
                   Icon(
                     Icons.restaurant_outlined,
                     size: 40,
-                    color: grayColor.withOpacity(0.6),
+                    color: grayColor.withValues(alpha: 0.6),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -357,7 +353,7 @@ class _ScopriTabState extends State<ScopriTab>
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: grayColor.withOpacity(0.8),
+                      color: grayColor.withValues(alpha: 0.8),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -365,7 +361,7 @@ class _ScopriTabState extends State<ScopriTab>
                     'Ordina qualcosa e diventa trendsetter!',
                     style: TextStyle(
                       fontSize: 12,
-                      color: grayColor.withOpacity(0.6),
+                      color: grayColor.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -381,7 +377,7 @@ class _ScopriTabState extends State<ScopriTab>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(15, 12, 15, 8),
+          padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
           child: Row(
             children: [
               Image.asset(
@@ -405,7 +401,7 @@ class _ScopriTabState extends State<ScopriTab>
           height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+            padding: const EdgeInsets.fromLTRB(20, 0, 15, 10),
             itemCount: _trendingDishes.length,
             itemBuilder: (context, index) {
               return _buildTrendingCard(_trendingDishes[index]);
@@ -469,10 +465,10 @@ class _ScopriTabState extends State<ScopriTab>
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         color: lightColor,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -506,7 +502,7 @@ class _ScopriTabState extends State<ScopriTab>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: secondaryPink,
+                    color: AppColors.danger,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -599,7 +595,7 @@ class _ScopriTabState extends State<ScopriTab>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(15, 12, 15, 4),
+          padding: const EdgeInsets.fromLTRB(20, 12, 15, 4),
           child: Row(
             children: [
               Image.asset(
@@ -621,7 +617,7 @@ class _ScopriTabState extends State<ScopriTab>
                 'by Misya',
                 style: TextStyle(
                   fontSize: 11,
-                  color: grayColor.withOpacity(0.7),
+                  color: grayColor.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -631,7 +627,7 @@ class _ScopriTabState extends State<ScopriTab>
           height: 250,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(15, 8, 15, 10),
+            padding: const EdgeInsets.fromLTRB(20, 8, 15, 10),
             itemCount: _gzContent.length,
             itemBuilder: (context, index) {
               return _buildGZCard(_gzContent[index]);
@@ -654,10 +650,10 @@ class _ScopriTabState extends State<ScopriTab>
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: lightColor,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -693,7 +689,7 @@ class _ScopriTabState extends State<ScopriTab>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -728,7 +724,7 @@ class _ScopriTabState extends State<ScopriTab>
                     content.description,
                     style: TextStyle(
                       fontSize: 11,
-                      color: grayColor.withOpacity(0.9),
+                      color: grayColor.withValues(alpha: 0.9),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -747,11 +743,11 @@ class _ScopriTabState extends State<ScopriTab>
   Widget _buildEventSection() {
     if (_isLoadingEvent) {
       return Container(
-        margin: const EdgeInsets.fromLTRB(15, 12, 15, 8),
+        margin: const EdgeInsets.fromLTRB(20, 12, 15, 8),
         height: 100,
         decoration: BoxDecoration(
-          color: lightGrayColor.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(15),
+          color: lightGrayColor.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
       );
     }
@@ -765,19 +761,19 @@ class _ScopriTabState extends State<ScopriTab>
     // Colore dal server con GUARDIA: un hex malformato non deve far
     // crashare la build della home (int.parse senza try lo faceva).
     Color baseColor = accentYellow;
-    Color endColor = warningOrange;
+    Color endColor = AppColors.warning;
     if (event.backgroundColor != null) {
       final parsed = int.tryParse(
         event.backgroundColor!.replaceFirst('#', '0xFF'),
       );
       if (parsed != null) {
         baseColor = Color(parsed);
-        endColor = Color(parsed).withOpacity(0.7);
+        endColor = Color(parsed).withValues(alpha: 0.7);
       }
     }
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(15, 12, 15, 8),
+      margin: const EdgeInsets.fromLTRB(20, 12, 15, 8),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -785,7 +781,7 @@ class _ScopriTabState extends State<ScopriTab>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Row(
         children: [
@@ -827,7 +823,7 @@ class _ScopriTabState extends State<ScopriTab>
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.3),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -893,7 +889,7 @@ class _ScopriTabState extends State<ScopriTab>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(15, 12, 15, 8),
+          padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
           child: Row(
             children: [
               Image.asset(
@@ -913,23 +909,43 @@ class _ScopriTabState extends State<ScopriTab>
             ],
           ),
         ),
+        // Lineup F4 (carta bianca): un gioco GIORNALIERO che fa tornare,
+        // uno endless di scoperta, e lo swipe del craving. Tutti finiscono
+        // sul piatto pronto da ordinare: niente premi, il premio e' il cibo.
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
+              // Il gioco del giorno, a tutta larghezza: e' l'appuntamento
+              _buildGameCard(
+                '',
+                'Il Piatto Segreto',
+                AppColors.primary,
+                iconAsset: 'assets/icons/icons8-cappello-dello-chef-32.png',
+                badge: 'OGGI',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PiattoSegretoScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: _buildGameCard(
                       '',
-                      'Dish\nMatch',
-                      warningOrange,
-                      iconAsset: 'assets/icons/icons8-ingredienti-48.png',
+                      'Il Prezzo\nè Giusto?',
+                      AppColors.secondary,
+                      iconAsset: 'assets/icons/icons8-euro-32.png',
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const DishMatchGameScreen(),
+                            builder: (context) => const PrezzoGiustoScreen(),
                           ),
                         );
                       },
@@ -940,52 +956,13 @@ class _ScopriTabState extends State<ScopriTab>
                     child: _buildGameCard(
                       '',
                       'Foodder',
-                      secondaryPink,
-                      iconAsset: 'assets/icons/icons8-tinder-48.png',
+                      AppColors.danger,
+                      iconAsset: 'assets/icons/icons8-cuore-cucito-48.png',
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const FoodSwipeGameScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildGameCard(
-                      '',
-                      'Pizza\nMatch',
-                      successGold,
-                      iconAsset: 'assets/icons/icons8-pizza-48.png',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PizzaMatchGameScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildGameCard(
-                      '',
-                      'Scrambler',
-                      primaryDarkPink,
-                      iconAsset: 'assets/icons/icons8-mattoncino-48.png',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const RecipeScramblerGameScreen(),
                           ),
                         );
                       },
@@ -1006,12 +983,12 @@ class _ScopriTabState extends State<ScopriTab>
     Color color, {
     VoidCallback? onTap,
     String? iconAsset,
+    String? badge,
   }) {
     return GestureDetector(
       onTap:
           onTap ??
           () {
-            // TODO: Aprire gioco
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text('$title in arrivo!')));
@@ -1021,24 +998,18 @@ class _ScopriTabState extends State<ScopriTab>
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color, color.withOpacity(0.8)],
+            colors: [color, color.withValues(alpha: 0.8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [AppColors.cardShadow],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (iconAsset != null)
-              Image.asset(iconAsset, width: 24, height: 24)
+              Image.asset(iconAsset, width: 24, height: 24, color: Colors.white)
             else
               Text(icon, style: const TextStyle(fontSize: 24)),
             const SizedBox(width: 8),
@@ -1051,6 +1022,28 @@ class _ScopriTabState extends State<ScopriTab>
                 color: Colors.white,
               ),
             ),
+            if (badge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.dark,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1073,7 +1066,7 @@ class _ScopriTabState extends State<ScopriTab>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(15, 12, 15, 8),
+          padding: const EdgeInsets.fromLTRB(20, 12, 15, 8),
           child: Text(
             title,
             style: const TextStyle(
@@ -1087,15 +1080,15 @@ class _ScopriTabState extends State<ScopriTab>
           height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+            padding: const EdgeInsets.fromLTRB(20, 0, 15, 10),
             itemCount: 3,
             itemBuilder: (context, index) {
               return Container(
                 width: 170,
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
-                  color: lightGrayColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(15),
+                  color: lightGrayColor.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
                 ),
               );
             },

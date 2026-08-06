@@ -536,7 +536,7 @@ class _CartScreenState extends State<CartScreen> {
         color: primaryColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -679,7 +679,7 @@ class _CartScreenState extends State<CartScreen> {
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -885,7 +885,7 @@ class _CartScreenState extends State<CartScreen> {
       decoration: BoxDecoration(
         color: lightColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: lightGrayColor.withOpacity(0.7)),
+        border: Border.all(color: lightGrayColor.withValues(alpha: 0.7)),
       ),
       child: Column(
         children: [
@@ -1027,7 +1027,7 @@ class _CartScreenState extends State<CartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(color: lightGrayColor.withOpacity(0.5)),
+          bottom: BorderSide(color: lightGrayColor.withValues(alpha: 0.5)),
         ),
       ),
       child: Row(
@@ -1155,7 +1155,7 @@ class _CartScreenState extends State<CartScreen> {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: onPressed != null ? lightColor : lightColor.withOpacity(0.5),
+        color: onPressed != null ? lightColor : lightColor.withValues(alpha: 0.5),
         shape: BoxShape.circle,
       ),
       child: IconButton(
@@ -1225,7 +1225,7 @@ class _CartScreenState extends State<CartScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
+                            color: Colors.black.withValues(alpha: 0.15),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -1387,7 +1387,7 @@ class _CartScreenState extends State<CartScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1527,7 +1527,7 @@ class _CartScreenState extends State<CartScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -1608,7 +1608,7 @@ class _CartScreenState extends State<CartScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.white, lightGrayColor.withOpacity(0.3)],
+            colors: [Colors.white, lightGrayColor.withValues(alpha: 0.3)],
           ),
         ),
         child: Column(
@@ -1618,7 +1618,7 @@ class _CartScreenState extends State<CartScreen> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: dangerColor.withOpacity(0.1),
+                color: dangerColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.warning_rounded, color: dangerColor, size: 32),

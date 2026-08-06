@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 20,
                         offset: const Offset(0, -4),
                       ),
@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
               hintText: 'Inserisci la tua email',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -296,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -350,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> {
               hintText: '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
               hintStyle: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withOpacity(0.6),
+                color: AppColors.gray.withValues(alpha: 0.6),
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -373,7 +373,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               filled: true,
-              fillColor: AppColors.lightGray.withOpacity(0.3),
+              fillColor: AppColors.lightGray.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

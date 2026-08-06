@@ -624,7 +624,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.3),
+                          Colors.black.withValues(alpha: 0.3),
                           Colors.transparent,
                         ],
                         stops: const [0.0, 0.5],
@@ -690,7 +690,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -717,7 +717,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -763,7 +763,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -805,7 +805,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -854,7 +854,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -935,7 +935,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -1254,7 +1254,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1493,7 +1493,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: lightGrayColor.withOpacity(0.5)),
+          bottom: BorderSide(color: lightGrayColor.withValues(alpha: 0.5)),
         ),
       ),
       child: Row(
@@ -1800,7 +1800,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                       borderRadius: BorderRadius.circular(6),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -1857,7 +1857,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                       color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, -2),
                         ),

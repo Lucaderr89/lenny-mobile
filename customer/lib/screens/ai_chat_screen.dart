@@ -483,7 +483,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 Text(
                   _isTyping ? 'Sta scrivendo...' : 'Online',
                   style: TextStyle(
-                    color: AppColors.surface.withOpacity(0.8),
+                    color: AppColors.surface.withValues(alpha: 0.8),
                     fontSize: 12,
                   ),
                 ),
@@ -524,7 +524,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 children: [
                   CircleAvatar(
                     radius: 16,
-                    backgroundColor: AppColors.primary.withOpacity(0.15),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                     child: const Icon(
                       Icons.smart_toy_outlined,
                       size: 16,
@@ -542,7 +542,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 4,
                         ),
                       ],
@@ -589,7 +589,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           if (!isUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppColors.primary.withOpacity(0.15),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
               child: const Icon(
                 Icons.smart_toy_outlined,
                 size: 16,
@@ -611,7 +611,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -646,7 +646,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppColors.primary.withOpacity(0.15),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   child: const Icon(
                     Icons.smart_toy_outlined,
                     size: 16,
@@ -658,7 +658,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   'Ecco cosa ho trovato per te',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.dark.withOpacity(0.7),
+                    color: AppColors.dark.withValues(alpha: 0.7),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -704,7 +704,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -812,7 +812,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppColors.primary.withOpacity(0.15),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   child: const Icon(
                     Icons.smart_toy_outlined,
                     size: 16,
@@ -824,7 +824,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   'Ristoranti trovati',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.dark.withOpacity(0.7),
+                    color: AppColors.dark.withValues(alpha: 0.7),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -845,7 +845,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -959,7 +959,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
         color: AppColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, -1),
           ),

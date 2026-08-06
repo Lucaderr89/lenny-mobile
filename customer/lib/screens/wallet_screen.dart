@@ -218,7 +218,7 @@ class _WalletScreenState extends State<WalletScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryDark.withOpacity(0.3),
+                color: AppColors.primaryDark.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -567,7 +567,7 @@ class _WalletScreenState extends State<WalletScreen> {
         boxShadow: [
           if (card.isDefault)
             BoxShadow(
-              color: AppColors.primaryDark.withOpacity(0.2),
+              color: AppColors.primaryDark.withValues(alpha: 0.2),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

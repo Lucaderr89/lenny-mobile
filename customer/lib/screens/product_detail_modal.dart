@@ -368,7 +368,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -408,7 +408,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -567,9 +567,9 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withOpacity(0.3)),
+                    border: Border.all(color: color.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     item.name,
@@ -590,9 +590,9 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
+                      color: color.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: color.withOpacity(0.5)),
+                      border: Border.all(color: color.withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -639,7 +639,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.05),
+                color: color.withValues(alpha: 0.05),
                 border: Border(bottom: BorderSide(color: lightGrayColor)),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
@@ -664,7 +664,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
+                      color: color.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -698,9 +698,9 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
+                      color: color.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: color.withOpacity(0.2)),
+                      border: Border.all(color: color.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -896,11 +896,11 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
         decoration: BoxDecoration(
           color: isSelected
               ? primaryLight
-              : (canSelect ? lightGrayColor : lightGrayColor.withOpacity(0.5)),
+              : (canSelect ? lightGrayColor : lightGrayColor.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected
-                ? primaryColor.withOpacity(0.3)
+                ? primaryColor.withValues(alpha: 0.3)
                 : Colors.transparent,
             width: 1,
           ),
@@ -992,7 +992,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1009,9 +1009,9 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color: dangerColor.withOpacity(0.1),
+                color: dangerColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: dangerColor.withOpacity(0.3)),
+                border: Border.all(color: dangerColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

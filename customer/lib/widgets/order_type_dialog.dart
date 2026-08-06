@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_colors.dart';
+import 'wave_clipper.dart';
 import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 import '../services/auth_service.dart';
@@ -95,14 +96,14 @@ class _OrderTypeDialogState extends State<OrderTypeDialog> {
 
                 // Card bianca - Expanded riempie tutto lo spazio rimanente
                 Expanded(child: ClipPath(
-                  clipper: _WaveClipper(),
+                  clipper: const WaveClipper(),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 20,
                           offset: const Offset(0, -4),
                         ),
@@ -268,12 +269,12 @@ class _OrderTypeButton extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.25),
+            color: color.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.4), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -286,7 +287,7 @@ class _OrderTypeButton extends StatelessWidget {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: textColor.withOpacity(0.15),
+                  color: textColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Image.asset(
@@ -319,7 +320,7 @@ class _OrderTypeButton extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
-                        color: textColor.withOpacity(0.8),
+                        color: textColor.withValues(alpha: 0.8),
                         height: 1.2,
                       ),
                     ),
@@ -330,7 +331,7 @@ class _OrderTypeButton extends StatelessWidget {
               // Freccia
               Icon(
                 Icons.arrow_forward_ios,
-                color: textColor.withOpacity(0.6),
+                color: textColor.withValues(alpha: 0.6),
                 size: 18,
               ),
             ],
@@ -341,42 +342,3 @@ class _OrderTypeButton extends StatelessWidget {
   }
 }
 
-/// Custom clipper per creare effetto onda
-class _WaveClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-
-    // Inizia dall'angolo in alto a sinistra con l'onda
-    path.lineTo(0, 40);
-
-    // Curva ondulata in alto
-    final firstControlPoint = Offset(size.width * 0.25, 0);
-    final firstEndPoint = Offset(size.width * 0.5, 20);
-    path.quadraticBezierTo(
-      firstControlPoint.dx,
-      firstControlPoint.dy,
-      firstEndPoint.dx,
-      firstEndPoint.dy,
-    );
-
-    final secondControlPoint = Offset(size.width * 0.75, 40);
-    final secondEndPoint = Offset(size.width, 20);
-    path.quadraticBezierTo(
-      secondControlPoint.dx,
-      secondControlPoint.dy,
-      secondEndPoint.dx,
-      secondEndPoint.dy,
-    );
-
-    // Completa il rettangolo
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-}

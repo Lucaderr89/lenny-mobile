@@ -435,7 +435,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -536,7 +536,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -959,7 +959,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -1035,7 +1035,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
@@ -1095,7 +1095,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
-                              color: primaryDark.withOpacity(0.8),
+                              color: primaryDark.withValues(alpha: 0.8),
                             ),
                           ),
                         ],
@@ -1461,7 +1461,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final baseColor = periodColors[period] ?? primaryColor;
       // Calcola l'opacità in base all'indice (gradiente dal chiaro allo scuro)
       final opacity = 0.08 + (slotIndex / (totalSlots - 1)) * 0.25;
-      slotColor = baseColor.withOpacity(opacity);
+      slotColor = baseColor.withValues(alpha: opacity);
     }
 
     return GestureDetector(
@@ -2475,7 +2475,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.05),
+        color: primaryColor.withValues(alpha: 0.05),
         border: Border(bottom: BorderSide(color: lightGrayColor, width: 1)),
       ),
       child: Column(
@@ -2488,7 +2488,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.85),
+                  color: primaryColor.withValues(alpha: 0.85),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -2552,7 +2552,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: primaryColor, width: 1.5),
                     ),
@@ -2602,7 +2602,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.06),
+                color: primaryColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -2653,12 +2653,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       border: Border.all(
                         color: _selectedDate != null
                             ? primaryColor
-                            : primaryColor.withOpacity(0.5),
+                            : primaryColor.withValues(alpha: 0.5),
                         width: 2,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 8,
                           spreadRadius: 1,
                           offset: const Offset(0, 2),
@@ -2766,7 +2766,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               counterText: '',
               filled: true,
-              fillColor: lightGrayColor.withOpacity(0.3),
+              fillColor: lightGrayColor.withValues(alpha: 0.3),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 12,
@@ -2858,7 +2858,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.08),
+                color: AppColors.info.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -3063,7 +3063,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: _useAppCredits
-                      ? primaryColor.withOpacity(0.1)
+                      ? primaryColor.withValues(alpha: 0.1)
                       : lightGrayColor,
                   border: Border.all(
                     color: _useAppCredits ? primaryColor : lightGrayColor,
@@ -3229,7 +3229,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: successColor.withOpacity(0.1),
+                color: successColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: successColor, width: 1),
               ),
@@ -3366,9 +3366,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 vertical: 8,
               ),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.06),
+                color: primaryColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: primaryColor.withOpacity(0.2)),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -3484,9 +3484,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       margin: const EdgeInsets.only(top: 4, bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -3533,7 +3533,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         margin: const EdgeInsets.only(top: 4, bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: successColor.withOpacity(0.15),
+          color: successColor.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: successColor, width: 1),
         ),
@@ -3561,9 +3561,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         margin: const EdgeInsets.only(top: 4, bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: successColor.withOpacity(0.1),
+          color: successColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: successColor.withOpacity(0.3), width: 1),
+          border: Border.all(color: successColor.withValues(alpha: 0.3), width: 1),
         ),
         child: Row(
           children: [
@@ -3608,9 +3608,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       margin: const EdgeInsets.only(top: 8, bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: successColor.withOpacity(0.1),
+        color: successColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: successColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: successColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -3821,7 +3821,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.1) : lightGrayColor,
+          color: isSelected ? primaryColor.withValues(alpha: 0.1) : lightGrayColor,
           border: Border.all(
             color: isSelected ? primaryColor : lightGrayColor,
             width: isSelected ? 2 : 1,
@@ -3892,7 +3892,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? primaryColor.withOpacity(0.08)
+              ? primaryColor.withValues(alpha: 0.08)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
@@ -3919,7 +3919,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: successColor.withOpacity(0.15),
+                color: successColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -3968,7 +3968,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             decoration: BoxDecoration(
-              color: isSelected ? primaryColor.withOpacity(0.08) : Colors.white,
+              color: isSelected ? primaryColor.withValues(alpha: 0.08) : Colors.white,
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: isSelected ? primaryColor : lightGrayColor,
@@ -4012,7 +4012,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         vertical: 1,
                       ),
                       decoration: BoxDecoration(
-                        color: successColor.withOpacity(0.15),
+                        color: successColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
@@ -4040,7 +4040,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -4055,7 +4055,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: primaryColor.withOpacity(0.6),
+            disabledBackgroundColor: primaryColor.withValues(alpha: 0.6),
             disabledForegroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
@@ -4093,7 +4093,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(

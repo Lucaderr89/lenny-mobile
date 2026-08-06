@@ -148,7 +148,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Image.asset(
@@ -298,11 +298,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -331,11 +331,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -681,7 +681,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -717,7 +717,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 16,
                   offset: const Offset(0, -4),
                 ),
@@ -894,18 +894,18 @@ class _OrganicShapePainter extends CustomPainter {
 
     // Ombra principale per profondità
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.20)
+      ..color = Colors.black.withValues(alpha: 0.20)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
 
     // Ombra leggera esterna tipo "taped" per effetto elegante
     final outerShadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.10)
+      ..color = Colors.black.withValues(alpha: 0.10)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 35);
 
     // Bordo grigio per definire i contorni (come Glovo)
     final strokePaint = Paint()
       ..color = const Color(0xFFCC8800)
-          .withOpacity(0.40) // Tonalità scura del giallo/arancione di sfondo
+          .withValues(alpha: 0.40) // Tonalità scura del giallo/arancione di sfondo
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5.0;
 

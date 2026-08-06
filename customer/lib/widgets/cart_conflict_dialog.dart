@@ -24,8 +24,8 @@ Future<bool?> showCartConflictDialog({
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFFFFD042).withOpacity(0.2),
-                    const Color(0xFFFF8E53).withOpacity(0.2),
+                    const Color(0xFFFFD042).withValues(alpha: 0.2),
+                    const Color(0xFFFF8E53).withValues(alpha: 0.2),
                   ],
                 ),
                 shape: BoxShape.circle,

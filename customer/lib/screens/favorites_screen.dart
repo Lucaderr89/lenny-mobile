@@ -177,21 +177,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primaryColor.withOpacity(0.08),
-            primaryColor.withOpacity(0.03),
+            primaryColor.withValues(alpha: 0.08),
+            primaryColor.withValues(alpha: 0.03),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primaryColor.withOpacity(0.15), width: 1),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.15), width: 1),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.15),
+              color: primaryColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -206,7 +206,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               'Tocca un piatto preferito per ordinarlo subito!',
               style: TextStyle(
                 fontSize: 13,
-                color: darkColor.withOpacity(0.8),
+                color: darkColor.withValues(alpha: 0.8),
                 height: 1.4,
               ),
             ),
@@ -227,8 +227,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  primaryColor.withOpacity(0.2),
-                  primaryColor.withOpacity(0.05),
+                  primaryColor.withValues(alpha: 0.2),
+                  primaryColor.withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -278,12 +278,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: primaryColor.withOpacity(0.08),
+            color: primaryColor.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 0),
           ),
@@ -329,8 +329,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
-                                      primaryColor.withOpacity(0.3),
-                                      primaryColor.withOpacity(0.1),
+                                      primaryColor.withValues(alpha: 0.3),
+                                      primaryColor.withValues(alpha: 0.1),
                                     ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
@@ -356,7 +356,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryColor.withOpacity(0.4),
+                                  color: primaryColor.withValues(alpha: 0.4),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -395,7 +395,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                   vertical: 5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: primaryColor.withOpacity(0.15),
+                                  color: primaryColor.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
@@ -429,7 +429,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: lightGrayColor.withOpacity(0.5),
+                        color: lightGrayColor.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -449,12 +449,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [lightGrayColor.withOpacity(0.2), Colors.white],
+                  colors: [lightGrayColor.withValues(alpha: 0.2), Colors.white],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 border: Border(
-                  top: BorderSide(color: lightGrayColor.withOpacity(0.5)),
+                  top: BorderSide(color: lightGrayColor.withValues(alpha: 0.5)),
                 ),
               ),
               child: ListView.separated(
@@ -474,12 +474,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.06),
+                          color: primaryColor.withValues(alpha: 0.06),
                           blurRadius: 12,
                           offset: const Offset(0, 0),
                         ),
@@ -502,8 +502,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            primaryColor.withOpacity(0.2),
-                                            primaryColor.withOpacity(0.05),
+                                            primaryColor.withValues(alpha: 0.2),
+                                            primaryColor.withValues(alpha: 0.05),
                                           ],
                                         ),
                                       ),
@@ -520,8 +520,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
-                                      primaryColor.withOpacity(0.2),
-                                      primaryColor.withOpacity(0.05),
+                                      primaryColor.withValues(alpha: 0.2),
+                                      primaryColor.withValues(alpha: 0.05),
                                     ],
                                   ),
                                 ),
@@ -560,7 +560,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.1),
+                                color: primaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Icon(

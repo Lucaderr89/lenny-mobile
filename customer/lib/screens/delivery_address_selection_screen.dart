@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../config/app_colors.dart';
+import '../widgets/wave_clipper.dart';
 import '../providers/location_provider.dart';
 import '../models/address_model.dart';
 import '../services/address_service.dart';
@@ -118,7 +119,7 @@ class _DeliveryAddressSelectionScreenState
 
               // Card bianca con opzioni e bordo ondulato
               ClipPath(
-                clipper: _WaveClipper(),
+                clipper: const WaveClipper(),
                 child: Container(
                   width: double.infinity,
                   constraints: BoxConstraints(
@@ -131,7 +132,7 @@ class _DeliveryAddressSelectionScreenState
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 20,
                         offset: const Offset(0, -4),
                       ),
@@ -333,7 +334,7 @@ class _AddressOptionCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
+                  color: iconColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Image.asset(
@@ -370,7 +371,7 @@ class _AddressOptionCard extends StatelessWidget {
               ),
               Icon(
                 Icons.arrow_forward_ios,
-                color: textColor.withOpacity(0.4),
+                color: textColor.withValues(alpha: 0.4),
                 size: 18,
               ),
             ],
@@ -410,10 +411,10 @@ class _SavedAddressCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -423,7 +424,7 @@ class _SavedAddressCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Image.asset(
@@ -470,42 +471,3 @@ class _SavedAddressCard extends StatelessWidget {
   }
 }
 
-/// Custom clipper per creare effetto onda
-class _WaveClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-
-    // Inizia dall'angolo in alto a sinistra con l'onda
-    path.lineTo(0, 40);
-
-    // Curva ondulata in alto
-    final firstControlPoint = Offset(size.width * 0.25, 0);
-    final firstEndPoint = Offset(size.width * 0.5, 20);
-    path.quadraticBezierTo(
-      firstControlPoint.dx,
-      firstControlPoint.dy,
-      firstEndPoint.dx,
-      firstEndPoint.dy,
-    );
-
-    final secondControlPoint = Offset(size.width * 0.75, 40);
-    final secondEndPoint = Offset(size.width, 20);
-    path.quadraticBezierTo(
-      secondControlPoint.dx,
-      secondControlPoint.dy,
-      secondEndPoint.dx,
-      secondEndPoint.dy,
-    );
-
-    // Completa il rettangolo
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-}

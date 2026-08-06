@@ -214,7 +214,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             Icon(
               Icons.shopping_bag_outlined,
               size: 80,
-              color: AppColors.gray.withOpacity(0.5),
+              color: AppColors.gray.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -261,10 +261,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cardColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: cardColor.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -291,7 +291,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               decoration: BoxDecoration(
-                color: cardColor.withOpacity(0.25),
+                color: cardColor.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(11),
                   topRight: const Radius.circular(11),
@@ -333,7 +333,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: cardColor.withOpacity(0.2),
+                                color: cardColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -443,7 +443,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                             decoration: BoxDecoration(
                               boxShadow: [
                                 BoxShadow(
-                                  color: cardColor.withOpacity(0.3),
+                                  color: cardColor.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   spreadRadius: 2,
                                 ),
@@ -470,7 +470,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               decoration: BoxDecoration(
                                 boxShadow: [
                                   BoxShadow(
-                                    color: cardColor.withOpacity(0.3),
+                                    color: cardColor.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     spreadRadius: 2,
                                   ),
@@ -671,10 +671,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cardColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: cardColor.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -701,7 +701,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               decoration: BoxDecoration(
-                color: cardColor.withOpacity(0.25),
+                color: cardColor.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(11),
                   topRight: const Radius.circular(11),
@@ -736,7 +736,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: cardColor.withOpacity(0.2),
+                                color: cardColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -940,7 +940,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                           decoration: BoxDecoration(
                             boxShadow: [
                               BoxShadow(
-                                color: cardColor.withOpacity(0.3),
+                                color: cardColor.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 spreadRadius: 2,
                               ),
@@ -989,7 +989,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                             decoration: BoxDecoration(
                               boxShadow: [
                                 BoxShadow(
-                                  color: cardColor.withOpacity(0.3),
+                                  color: cardColor.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   spreadRadius: 2,
                                 ),
