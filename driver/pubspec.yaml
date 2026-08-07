@@ -53,6 +53,9 @@ dependencies:
   # Modalita Guida: annunci vocali e schermo sempre acceso con ordini attivi
   flutter_tts: ^4.0.2
   wakelock_plus: ^1.2.8
+
+  # Bolla flottante sopra Google Maps (Modalita Guida, Android)
+  flutter_overlay_window: ^0.4.5
   
   # Maps (OpenStreetMap)
   flutter_map: ^6.1.0

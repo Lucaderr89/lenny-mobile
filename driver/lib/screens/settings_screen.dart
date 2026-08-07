@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../services/theme_controller.dart';
 import '../services/tts_service.dart';
+import 'guida_sicura_screen.dart';
 
 /// SettingsScreen - Impostazioni driver (aspetto + cambio password)
 class SettingsScreen extends StatefulWidget {
@@ -229,6 +230,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             activeThumbColor: AppColors.primary,
             contentPadding: EdgeInsets.zero,
+          ),
+          const Divider(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(
+              Icons.headset_mic_outlined,
+              color: AppColors.primary,
+            ),
+            title: const Text(
+              'Guida sicura',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              'Come farti leggere anche WhatsApp dal telefono',
+              style: TextStyle(
+                fontSize: 12,
+                color: temaScuro
+                    ? AppColors.nightTextSecondary
+                    : AppColors.grayDark,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GuidaSicuraScreen()),
+            ),
           ),
         ],
       ),

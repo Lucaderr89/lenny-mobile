@@ -14,6 +14,7 @@ import '../services/shift_service.dart';
 import '../services/fcm_service.dart';
 import '../services/notification_store.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../services/overlay_bolla_service.dart';
 import '../services/tts_service.dart';
 import '../widgets/location_permission_dialog.dart';
 import '../widgets/azione_card.dart';
@@ -256,6 +257,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // Schermo sempre acceso finche' c'e' un ordine attivo: il telefono
         // a cruscotto e' il "navigatore Lenny", non deve spegnersi.
         WakelockPlus.toggle(enable: orders.isNotEmpty);
+
+        // Bolla overlay: segue l'ordine "piu' avanti" nel flusso (prima
+        // quello in consegna, poi in ritiro, poi il primo confermato);
+        // senza ordini si chiude da sola.
+        Order? attivo;
+        for (final o in orders) {
+          if (o.confirmedAt == null) continue;
+          if (o.isInDelivery) {
+            attivo = o;
+            break;
+          }
+          if (attivo == null || (o.isPickingUp && !attivo.isPickingUp)) {
+            attivo = o;
+          }
+        }
+        OverlayBollaService().aggiorna(attivo);
       }
     } catch (e) {
       print('❌ Errore caricamento ordini: $e');
@@ -1696,8 +1713,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           icona: Icons.navigation,
                           etichetta: 'NAVIGA',
                           colore: coloreAzione,
-                          onTap: () =>
-                              _openMaps(targetLat, targetLng, targetNome),
+                          onTap: () => _navigaConBolla(
+                            order,
+                            targetLat,
+                            targetLng,
+                            targetNome,
+                          ),
                         ),
                       ),
                       if (targetTel.isNotEmpty) ...[
@@ -1724,6 +1745,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   else if (order.isInDelivery)
                     // In delivery → mostra pulsante CONFERMA CONSEGNA
                     _buildDeliverButton(order),
+
+                  // Emergenze: un tocco → WhatsApp col titolare, messaggio
+                  // gia' scritto. Niente da digitare in strada.
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: () => _segnalaProblema(order),
+                      icon: const Icon(
+                        Icons.report_problem_outlined,
+                        size: 18,
+                        color: AppColors.danger,
+                      ),
+                      label: const Text(
+                        'HO UN PROBLEMA',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.danger,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -3186,6 +3231,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// NAVIGA dalla card: prima accende la BOLLA sopra Maps (chiedendo il
+  /// permesso overlay la prima volta, con spiegazione), poi avvia la
+  /// navigazione. La bolla tiene tappa, note e telefono sempre in vista.
+  Future<void> _navigaConBolla(
+    Order order,
+    double lat,
+    double lng,
+    String label,
+  ) async {
+    await OverlayBollaService().mostraPerOrdine(context, order);
+    await _openMaps(lat, lng, label);
+  }
+
   Future<void> _openMaps(double lat, double lng, String label) async {
     // NAVIGAZIONE DIRETTA: Maps si apre col turn-by-turn GIA' avviato
     // verso la tappa. Il vecchio link "search" mostrava un pin e chiedeva
@@ -3204,6 +3262,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       _showToast('Impossibile aprire Google Maps', isError: true);
+    }
+  }
+
+  /// "HO UN PROBLEMA": tre scelte grandi, poi si apre WhatsApp verso il
+  /// titolare con il messaggio GIA' scritto (ordine, tipo problema,
+  /// driver). Canale diretto: niente pannello, niente testo da digitare.
+  Future<void> _segnalaProblema(Order order) async {
+    final String? tipo = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Che problema hai?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              BottoneAzione(
+                icona: Icons.two_wheeler,
+                etichetta: 'VEICOLO FERMO',
+                colore: AppColors.danger,
+                onTap: () => Navigator.pop(ctx, 'Veicolo fermo'),
+              ),
+              const SizedBox(height: 10),
+              BottoneAzione(
+                icona: Icons.person_off,
+                etichetta: 'CLIENTE ASSENTE',
+                colore: AppColors.warning,
+                onTap: () => Navigator.pop(ctx, 'Cliente assente'),
+              ),
+              const SizedBox(height: 10),
+              BottoneAzione(
+                icona: Icons.help_outline,
+                etichetta: 'ALTRO PROBLEMA',
+                colore: AppColors.primary,
+                pieno: false,
+                onTap: () => Navigator.pop(ctx, 'Altro problema'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (tipo == null) return;
+
+    final testo = Uri.encodeComponent(
+      'PROBLEMA: $tipo\n'
+      'Ordine #${order.id} (${order.restaurantName} -> ${order.customerName})\n'
+      'Driver: $_driverName',
+    );
+    final uri = Uri.parse('https://wa.me/393346841489?text=$testo');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      _showToast('Impossibile aprire WhatsApp', isError: true);
     }
   }
 

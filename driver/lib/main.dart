@@ -11,6 +11,7 @@ import 'firebase_options.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
 import 'config/app_router.dart';
+import 'overlay/bolla_overlay.dart';
 import 'services/fcm_service.dart';
 import 'services/theme_controller.dart';
 
@@ -32,6 +33,15 @@ void main() async {
           if (kDebugMode) parent.print(zone, riga);
         },
       ));
+}
+
+/// Entry point della BOLLA overlay (engine separato, avviato dal
+/// servizio Android di flutter_overlay_window). Deve stare in main.dart
+/// e chiamarsi overlayMain.
+@pragma("vm:entry-point")
+void overlayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const BollaOverlay());
 }
 
 Future<void> _avvia() async {

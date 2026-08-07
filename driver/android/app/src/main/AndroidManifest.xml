@@ -10,6 +10,10 @@
     <!-- Permesso notifiche push (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Bolla flottante della Modalita' Guida: resta visibile SOPRA Google
+         Maps con la prossima tappa e le azioni rapide. Il permesso viene
+         chiesto una volta, con spiegazione, al primo uso di NAVIGA. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     
     <application
         android:label="Lenny Driver"
@@ -35,7 +39,18 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep link per riaprire l'app dalla bolla overlay -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="lennydriver"/>
+            </intent-filter>
         </activity>
+        <!-- Servizio della bolla overlay (flutter_overlay_window) -->
+        <service
+            android:name="flutter.overlay.window.flutter_overlay_window.OverlayService"
+            android:exported="false" />
         <!-- FCM: colore e icona di default per le notifiche -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
