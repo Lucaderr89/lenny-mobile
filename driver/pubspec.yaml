@@ -46,6 +46,9 @@ dependencies:
   
   # Geolocation
   geolocator: ^11.0.0
+
+  # Icone vettoriali del set custom "Lenny Icons" (assets/icons_svg, condiviso con l app cliente)
+  flutter_svg: ^2.0.10
   
   # Maps (OpenStreetMap)
   flutter_map: ^6.1.0
@@ -85,3 +88,4 @@ flutter:
     - assets/sounds/
     - assets/images/
     - assets/icons/
+    - assets/icons_svg/

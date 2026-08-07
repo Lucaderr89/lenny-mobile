@@ -12,6 +12,7 @@ import 'config/app_theme.dart';
 import 'config/app_constants.dart';
 import 'config/app_router.dart';
 import 'services/fcm_service.dart';
+import 'services/theme_controller.dart';
 
 /// Entry point dell'app Lenny Driver
 void main() async {
@@ -77,6 +78,9 @@ Future<void> _avvia() async {
   // Abilita edge-to-edge per gestire correttamente SafeArea
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
+  // Tema (chiaro/notte): legge solo le prefs, non blocca l'avvio.
+  await ThemeController().init();
+
   // Avvia SUBITO la UI: NON blocchiamo l'apertura dell'app sulle chiamate di
   // rete FCM (getToken + registrazione token sul backend). Era la causa del
   // "devo cliccare più volte la push": ad app chiusa il primo frame restava
@@ -92,21 +96,30 @@ class LennyDriverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+    // Il tema segue ThemeController: automatico col sole o fisso da
+    // impostazioni. ValueListenableBuilder ricostruisce al cambio.
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController().themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp.router(
+          title: AppConstants.appName,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: mode,
 
-      // 🇮🇹 Localizzazione italiana
-      locale: const Locale('it', 'IT'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('it', 'IT')],
+          // Localizzazione italiana
+          locale: const Locale('it', 'IT'),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('it', 'IT')],
 
-      routerConfig: AppRouter.router,
+          routerConfig: AppRouter.router,
+        );
+      },
     );
   }
 }

@@ -38,11 +38,27 @@ class AppColors {
   static const Color textSecondary = gray;
   static const Color textOnPrimary = Colors.white;
 
-  // Shadows
-  static BoxShadow cardShadow = BoxShadow(
-    color: Colors.black.withValues(alpha: 0.05),
-    blurRadius: 12,
-    offset: const Offset(0, 4),
+  // Testo secondario scuro e bordi (allineati all'app cliente)
+  static const Color grayDark = Color(0xFF595959);
+  static const Color grayLight = Color(0xFFD8D8D8);
+
+  // ── TEMA NOTTE (cruscotto) ────────────────────────────────────────────
+  // I driver lavorano quasi solo la sera: fondi quasi neri, testo caldo ad
+  // alto contrasto, niente bianchi accecanti. Gli stati restano riconoscibili
+  // ma desaturati quel tanto che basta a non abbagliare.
+  static const Color nightBackground = Color(0xFF10151C);
+  static const Color nightSurface = Color(0xFF1A222C);
+  static const Color nightSurfaceHigh = Color(0xFF232D3A);
+  static const Color nightBorder = Color(0xFF2C3846);
+  static const Color nightText = Color(0xFFF1F4F8);
+  static const Color nightTextSecondary = Color(0xFF9AA7B4);
+  static const Color nightPrimary = Color(0xFF5B93C9); // blu brand schiarito
+
+  /// Ombra unica delle card (tema chiaro; di notte si usano i bordi)
+  static const BoxShadow cardShadow = BoxShadow(
+    color: Color(0x14000000),
+    blurRadius: 10,
+    offset: Offset(0, 3),
   );
 
   static BoxShadow cardShadowHover = BoxShadow(
@@ -63,4 +79,21 @@ class AppColors {
     end: Alignment.bottomRight,
     colors: [primaryDark, primary],
   );
+
+  /// Gradiente dello splash NOTTE del driver (blu profondo, mondo "strada")
+  static const LinearGradient splashNotteGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF0A1626), Color(0xFF0B3A6B)],
+  );
+}
+
+/// Raggi condivisi con l'app cliente: card 12, chip 8, sheet 24, pillola 100.
+class AppRadius {
+  AppRadius._();
+
+  static const double card = 12.0;
+  static const double chip = 8.0;
+  static const double sheet = 24.0;
+  static const double pill = 100.0;
 }
