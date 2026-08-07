@@ -143,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: Colors.white,
+                color: context.cCard,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -355,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -491,7 +491,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.lightGray.withOpacity(0.5),
+                      color: context.cBordo.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -513,9 +513,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   )
                 else
-                  const Text(
+                  Text(
                     'Nessun documento caricato',
-                    style: TextStyle(color: AppColors.gray),
+                    style: TextStyle(color: context.cTestoSec),
                   ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -555,7 +555,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cCard,
+        border: context.cBordoCard,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -581,10 +582,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 12),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.dark,
+                  color: context.cTesto,
                 ),
               ),
             ],
@@ -604,9 +605,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.gray,
+              color: context.cTestoSec,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -616,7 +617,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w400,
-              color: value.isEmpty ? AppColors.gray : AppColors.dark,
+              color: value.isEmpty ? context.cTestoSec : context.cTesto,
             ),
           ),
           const Divider(height: 16, thickness: 0.5),
@@ -628,7 +629,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
-        color: AppColors.lightGray,
+        color: context.cBordo,
         child: Column(
           children: [
             // Header Drawer
@@ -644,7 +645,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.light,
+                      color: context.cSfondo,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -653,7 +654,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.light.withOpacity(0.9),
+                      color: context.cSfondo.withOpacity(0.9),
                     ),
                   ),
                 ],
@@ -761,7 +762,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         style: GoogleFonts.poppins(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: textColor ?? AppColors.dark,
+          color: textColor ?? context.cTesto,
         ),
       ),
       onTap: onTap,
@@ -894,7 +895,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.cTesto,
                 ),
               ),
               const SizedBox(height: 12),
@@ -904,7 +905,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Non riceverai più ordini fino al prossimo turno.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.gray,
+                  color: context.cTestoSec,
                   fontSize: 14,
                   height: 1.4,
                 ),
@@ -920,7 +921,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(
-                          color: AppColors.gray.withOpacity(0.3),
+                          color: context.cTestoSec.withOpacity(0.3),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -929,7 +930,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Text(
                         'Annulla',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: context.cTestoSec,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -983,8 +984,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: context.cCard,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
@@ -997,7 +998,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: AppColors.gray.withOpacity(0.3),
+                color: context.cTestoSec.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1017,20 +1018,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 20),
             // Title
-            const Text(
+            Text(
               'Logout',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppColors.dark,
+                color: context.cTesto,
               ),
             ),
             const SizedBox(height: 12),
             // Message
-            const Text(
+            Text(
               'Sei sicuro di voler uscire?',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: AppColors.gray),
+              style: TextStyle(fontSize: 15, color: context.cTestoSec),
             ),
             const SizedBox(height: 24),
             // Buttons
@@ -1041,17 +1042,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: () => Navigator.pop(context, false),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: AppColors.gray.withOpacity(0.3)),
+                      side: BorderSide(color: context.cTestoSec.withOpacity(0.3)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Annulla',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                   ),

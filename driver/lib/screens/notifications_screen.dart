@@ -76,7 +76,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'assignment_cancelled':
         return AppColors.danger;
       default:
-        return AppColors.gray;
+        return context.cTestoSec;
     }
   }
 
@@ -97,7 +97,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -146,7 +146,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Icon(
             Icons.notifications_none,
             size: 72,
-            color: AppColors.gray.withValues(alpha: 0.5),
+            color: context.cTestoSec.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
@@ -154,13 +154,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: context.cTestoSec,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'Le notifiche ricevute appariranno qui',
-            style: TextStyle(fontSize: 14, color: AppColors.gray),
+            style: TextStyle(fontSize: 14, color: context.cTestoSec),
           ),
         ],
       ),
@@ -194,7 +194,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(color: context.cCard, width: 1.5),
                   ),
                 ),
               ),
@@ -205,7 +205,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           style: TextStyle(
             fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
             fontSize: 14,
-            color: AppColors.textPrimary,
+            color: context.cTesto,
           ),
         ),
         subtitle: Column(
@@ -214,14 +214,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             const SizedBox(height: 2),
             Text(
               item.body,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 13, color: context.cTestoSec),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
               _relativeTime(item.receivedAt),
-              style: TextStyle(fontSize: 11, color: AppColors.gray),
+              style: TextStyle(fontSize: 11, color: context.cTestoSec),
             ),
           ],
         ),

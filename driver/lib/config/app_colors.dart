@@ -88,6 +88,49 @@ class AppColors {
   );
 }
 
+/// Ponte fra le schermate e il tema attivo.
+///
+/// Le schermate NON devono piu' scrivere colori fissi (bianco, grigio,
+/// #212121): quelli restano chiari anche col tema notte attivo. Passando da
+/// qui il colore lo decide il tema corrente, quindi lo stesso codice funziona
+/// di giorno e di notte.
+extension ColoriTema on BuildContext {
+  bool get notte => Theme.of(this).brightness == Brightness.dark;
+
+  /// Fondo della pagina
+  Color get cSfondo =>
+      notte ? AppColors.nightBackground : AppColors.background;
+
+  /// Fondo delle card e delle superfici in rilievo
+  Color get cCard => notte ? AppColors.nightSurface : Colors.white;
+
+  /// Fondo delle superfici dentro una card (righe, box interni)
+  Color get cCardAlta =>
+      notte ? AppColors.nightSurfaceHigh : AppColors.background;
+
+  /// Testo principale
+  Color get cTesto => notte ? AppColors.nightText : AppColors.dark;
+
+  /// Testo secondario / etichette
+  Color get cTestoSec =>
+      notte ? AppColors.nightTextSecondary : AppColors.gray;
+
+  /// Bordi e separatori
+  Color get cBordo => notte ? AppColors.nightBorder : AppColors.lightGray;
+
+  /// Blu del brand, schiarito di notte per restare leggibile sul fondo scuro
+  Color get cPrimario => notte ? AppColors.nightPrimary : AppColors.primary;
+
+  /// Ombra delle card: di notte si usano i bordi, l'ombra sparirebbe comunque
+  List<BoxShadow> get cOmbra =>
+      notte ? const <BoxShadow>[] : const [AppColors.cardShadow];
+
+  /// Bordo delle card: SOLO di notte. Su fondo scuro l'ombra non si vede e
+  /// senza bordo la card si confonde col fondo; di giorno resta l'ombra.
+  BoxBorder? get cBordoCard =>
+      notte ? Border.all(color: AppColors.nightBorder) : null;
+}
+
 /// Raggi condivisi con l'app cliente: card 12, chip 8, sheet 24, pillola 100.
 class AppRadius {
   AppRadius._();

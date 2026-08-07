@@ -125,6 +125,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Ricarica dati quando l'app torna in primo piano
     if (state == AppLifecycleState.resumed) {
+      // La bolla serve SOPRA il navigatore. Se sei tornato dentro l'app —
+      // anche solo cambiando applicazione dal sistema — hai gia' tutto sotto
+      // gli occhi: la bolla diventa un ostacolo e va via da sola.
+      OverlayBollaService().chiudi();
       _loadData();
     }
   }
@@ -309,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -602,7 +606,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (info == null) {
       return _buildInfoTile(
         icon: Icons.schedule_outlined,
-        color: AppColors.gray,
+        color: context.cTestoSec,
         title: 'Nessun turno programmato',
         subtitle: 'Contatta il tuo responsabile per info.',
       );
@@ -636,7 +640,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final last = info.todayShifts.last;
       return _buildInfoTile(
         icon: Icons.done_all,
-        color: AppColors.gray,
+        color: context.cTestoSec,
         title: 'Turno terminato alle ${last.oraFine}',
         subtitle: info.nextShift != null
             ? 'Prossimo turno: ${info.nextShift!.giorno} alle ${info.nextShift!.oraInizio}'
@@ -657,7 +661,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return _buildInfoTile(
       icon: Icons.schedule_outlined,
-      color: AppColors.gray,
+      color: context.cTestoSec,
       title: 'Nessun turno programmato',
       subtitle: 'Contatta il tuo responsabile per info.',
     );
@@ -672,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.25)),
         boxShadow: [
@@ -700,10 +704,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.dark,
+                    color: context.cTesto,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -711,7 +715,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   subtitle,
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.gray.withValues(alpha: 0.9),
+                    color: context.cTestoSec.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -728,7 +732,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               );
             },
             icon: const Icon(Icons.history_rounded),
-            color: AppColors.gray,
+            color: context.cTestoSec,
             iconSize: 24,
             tooltip: 'Storico consegne',
             padding: const EdgeInsets.all(6),
@@ -1020,7 +1024,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.primary.withValues(alpha: 0.35),
@@ -1053,10 +1057,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(width: 8),
                 Text(
                   slot,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.dark,
+                    color: context.cTesto,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1081,10 +1085,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const Spacer(),
                 Text(
                   '€${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.dark,
+                    color: context.cTesto,
                   ),
                 ),
               ],
@@ -1149,7 +1153,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ? AppColors.success
             : (inProg
                   ? AppColors.primary
-                  : AppColors.lightGray.withValues(alpha: 0.5)),
+                  : context.cBordo.withValues(alpha: 0.5)),
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -1160,7 +1164,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: inProg ? Colors.white : AppColors.gray,
+                  color: inProg ? Colors.white : context.cTestoSec,
                 ),
               ),
       ),
@@ -1215,20 +1219,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(width: 4),
                       Text(
                         isPickup ? 'RITIRO' : 'CONSEGNA',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.gray,
+                          color: context.cTestoSec,
                           letterSpacing: 0.3,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         '#${st.orderId}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.gray,
+                          color: context.cTestoSec,
                         ),
                       ),
                       if (inProg) ...[
@@ -1260,7 +1264,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: done ? AppColors.gray : AppColors.dark,
+                      color: done ? context.cTestoSec : context.cTesto,
                       decoration: done ? TextDecoration.lineThrough : null,
                     ),
                     maxLines: 1,
@@ -1271,7 +1275,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       subtitle,
                       style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.gray.withValues(alpha: 0.8),
+                        color: context.cTestoSec.withValues(alpha: 0.8),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1283,7 +1287,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!isPickup || o.restaurantPhone != null)
+                  if ((isPickup
+                          ? (o.restaurantPhone ?? '')
+                          : o.customerPhone)
+                      .isNotEmpty)
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: Icon(
@@ -1365,13 +1372,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.white, AppColors.lightGray.withValues(alpha: 0.3)],
+          colors: [context.cCard, context.cBordo.withValues(alpha: 0.3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.lightGray.withValues(alpha: 0.3),
+          color: context.cBordo.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -1392,10 +1399,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 20),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: AppColors.dark,
+              color: context.cTesto,
             ),
           ),
           const SizedBox(height: 8),
@@ -1404,7 +1411,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.gray.withValues(alpha: 0.8),
+              color: context.cTestoSec.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -1536,17 +1543,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final String targetNome = inConsegna
         ? order.customerName
         : order.restaurantName;
-    // Telefono della tappa attiva. In ritiro molti ristoranti non hanno il
-    // numero in anagrafica: invece di far sparire il bottone si ripiega sul
-    // cliente (l'etichetta dice chi si sta chiamando).
+    // Le chiamate NON stanno piu' fra i bottoni grandi: un solo "CHIAMA" non
+    // diceva chi stavi chiamando. Ora ogni riga ha il suo tasto — quella del
+    // ristorante chiama il ristorante, quella del cliente chiama il cliente.
     final String telRistorante = order.restaurantPhone ?? '';
-    final bool chiamaCliente = inConsegna || telRistorante.isEmpty;
-    final String targetTel = chiamaCliente
-        ? order.customerPhone
-        : telRistorante;
-    final String etichettaChiamata = chiamaCliente
-        ? 'CHIAMA CLIENTE'
-        : 'CHIAMA LOCALE';
     final Color coloreAzione = daConfermare
         ? AppColors.warning
         : inConsegna
@@ -1559,7 +1559,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cCard,
           borderRadius: BorderRadius.circular(AppRadius.card),
           border: Border.all(
             color: daConfermare
@@ -1579,27 +1579,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.access_time,
                     size: 15,
-                    color: AppColors.gray,
+                    color: context.cTestoSec,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     order.timeSlot,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     '#${order.id}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.gray,
+                      color: context.cTestoSec,
                     ),
                   ),
                   if (order.riassegnato) ...[
@@ -1627,10 +1627,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   const Spacer(),
                   Text(
                     '€${order.total.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                 ],
@@ -1665,11 +1665,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           children: [
                             Row(
                               children: [
-                                const Text(
+                                Text(
                                   'RITIRO DA',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: AppColors.gray,
+                                    color: context.cTestoSec,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1680,17 +1680,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             const SizedBox(height: 2),
                             Text(
                               order.restaurantName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                             Text(
                               order.restaurantAddress,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray.withValues(alpha: 0.8),
+                                color: context.cTestoSec.withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1698,6 +1698,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ],
                         ),
                       ),
+                      if (telRistorante.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        ChiamaRiga(
+                          telefono: telRistorante,
+                          colore: AppColors.primary,
+                        ),
+                      ],
                     ],
                   ),
 
@@ -1723,28 +1730,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'CONSEGNA A',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray,
+                                color: context.cTestoSec,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               order.customerName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                             Text(
                               order.deliveryAddress,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray.withValues(alpha: 0.8),
+                                color: context.cTestoSec.withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1752,6 +1759,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ],
                         ),
                       ),
+                      if (order.customerPhone.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        ChiamaRiga(
+                          telefono: order.customerPhone,
+                          colore: AppColors.success,
+                        ),
+                      ],
                     ],
                   ),
 
@@ -1778,9 +1792,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Expanded(
                             child: Text(
                               order.deliveryNotes!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                           ),
@@ -1793,34 +1807,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                   // Bottoni GRANDI puntati sulla tappa ATTIVA: da usare col
                   // pollice guantato, senza cercare iconcine.
-                  Row(
-                    children: [
-                      Expanded(
-                        child: BottoneAzione(
-                          icona: Icons.navigation,
-                          etichetta: 'NAVIGA',
-                          colore: coloreAzione,
-                          onTap: () => _navigaConBolla(
-                            order,
-                            targetLat,
-                            targetLng,
-                            targetNome,
-                          ),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: BottoneAzione(
+                      icona: Icons.navigation,
+                      etichetta: 'NAVIGA',
+                      colore: coloreAzione,
+                      onTap: () => _navigaConBolla(
+                        order,
+                        targetLat,
+                        targetLng,
+                        targetNome,
                       ),
-                      if (targetTel.isNotEmpty) ...[
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: BottoneAzione(
-                            icona: Icons.phone,
-                            etichetta: etichettaChiamata,
-                            colore: coloreAzione,
-                            pieno: false,
-                            onTap: () => _makePhoneCall(targetTel),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
 
                   const SizedBox(height: 8),
@@ -1900,7 +1899,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: borderColor,
@@ -1957,26 +1956,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       fontWeight: FontWeight.bold,
                       color: order.confirmedAt == null
                           ? AppColors.warning
-                          : AppColors.dark,
+                          : context.cTesto,
                     ),
                   ),
                   const SizedBox(width: 8),
 
                   Text(
                     '#${order.id}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.gray,
+                      color: context.cTestoSec,
                     ),
                   ),
                   const Spacer(),
                   Text(
                     '€${order.total.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                 ],
@@ -2009,9 +2008,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               children: [
                                 Text(
                                   pickupLabel,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
-                                    color: AppColors.gray,
+                                    color: context.cTestoSec,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -2022,17 +2021,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             const SizedBox(height: 2),
                             Text(
                               order.restaurantName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                             Text(
                               order.restaurantAddress,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray.withValues(alpha: 0.8),
+                                color: context.cTestoSec.withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -2084,28 +2083,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'CONSEGNA A',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray,
+                                color: context.cTestoSec,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               order.customerName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                             Text(
                               order.deliveryAddress,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray.withValues(alpha: 0.8),
+                                color: context.cTestoSec.withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -2163,9 +2162,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Expanded(
                             child: Text(
                               order.deliveryNotes!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                           ),
@@ -2206,7 +2205,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: !allConfirmed
@@ -2255,7 +2254,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       fontWeight: FontWeight.bold,
                       color: !allConfirmed
                           ? AppColors.warning
-                          : AppColors.dark,
+                          : context.cTesto,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2263,10 +2262,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Flexible(
                     child: Text(
                       orderIds,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.gray,
+                        color: context.cTestoSec,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2274,10 +2273,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   const SizedBox(width: 8),
                   Text(
                     '€${totalAmount.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                 ],
@@ -2312,11 +2311,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           children: [
                             Row(
                               children: [
-                                const Text(
+                                Text(
                                   'RITIRO DA',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: AppColors.gray,
+                                    color: context.cTestoSec,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -2327,17 +2326,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             const SizedBox(height: 2),
                             Text(
                               firstOrder.restaurantName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.dark,
+                                color: context.cTesto,
                               ),
                             ),
                             Text(
                               firstOrder.restaurantAddress,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.gray.withValues(alpha: 0.8),
+                                color: context.cTestoSec.withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -2376,11 +2375,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   const Divider(height: 14),
 
                   // Consegne multiple
-                  const Text(
+                  Text(
                     'CONSEGNA A',
                     style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.gray,
+                      color: context.cTestoSec,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -2417,17 +2416,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               children: [
                                 Text(
                                   order.customerName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.dark,
+                                    color: context.cTesto,
                                   ),
                                 ),
                                 Text(
                                   order.deliveryAddress,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: AppColors.gray.withValues(
+                                    color: context.cTestoSec.withValues(
                                       alpha: 0.8,
                                     ),
                                   ),
@@ -2632,8 +2631,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: context.cCard,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.all(16),
@@ -2647,7 +2646,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.lightGray,
+                    color: context.cBordo,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -2659,10 +2658,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Expanded(
                     child: Text(
                       'Ordine #${order.id}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2735,7 +2734,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
                           Icon(Icons.note, color: AppColors.warning, size: 18),
                           SizedBox(width: 8),
@@ -2744,7 +2743,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.gray,
+                              color: context.cTestoSec,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -2753,9 +2752,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(height: 8),
                       Text(
                         order.deliveryNotes!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.dark,
+                          color: context.cTesto,
                         ),
                       ),
                     ],
@@ -2783,21 +2782,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         size: 18,
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'PAGAMENTO: ',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.gray,
+                          color: context.cTestoSec,
                           letterSpacing: 0.5,
                         ),
                       ),
                       Text(
                         order.paymentMethodDescription!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.dark,
+                          color: context.cTesto,
                         ),
                       ),
                     ],
@@ -2810,17 +2809,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.lightGray.withValues(alpha: 0.3),
+                  color: context.cBordo.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(
                           Icons.shopping_basket,
-                          color: AppColors.dark,
+                          color: context.cTesto,
                           size: 18,
                         ),
                         SizedBox(width: 8),
@@ -2829,7 +2828,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.gray,
+                            color: context.cTestoSec,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -2837,11 +2836,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 8),
                     if (order.products.isEmpty)
-                      const Text(
+                      Text(
                         'Nessun prodotto in quest\'ordine',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.gray,
+                          color: context.cTestoSec,
                           fontStyle: FontStyle.italic,
                         ),
                       )
@@ -2875,18 +2874,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               Expanded(
                                 child: Text(
                                   product.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.dark,
+                                    color: context.cTesto,
                                   ),
                                 ),
                               ),
                               Text(
                                 '€${product.total.toStringAsFixed(2)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.dark,
+                                  color: context.cTesto,
                                 ),
                               ),
                             ],
@@ -2933,7 +2932,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.lightGray.withValues(alpha: 0.3),
+        color: context.cBordo.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -2943,10 +2942,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Expanded(
             child: Text(
               '$deliveryDate - ${order.timeSlot}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.dark,
+                color: context.cTesto,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -2976,10 +2975,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: AppColors.dark,
+              color: context.cTesto,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -2989,7 +2988,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             subtitle,
             style: TextStyle(
               fontSize: 11,
-              color: AppColors.gray.withValues(alpha: 0.8),
+              color: context.cTestoSec.withValues(alpha: 0.8),
               height: 1.3,
             ),
             maxLines: 3,
@@ -3013,8 +3012,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: context.cCard,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.all(20),
@@ -3028,7 +3027,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.lightGray,
+                    color: context.cBordo,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -3036,10 +3035,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // Header
               Text(
                 'Batch: ${batchOrders.length} ordini',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.dark,
+                  color: context.cTesto,
                 ),
               ),
               const SizedBox(height: 8),
@@ -3047,7 +3046,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 'Slot: ${firstOrder.timeSlot} • Totale: €${totalAmount.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.gray.withValues(alpha: 0.8),
+                  color: context.cTestoSec.withValues(alpha: 0.8),
                 ),
               ),
               const Divider(height: 32),
@@ -3068,12 +3067,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const SizedBox(height: 20),
 
               // Consegne
-              const Text(
+              Text(
                 'CONSEGNE',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.gray,
+                  color: context.cTestoSec,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -3124,17 +3123,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               children: [
                                 Text(
                                   order.customerName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.dark,
+                                    color: context.cTesto,
                                   ),
                                 ),
                                 Text(
                                   order.customerPhone,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.gray.withValues(
+                                    color: context.cTestoSec.withValues(
                                       alpha: 0.8,
                                     ),
                                   ),
@@ -3160,7 +3159,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         order.deliveryAddress,
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.gray.withValues(alpha: 0.8),
+                          color: context.cTestoSec.withValues(alpha: 0.8),
                         ),
                       ),
                       if (order.deliveryNotes != null &&
@@ -3234,10 +3233,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.gray,
+                  color: context.cTestoSec,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -3255,10 +3254,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: AppColors.dark,
+              color: context.cTesto,
             ),
           ),
           const SizedBox(height: 4),
@@ -3266,7 +3265,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             subtitle,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.gray.withValues(alpha: 0.8),
+              color: context.cTestoSec.withValues(alpha: 0.8),
               height: 1.4,
             ),
           ),
@@ -3356,10 +3355,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// con l'intestazione dell'ordine gia' scritta. Il problema lo racconta
   /// il driver a parole sue: nessuna lista di scelte da navigare in strada.
   Future<void> _segnalaProblema(Order order) async {
+    // Niente "Driver: nome": il messaggio parte dal numero del driver, chi
+    // scrive si vede gia' dalla chat.
     final testo = Uri.encodeComponent(
       'Problema ordine #${order.id} '
-      '(${order.restaurantName} -> ${order.customerName})\n'
-      'Driver: $_driverName\n',
+      '(${order.restaurantName} -> ${order.customerName})\n',
     );
     final uri = Uri.parse('https://wa.me/393346841489?text=$testo');
     if (await canLaunchUrl(uri)) {
@@ -3370,8 +3370,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
-    final url = 'tel:$phoneNumber';
-    final uri = Uri.parse(url);
+    // Numeri scritti a mano in anagrafica: vanno ripuliti o tel: fallisce.
+    final numero = ChiamaRiga.normalizza(phoneNumber);
+    if (numero.isEmpty) {
+      _showToast('Numero non disponibile', isError: true);
+      return;
+    }
+    final uri = Uri.parse('tel:$numero');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
@@ -3538,12 +3543,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Controlla di aver ritirato tutto:',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.dark,
+                color: context.cTesto,
               ),
             ),
             const SizedBox(height: 12),
@@ -3582,7 +3587,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               '- Controlla tutti i prodotti\n- Verifica le quantità\n- Controlla accessori e posate',
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.gray.withValues(alpha: 0.8),
+                color: context.cTestoSec.withValues(alpha: 0.8),
                 height: 1.5,
               ),
             ),
@@ -3650,9 +3655,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Conferma il metodo di pagamento utilizzato dal cliente:',
-                style: TextStyle(fontSize: 14, color: AppColors.gray),
+                style: TextStyle(fontSize: 14, color: context.cTestoSec),
               ),
               const SizedBox(height: 16),
               _buildPaymentMethodOption(
@@ -3686,9 +3691,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(null),
-              child: const Text(
+              child: Text(
                 'ANNULLA',
-                style: TextStyle(color: AppColors.gray),
+                style: TextStyle(color: context.cTestoSec),
               ),
             ),
             ElevatedButton(
@@ -3734,12 +3739,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.1)
-              : AppColors.lightGray.withValues(alpha: 0.3),
+              : context.cBordo.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
-                : AppColors.gray.withValues(alpha: 0.3),
+                : context.cTestoSec.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -3747,7 +3752,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Icon(
               icon,
-              color: isSelected ? AppColors.primary : AppColors.gray,
+              color: isSelected ? AppColors.primary : context.cTestoSec,
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -3757,7 +3762,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.dark,
+                  color: isSelected ? AppColors.primary : context.cTesto,
                 ),
               ),
             ),

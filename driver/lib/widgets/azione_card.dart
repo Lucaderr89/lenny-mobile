@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_colors.dart';
 
@@ -96,6 +97,59 @@ class AzioneProssima extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Pulsante di chiamata agganciato alla RIGA a cui appartiene: sulla riga
+/// del ristorante chiama il ristorante, su quella del cliente chiama il
+/// cliente. Chi si sta chiamando lo dice la posizione, non l'etichetta.
+class ChiamaRiga extends StatelessWidget {
+  final String telefono;
+  final Color colore;
+
+  const ChiamaRiga({
+    super.key,
+    required this.telefono,
+    required this.colore,
+  });
+
+  /// In anagrafica i numeri sono scritti a mano: "339 833 1545",
+  /// "+39.33.14.57.52.43", "0549 905280". Spazi e punteggiatura rompono
+  /// l'URI tel:, quindi si tiene solo il + iniziale e le cifre.
+  static String normalizza(String grezzo) {
+    final pulito = grezzo.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (pulito.isEmpty) return '';
+    final piu = pulito.startsWith('+');
+    final cifre = pulito.replaceAll('+', '');
+    return piu ? '+$cifre' : cifre;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Chiama $telefono',
+      child: InkWell(
+        onTap: () async {
+          final numero = normalizza(telefono);
+          if (numero.isEmpty) return;
+          try {
+            await launchUrl(Uri.parse('tel:$numero'));
+          } catch (_) {/* nessun dialer: niente crash in strada */}
+        },
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: colore.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppRadius.chip),
+            border: Border.all(color: colore.withValues(alpha: 0.55)),
+          ),
+          child: Icon(Icons.phone, color: colore, size: 21),
+        ),
       ),
     );
   }

@@ -73,7 +73,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         '${DateFormat('d MMM', 'it').format(_weekStart)} – ${DateFormat('d MMM yyyy', 'it').format(weekEnd)}';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -145,12 +145,12 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isToday
               ? AppColors.primary.withValues(alpha: 0.4)
-              : AppColors.lightGray.withValues(alpha: 0.3),
+              : context.cBordo.withValues(alpha: 0.3),
           width: isToday ? 1.5 : 1,
         ),
       ),
@@ -162,7 +162,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
           decoration: BoxDecoration(
             color: isToday
                 ? AppColors.primary
-                : AppColors.lightGray.withValues(alpha: 0.4),
+                : context.cBordo.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
@@ -171,7 +171,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: isToday ? Colors.white : AppColors.dark,
+                color: isToday ? Colors.white : context.cTesto,
               ),
             ),
           ),
@@ -181,7 +181,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
           style: TextStyle(
             fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
             fontSize: 14,
-            color: AppColors.dark,
+            color: context.cTesto,
           ),
         ),
         subtitle: dayShifts.isEmpty
@@ -189,7 +189,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                 'Nessun turno',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.gray.withValues(alpha: 0.7),
+                  color: context.cTestoSec.withValues(alpha: 0.7),
                 ),
               )
             : Wrap(
@@ -235,15 +235,15 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             Icon(
               Icons.calendar_today_outlined,
               size: 56,
-              color: AppColors.gray.withValues(alpha: 0.5),
+              color: context.cTestoSec.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Nessun turno questa settimana',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.dark,
+                color: context.cTesto,
               ),
             ),
             const SizedBox(height: 8),
@@ -252,7 +252,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: AppColors.gray.withValues(alpha: 0.8),
+                color: context.cTestoSec.withValues(alpha: 0.8),
               ),
             ),
           ],

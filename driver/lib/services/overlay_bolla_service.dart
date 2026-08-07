@@ -91,6 +91,16 @@ class OverlayBollaService {
     } catch (_) {}
   }
 
+  /// Chiude la bolla se aperta. Silenziosa se non c'e' nulla da chiudere.
+  Future<void> chiudi() async {
+    if (!supportata) return;
+    try {
+      if (await FlutterOverlayWindow.isActive()) {
+        await FlutterOverlayWindow.closeOverlay();
+      }
+    } catch (_) {}
+  }
+
   Future<void> _condividiDati(Order o) async {
     final inConsegna = o.isInDelivery;
     await FlutterOverlayWindow.shareData(

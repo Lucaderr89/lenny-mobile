@@ -86,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ? Icons.radio_button_checked
                     : Icons.radio_button_off,
                 size: 22,
-                color: selezionata ? AppColors.primary : AppColors.gray,
+                color: selezionata ? AppColors.primary : context.cTestoSec,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fontSize: 12,
                         color: temaScuro
                             ? AppColors.nightTextSecondary
-                            : AppColors.grayDark,
+                            : context.cTestoSec,
                       ),
                     ),
                   ],
@@ -121,10 +121,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: temaScuro ? AppColors.nightSurface : Colors.white,
+        color: context.cCard,
+        border: context.cBordoCard,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: temaScuro ? Border.all(color: AppColors.nightBorder) : null,
-        boxShadow: temaScuro ? null : const [AppColors.cardShadow],
+        boxShadow: context.cOmbra,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,10 +174,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: temaScuro ? AppColors.nightSurface : Colors.white,
+        color: context.cCard,
+        border: context.cBordoCard,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: temaScuro ? Border.all(color: AppColors.nightBorder) : null,
-        boxShadow: temaScuro ? null : const [AppColors.cardShadow],
+        boxShadow: context.cOmbra,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: 12,
                 color: temaScuro
                     ? AppColors.nightTextSecondary
-                    : AppColors.grayDark,
+                    : context.cTestoSec,
               ),
             ),
             activeThumbColor: AppColors.primary,
@@ -248,7 +248,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: 12,
                 color: temaScuro
                     ? AppColors.nightTextSecondary
-                    : AppColors.grayDark,
+                    : context.cTestoSec,
               ),
             ),
             trailing: const Icon(Icons.chevron_right),
@@ -275,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -311,7 +311,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cCard,
+                  border: context.cBordoCard,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -339,12 +340,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Cambio Password',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.dark,
+                            color: context.cTesto,
                           ),
                         ),
                       ],

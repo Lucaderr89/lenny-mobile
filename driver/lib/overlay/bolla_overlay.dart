@@ -47,9 +47,12 @@ class _BollaOverlayState extends State<BollaOverlay> {
   }
 
   Future<void> _chiama() async {
-    if (_telefono.isEmpty) return;
+    // Stessa ripulitura dell'app: i numeri in anagrafica hanno spazi e punti
+    // che rompono l'URI tel:.
+    final numero = _telefono.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (numero.isEmpty) return;
     try {
-      await launchUrl(Uri.parse('tel:$_telefono'));
+      await launchUrl(Uri.parse('tel:$numero'));
     } catch (_) {}
   }
 

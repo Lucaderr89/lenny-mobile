@@ -75,7 +75,7 @@ class SupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -101,7 +101,8 @@ class SupportScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cCard,
+                border: context.cBordoCard,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -129,25 +130,26 @@ class SupportScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Contatta Supporto',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.dark,
+                          color: context.cTesto,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Hai bisogno di aiuto? Contattaci attraverso uno dei seguenti canali:',
-                    style: TextStyle(fontSize: 14, color: AppColors.gray),
+                    style: TextStyle(fontSize: 14, color: context.cTestoSec),
                   ),
                   const SizedBox(height: 20),
 
                   // Email
                   _buildContactButton(
+                    context,
                     icon: Icons.email,
                     title: 'Email',
                     subtitle: 'supporto@lenny.com',
@@ -158,6 +160,7 @@ class SupportScreen extends StatelessWidget {
 
                   // Telefono
                   _buildContactButton(
+                    context,
                     icon: Icons.phone,
                     title: 'Telefono',
                     subtitle: '+39 0541 123456',
@@ -168,6 +171,7 @@ class SupportScreen extends StatelessWidget {
 
                   // WhatsApp
                   _buildContactButton(
+                    context,
                     icon: Icons.chat,
                     title: 'WhatsApp',
                     subtitle: 'Chat con il supporto',
@@ -183,7 +187,8 @@ class SupportScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cCard,
+                border: context.cBordoCard,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -211,12 +216,12 @@ class SupportScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Guide Operative',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.dark,
+                          color: context.cTesto,
                         ),
                       ),
                     ],
@@ -225,6 +230,7 @@ class SupportScreen extends StatelessWidget {
 
                   // Lista guide
                   _buildGuideItem(
+                    context,
                     icon: Icons.play_circle_outline,
                     title: 'Come iniziare un turno',
                     description: 'Guida passo-passo per andare online',
@@ -239,6 +245,7 @@ class SupportScreen extends StatelessWidget {
                   ),
                   const Divider(height: 24),
                   _buildGuideItem(
+                    context,
                     icon: Icons.shopping_bag_outlined,
                     title: 'Gestione ordini',
                     description: 'Come accettare e completare consegne',
@@ -253,6 +260,7 @@ class SupportScreen extends StatelessWidget {
                   ),
                   const Divider(height: 24),
                   _buildGuideItem(
+                    context,
                     icon: Icons.calendar_today,
                     title: 'Disponibilità settimanali',
                     description: 'Come comunicare i tuoi turni',
@@ -267,6 +275,7 @@ class SupportScreen extends StatelessWidget {
                   ),
                   const Divider(height: 24),
                   _buildGuideItem(
+                    context,
                     icon: Icons.account_balance_wallet,
                     title: 'Pagamenti e guadagni',
                     description: 'Come funzionano i pagamenti',
@@ -288,7 +297,8 @@ class SupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildContactButton({
+  Widget _buildContactButton(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -320,18 +330,18 @@ class SupportScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.gray,
+                        color: context.cTestoSec,
                       ),
                     ),
                   ],
@@ -345,7 +355,8 @@ class SupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGuideItem({
+  Widget _buildGuideItem(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String description,
@@ -365,21 +376,21 @@ class SupportScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: const TextStyle(fontSize: 13, color: AppColors.gray),
+                    style: TextStyle(fontSize: 13, color: context.cTestoSec),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.gray),
+            Icon(Icons.chevron_right, color: context.cTestoSec),
           ],
         ),
       ),
@@ -393,8 +404,8 @@ class SupportScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: context.cCard,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -405,7 +416,7 @@ class SupportScreen extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.gray.withOpacity(0.3),
+                color: context.cTestoSec.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -417,10 +428,10 @@ class SupportScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                   ),
@@ -438,10 +449,10 @@ class SupportScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   content,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     height: 1.6,
-                    color: AppColors.dark,
+                    color: context.cTesto,
                   ),
                 ),
               ),

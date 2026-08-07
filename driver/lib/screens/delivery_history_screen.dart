@@ -88,12 +88,12 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: (context.notte ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
               primary: AppColors.primaryLight, // Azzurro chiaro per data inizio
               onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: AppColors.dark,
-              surfaceContainerHighest: AppColors.lightGray,
+              surface: context.cCard,
+              onSurface: context.cTesto,
+              surfaceContainerHighest: context.cBordo,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
@@ -105,7 +105,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
               ),
             ),
             datePickerTheme: DatePickerThemeData(
-              backgroundColor: Colors.white,
+              backgroundColor: context.cCard,
               headerBackgroundColor: AppColors.primaryLight, // Azzurro chiaro
               headerForegroundColor: Colors.white,
               dayStyle: const TextStyle(fontSize: 14),
@@ -121,9 +121,9 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                   return Colors.white;
                 }
                 if (states.contains(WidgetState.disabled)) {
-                  return AppColors.gray;
+                  return context.cTestoSec;
                 }
-                return AppColors.dark;
+                return context.cTesto;
               }),
               dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
@@ -156,12 +156,12 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: (context.notte ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
               primary: AppColors.primary, // Blu standard per data fine
               onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: AppColors.dark,
-              surfaceContainerHighest: AppColors.lightGray,
+              surface: context.cCard,
+              onSurface: context.cTesto,
+              surfaceContainerHighest: context.cBordo,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
@@ -173,7 +173,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
               ),
             ),
             datePickerTheme: DatePickerThemeData(
-              backgroundColor: Colors.white,
+              backgroundColor: context.cCard,
               headerBackgroundColor: AppColors.primary, // Blu standard
               headerForegroundColor: Colors.white,
               dayStyle: const TextStyle(fontSize: 14),
@@ -189,9 +189,9 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                   return Colors.white;
                 }
                 if (states.contains(WidgetState.disabled)) {
-                  return AppColors.gray;
+                  return context.cTestoSec;
                 }
-                return AppColors.dark;
+                return context.cTesto;
               }),
               dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
@@ -230,7 +230,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.cSfondo,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -280,7 +280,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
           Text(
             _errorMessage!,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.gray),
+            style: TextStyle(color: context.cTestoSec),
           ),
           const SizedBox(height: 24),
           ElevatedButton(onPressed: _loadHistory, child: const Text('Riprova')),
@@ -385,7 +385,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
       children: [
         // Filtri
         Container(
-          color: Colors.white,
+          color: context.cCard,
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
@@ -450,9 +450,9 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
     String? subtitle,
   }) {
     final Color bg = darkBg ? color : color.withOpacity(0.09);
-    final Color textColor = darkBg ? Colors.white : AppColors.dark;
+    final Color textColor = darkBg ? Colors.white : context.cTesto;
     final Color secondaryColor =
-        darkBg ? Colors.white.withOpacity(0.85) : AppColors.gray;
+        darkBg ? Colors.white.withOpacity(0.85) : context.cTestoSec;
     final Color iconBg =
         darkBg ? Colors.white.withOpacity(0.2) : color.withOpacity(0.18);
 
@@ -512,7 +512,8 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
       String label, int count, IconData icon, Color color) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cCard,
+        border: context.cBordoCard,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -537,16 +538,16 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
             const SizedBox(height: 6),
             Text(
               '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppColors.dark,
+                color: context.cTesto,
                 height: 1,
               ),
             ),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(fontSize: 11, color: AppColors.gray)),
+                style: TextStyle(fontSize: 11, color: context.cTestoSec)),
           ],
         ),
       ),
@@ -559,7 +560,8 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cCard,
+        border: context.cBordoCard,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -588,11 +590,11 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Ristorante più frequente',
                     style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.gray,
+                      color: context.cTestoSec,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
                     ),
@@ -600,10 +602,10 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                   const SizedBox(height: 4),
                   Text(
                     restaurant?.name ?? '—',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -623,9 +625,9 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                       height: 1,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'consegne',
-                    style: TextStyle(fontSize: 10, color: AppColors.gray),
+                    style: TextStyle(fontSize: 10, color: context.cTestoSec),
                   ),
                 ],
               )],
@@ -645,7 +647,8 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cCard,
+          border: context.cBordoCard,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -671,22 +674,22 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                 ),
                 Text(
                   DateFormat('dd/MM/yyyy HH:mm').format(deliveredDate),
-                  style: const TextStyle(fontSize: 12, color: AppColors.gray),
+                  style: TextStyle(fontSize: 12, color: context.cTestoSec),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.restaurant, size: 16, color: AppColors.gray),
+                Icon(Icons.restaurant, size: 16, color: context.cTestoSec),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     delivery.restaurantName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                 ),
@@ -695,12 +698,12 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.location_on, size: 16, color: AppColors.gray),
+                Icon(Icons.location_on, size: 16, color: context.cTestoSec),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     delivery.customerAddress,
-                    style: const TextStyle(fontSize: 13, color: AppColors.gray),
+                    style: TextStyle(fontSize: 13, color: context.cTestoSec),
                   ),
                 ),
               ],
@@ -776,8 +779,8 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: context.cCard,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.all(16),
@@ -791,7 +794,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.lightGray,
+                    color: context.cBordo,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -803,10 +806,10 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                 children: [
                   Text(
                     'Ordine #${delivery.id}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                      color: context.cTesto,
                     ),
                   ),
                   Container(
@@ -845,22 +848,22 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.lightGray.withValues(alpha: 0.3),
+                  color: context.cBordo.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_today,
                       size: 16,
-                      color: AppColors.gray,
+                      color: context.cTestoSec,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Consegnato: ${DateFormat('dd/MM/yyyy HH:mm').format(deliveredDate)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                   ],
@@ -888,12 +891,12 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
 
               // Prodotti
               if (delivery.products.isNotEmpty) ...[
-                const Text(
+                Text(
                   'PRODOTTI',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.gray,
+                    color: context.cTestoSec,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -901,7 +904,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.lightGray.withValues(alpha: 0.3),
+                    color: context.cBordo.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -936,19 +939,19 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                               Expanded(
                                 child: Text(
                                   product.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.dark,
+                                    color: context.cTesto,
                                   ),
                                 ),
                               ),
                               Text(
                                 '€${product.price.toStringAsFixed(2)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.dark,
+                                  color: context.cTesto,
                                 ),
                               ),
                             ],
@@ -965,13 +968,13 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
               if (delivery.deliveryTimeMinutes != null) ...[
                 Row(
                   children: [
-                    const Icon(Icons.timer, size: 16, color: AppColors.gray),
+                    Icon(Icons.timer, size: 16, color: context.cTestoSec),
                     const SizedBox(width: 8),
                     Text(
                       'Tempo di consegna: ${delivery.deliveryTimeMinutes} minuti',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                   ],
@@ -990,14 +993,14 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                           ? Icons.credit_card
                           : Icons.payment,
                       size: 16,
-                      color: AppColors.gray,
+                      color: context.cTestoSec,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Pagamento: ${delivery.paymentMethodDescription ?? delivery.paymentMethod}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                   ],
@@ -1021,10 +1024,10 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: AppColors.gray,
+            color: context.cTestoSec,
             letterSpacing: 0.5,
           ),
         ),
@@ -1032,7 +1035,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.lightGray.withValues(alpha: 0.3),
+            color: context.cBordo.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -1045,18 +1048,18 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                   children: [
                     Text(
                       mainText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.dark,
+                        color: context.cTesto,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.gray,
+                        color: context.cTestoSec,
                       ),
                     ),
                   ],
@@ -1073,13 +1076,13 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: AppColors.gray),
+        Icon(icon, size: 16, color: context.cTestoSec),
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: AppColors.dark,
+            color: context.cTesto,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1095,15 +1098,15 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
           Icon(
             Icons.inbox_outlined,
             size: 80,
-            color: AppColors.gray.withOpacity(0.5),
+            color: context.cTestoSec.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Nessuna consegna trovata',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.gray,
+              color: context.cTestoSec,
             ),
           ),
           const SizedBox(height: 8),
@@ -1111,7 +1114,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
             'Le tue consegne appariranno qui',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.gray.withOpacity(0.7),
+              color: context.cTestoSec.withOpacity(0.7),
             ),
           ),
         ],
