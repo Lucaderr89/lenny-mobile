@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 import '../config/app_colors.dart';
@@ -12,9 +13,10 @@ import '../config/app_colors.dart';
 ///
 /// ATTENZIONE: questo engine NON ha i plugin dell'app registrati (il
 /// plugin overlay lo crea con createAndRunEngine e basta) e nemmeno il
-/// canale usato da closeOverlay. Quindi da qui NON si possono aprire
-/// url_launcher ne' chiudere la bolla: le azioni si mandano all'app
-/// principale con shareData e le esegue lei.
+/// canale usato da closeOverlay. Quindi da qui NON si possono usare
+/// url_launcher ne' chiudere la bolla per la via normale: le azioni
+/// passano dal canale nativo 'lenny/bolla' che MainActivity aggancia a
+/// QUESTO motore, ed e' il codice Android a eseguirle.
 ///
 /// Riceve i dati come JSON:
 /// { verbo, soggetto, indirizzo, note, telefono, margineAlto }
@@ -37,6 +39,10 @@ class _BollaOverlayState extends State<BollaOverlay> {
   /// qui: dentro l'overlay il valore non e' affidabile.
   double? _margineAlto;
 
+  /// Azione in corso: serve a dare un riscontro visivo immediato al tocco.
+  /// Senza, un tasto che non parte e un tasto non premuto si assomigliano.
+  String? _inCorso;
+
   @override
   void initState() {
     super.initState();
@@ -58,19 +64,39 @@ class _BollaOverlayState extends State<BollaOverlay> {
     });
   }
 
-  /// Le azioni le esegue l'app principale: qui i plugin non ci sono.
+  /// Canale nativo agganciato a QUESTO motore da MainActivity: le azioni
+  /// le esegue il codice Android, senza passare dall'app principale.
+  static const MethodChannel _canale = MethodChannel('lenny/bolla');
+
+  /// Ripiego se il canale nativo non e' ancora agganciato: si chiede
+  /// all'app principale via messaggero del plugin.
   void _chiediAllApp(Map<String, dynamic> azione) {
     try {
       FlutterOverlayWindow.shareData(jsonEncode(azione));
     } catch (_) {}
   }
 
-  void _chiama() {
+  Future<void> _chiama() async {
     // Stessa ripulitura dell'app: i numeri in anagrafica hanno spazi e punti
     // che rompono l'URI tel:.
     final numero = _telefono.replaceAll(RegExp(r'[^0-9+]'), '');
     if (numero.isEmpty) return;
-    _chiediAllApp({'azione': 'chiama', 'telefono': numero});
+    setState(() => _inCorso = 'chiama');
+    try {
+      await _canale.invokeMethod('chiama', {'numero': numero});
+    } catch (_) {
+      _chiediAllApp({'azione': 'chiama', 'telefono': numero});
+    }
+    if (mounted) setState(() => _inCorso = null);
+  }
+
+  Future<void> _chiudi() async {
+    setState(() => _inCorso = 'chiudi');
+    try {
+      await _canale.invokeMethod('chiudi');
+    } catch (_) {
+      _chiediAllApp({'azione': 'chiudi'});
+    }
   }
 
   @override
@@ -130,14 +156,19 @@ class _BollaOverlayState extends State<BollaOverlay> {
                       ),
                     ),
                   ),
+                  // behavior opaque + area 44px: senza, GestureDetector
+                  // ascolta SOLO i pixel dell'icona (deferToChild) e in
+                  // moto la X diventa quasi impossibile da centrare.
                   GestureDetector(
-                    onTap: () => _chiediAllApp({'azione': 'chiudi'}),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _chiudi,
+                    child: const SizedBox(
+                      width: 44,
+                      height: 44,
                       child: Icon(
                         Icons.close,
                         color: AppColors.nightTextSecondary,
-                        size: 18,
+                        size: 20,
                       ),
                     ),
                   ),
@@ -195,7 +226,7 @@ class _BollaOverlayState extends State<BollaOverlay> {
                 const SizedBox(height: 10),
                 _BottoneBolla(
                   icona: Icons.phone,
-                  etichetta: 'CHIAMA',
+                  etichetta: _inCorso == 'chiama' ? 'CHIAMO...' : 'CHIAMA',
                   colore: colore,
                   onTap: _chiama,
                 ),
@@ -224,6 +255,7 @@ class _BottoneBolla extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         height: 46,
