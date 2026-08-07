@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../services/theme_controller.dart';
+import '../services/tts_service.dart';
 
 /// SettingsScreen - Impostazioni driver (aspetto + cambio password)
 class SettingsScreen extends StatefulWidget {
@@ -165,6 +166,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildCardGuida() {
+    final temaScuro = Theme.of(context).brightness == Brightness.dark;
+    final tts = TtsService();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: temaScuro ? AppColors.nightSurface : Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: temaScuro ? Border.all(color: AppColors.nightBorder) : null,
+        boxShadow: temaScuro ? null : const [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.chip),
+                ),
+                child: const Icon(
+                  Icons.volume_up_outlined,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Guida',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            value: tts.abilitato,
+            onChanged: (valore) async {
+              await tts.impostaAbilitato(valore);
+              if (valore) {
+                tts.annuncia('Annunci vocali attivi');
+              }
+              if (mounted) setState(() {});
+            },
+            title: const Text(
+              'Annunci vocali',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              'Nuovo ordine, cambio tappa e revoche letti ad alta voce',
+              style: TextStyle(
+                fontSize: 12,
+                color: temaScuro
+                    ? AppColors.nightTextSecondary
+                    : AppColors.grayDark,
+              ),
+            ),
+            activeThumbColor: AppColors.primary,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showToast(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -204,6 +274,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               // Card aspetto: tema automatico col sole (default) o fisso.
               _buildCardAspetto(),
+              const SizedBox(height: 16),
+
+              // Card guida: annunci vocali della Modalita' Guida
+              _buildCardGuida(),
               const SizedBox(height: 16),
 
               // Card cambio password

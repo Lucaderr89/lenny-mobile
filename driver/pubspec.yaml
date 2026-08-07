@@ -49,6 +49,10 @@ dependencies:
 
   # Icone vettoriali del set custom "Lenny Icons" (assets/icons_svg, condiviso con l app cliente)
   flutter_svg: ^2.0.10
+
+  # Modalita Guida: annunci vocali e schermo sempre acceso con ordini attivi
+  flutter_tts: ^4.0.2
+  wakelock_plus: ^1.2.8
   
   # Maps (OpenStreetMap)
   flutter_map: ^6.1.0

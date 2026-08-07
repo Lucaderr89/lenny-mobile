@@ -55,5 +55,16 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Navigazione diretta: senza questa dichiarazione canLaunchUrl
+             su Android 11+ non vede lo schema google.navigation e l'app
+             ripiegherebbe sempre sul pin web -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="google.navigation"/>
+        </intent>
+        <!-- Motore di sintesi vocale (annunci Modalita' Guida) -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
     </queries>
 </manifest>

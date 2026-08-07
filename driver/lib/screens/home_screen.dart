@@ -13,6 +13,8 @@ import '../services/geofence_tracking_service.dart';
 import '../services/shift_service.dart';
 import '../services/fcm_service.dart';
 import '../services/notification_store.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import '../services/tts_service.dart';
 import '../widgets/location_permission_dialog.dart';
 import '../widgets/azione_card.dart';
 import 'package:geolocator/geolocator.dart';
@@ -72,6 +74,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
     NotificationStore().unreadCount.addListener(_onUnreadChanged);
 
+    // Annunci vocali: prefs lette una volta, poi il servizio e' pronto
+    TtsService().init();
+
     // Ascolta push FCM in foreground per aggiornare ordini in tempo reale
     _fcmSubscription = FcmService().onForegroundMessage.listen((message) async {
       final event = message.data['event'] ?? '';
@@ -79,6 +84,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         await _playOrderAssignedSound();
         await _loadOrders();
       } else if (event == 'assignment_cancelled') {
+        // Annuncio NEUTRO: revoca o riassegnazione, il motivo non e'
+        // affare dell'app. La card sparisce col reload qui sotto.
+        TtsService().annuncia('Un ordine e stato rimosso dalla tua lista');
         await _loadOrders();
       }
     });
@@ -197,6 +205,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               previousStatus != 'picking_up' &&
               currentStatus == 'picking_up') {
             _showPickupReminder(order);
+            // Annuncio vocale: il telefono parla, gli occhi restano sulla strada
+            TtsService().annuncia('Ritiro da ${order.restaurantName}');
+          }
+
+          // Cambio tappa: l'ordine e' partito in consegna
+          if (previousStatus != null &&
+              previousStatus != 'in_delivery' &&
+              currentStatus == 'in_delivery') {
+            TtsService().annuncia(
+              'In consegna verso ${order.customerName}',
+            );
           }
 
           // NUOVO: Rileva nuovi ordini assigned non confermati (food: 'assigned', partner: 'ready_for_pickup')
@@ -206,6 +225,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               !_processedNewOrders.contains(order.id)) {
             // Suono iniziale per nuovo ordine
             _playOrderAssignedSound();
+            // Annuncio vocale col ristorante e la fascia
+            TtsService().annuncia(
+              'Nuovo ordine da ${order.restaurantName}, fascia ${order.timeSlot}',
+            );
             // Avvia timer reminder
             _startConfirmationReminder(order.id);
             // Marca come processato
@@ -229,6 +252,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // la lista contiene SOLO ordini attivi, quindi isNotEmpty = "ha un ordine".
         // Parte all'assegnazione, si ferma quando l'ultimo è consegnato.
         GeofenceTrackingService().sync(hasActiveOrders: orders.isNotEmpty);
+
+        // Schermo sempre acceso finche' c'e' un ordine attivo: il telefono
+        // a cruscotto e' il "navigatore Lenny", non deve spegnersi.
+        WakelockPlus.toggle(enable: orders.isNotEmpty);
       }
     } catch (e) {
       print('❌ Errore caricamento ordini: $e');
@@ -3160,8 +3187,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _openMaps(double lat, double lng, String label) async {
-    final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
-    final uri = Uri.parse(url);
+    // NAVIGAZIONE DIRETTA: Maps si apre col turn-by-turn GIA' avviato
+    // verso la tappa. Il vecchio link "search" mostrava un pin e chiedeva
+    // altri 3 tocchi (Indicazioni, Avvia) col motorino acceso.
+    final navUri = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
+    if (await canLaunchUrl(navUri)) {
+      await launchUrl(navUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    // Fallback (Maps assente): pin sulla mappa web
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
