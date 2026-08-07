@@ -14,25 +14,23 @@ class TtsService {
   factory TtsService() => _instance;
 
   static const String _chiavePrefs = 'annunci_vocali_driver';
-  static const String _chiaveVelocita = 'velocita_voce_driver';
   static const String _chiaveVoce = 'voce_driver';
 
   /// ATTENZIONE alla scala: su Android flutter_tts moltiplica per 2 il
   /// valore prima di passarlo al sistema, e per Android 1.0 = ritmo
-  /// normale. Quindi qui 0.5 = ritmo NORMALE, non meta' velocita'.
+  /// normale. Quindi 0.5 = ritmo NORMALE, non meta' velocita'.
+  ///
+  /// Non e' regolabile dall'utente: il ritmo naturale e' uno solo, e tre
+  /// scelte in impostazioni erano solo rumore.
   static const double velocitaNormale = 0.5;
-  static const double velocitaLenta = 0.42;
-  static const double velocitaSvelta = 0.6;
 
   final FlutterTts _tts = FlutterTts();
   bool _inizializzato = false;
   bool _abilitato = true;
-  double _velocita = velocitaNormale;
   String? _nomeVoce;
   List<Map<String, String>> _vociItaliane = const [];
 
   bool get abilitato => _abilitato;
-  double get velocita => _velocita;
   String? get nomeVoce => _nomeVoce;
   List<Map<String, String>> get vociItaliane => _vociItaliane;
 
@@ -42,15 +40,13 @@ class TtsService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _abilitato = prefs.getBool(_chiavePrefs) ?? true;
-      _velocita = prefs.getDouble(_chiaveVelocita) ?? velocitaNormale;
       _nomeVoce = prefs.getString(_chiaveVoce);
     } catch (_) {
       _abilitato = true;
-      _velocita = velocitaNormale;
     }
     try {
       await _tts.setLanguage('it-IT');
-      await _tts.setSpeechRate(_velocita);
+      await _tts.setSpeechRate(velocitaNormale);
       await _tts.setPitch(1.0);
       await _tts.setVolume(1.0);
       // In coda, non a taglio: due eventi ravvicinati si sentono entrambi
@@ -123,14 +119,6 @@ class TtsService {
     }
   }
 
-  Future<void> impostaVelocita(double valore) async {
-    _velocita = valore;
-    try {
-      await _tts.setSpeechRate(valore);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(_chiaveVelocita, valore);
-    } catch (_) {}
-  }
 
   Future<void> impostaVoce(Map<String, String> voce) async {
     await _applicaVoce(voce);

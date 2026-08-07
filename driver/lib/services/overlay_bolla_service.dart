@@ -91,8 +91,10 @@ class OverlayBollaService {
         flag: OverlayFlag.defaultFlag,
         enableDrag: true,
         positionGravity: PositionGravity.auto,
-        overlayTitle: 'Lenny Driver',
-        overlayContent: 'Prossima tappa in vista',
+        // Testo della notifica fissa che Android impone al servizio: deve
+        // dire cosa e', altrimenti sembra un avviso di lavoro.
+        overlayTitle: 'Bolla attiva',
+        overlayContent: 'Chiudila con la X sulla bolla',
         // Senza posizione esplicita il plugin alza la finestra di una
         // barra di stato "da manuale" (24dp), che sui telefoni con notch o
         // barra piu' alta non corrisponde: la bolla finiva mezza fuori.

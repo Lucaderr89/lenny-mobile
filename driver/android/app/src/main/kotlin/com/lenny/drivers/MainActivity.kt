@@ -42,6 +42,31 @@ class MainActivity : FlutterActivity() {
             }
 
             notificationManager.createNotificationChannel(channel)
+
+            // Canale della BOLLA. Android obbliga ogni servizio in primo
+            // piano ad avere una notifica fissa, e la bolla gira come
+            // servizio: quella notifica non si puo' togliere. Il plugin pero'
+            // creerebbe il canale a importanza NORMALE, quindi ogni NAVIGA
+            // suonava e appariva come un avviso vero, confondendolo con un
+            // ordine nuovo.
+            //
+            // Lo creiamo NOI per primi a importanza MINIMA: Android ignora
+            // i cambi di importanza su un canale gia' esistente, quindi la
+            // creazione del plugin non lo rialza. Risultato: notifica muta,
+            // relegata in fondo, senza banner.
+            val canaleBolla = NotificationChannel(
+                "Overlay Channel",
+                "Bolla sopra il navigatore",
+                NotificationManager.IMPORTANCE_MIN
+            ).apply {
+                description =
+                    "Notifica fissa richiesta da Android mentre la bolla e' attiva"
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            }
+
+            notificationManager.createNotificationChannel(canaleBolla)
         }
     }
 }

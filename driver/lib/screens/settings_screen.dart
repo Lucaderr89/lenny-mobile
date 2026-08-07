@@ -191,41 +191,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return nome;
   }
 
-  Widget _chipVelocita(String etichetta, double valore, TtsService tts) {
-    final selezionata = (tts.velocita - valore).abs() < 0.001;
-    return Expanded(
-      child: InkWell(
-        onTap: () async {
-          await tts.impostaVelocita(valore);
-          await tts.prova('Nuovo ordine. Fascia delle 19 e 30');
-          if (mounted) setState(() {});
-        },
-        borderRadius: BorderRadius.circular(AppRadius.chip),
-        child: Container(
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selezionata
-                ? AppColors.primary.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.chip),
-            border: Border.all(
-              color: selezionata ? AppColors.primary : context.cBordo,
-              width: selezionata ? 1.6 : 1,
-            ),
-          ),
-          child: Text(
-            etichetta,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: selezionata ? AppColors.primary : context.cTestoSec,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildCardGuida() {
     final temaScuro = Theme.of(context).brightness == Brightness.dark;
@@ -292,31 +257,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             contentPadding: EdgeInsets.zero,
           ),
 
-          // Velocita' e voce: si regolano solo ad annunci accesi, altrimenti
-          // sono comandi che non fanno niente.
+          // La voce si sceglie solo ad annunci accesi, altrimenti sarebbe un
+          // comando che non fa niente. La VELOCITA' non e' regolabile: il
+          // ritmo naturale e' uno solo, dare tre scelte era rumore.
           if (tts.abilitato) ...[
-            const SizedBox(height: 4),
-            Text(
-              'VELOCITA\'',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: context.cTestoSec,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                _chipVelocita('Lenta', TtsService.velocitaLenta, tts),
-                const SizedBox(width: 8),
-                _chipVelocita('Normale', TtsService.velocitaNormale, tts),
-                const SizedBox(width: 8),
-                _chipVelocita('Svelta', TtsService.velocitaSvelta, tts),
-              ],
-            ),
             if (tts.vociItaliane.length > 1) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               Text(
                 'VOCE',
                 style: TextStyle(

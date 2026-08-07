@@ -25,6 +25,7 @@ import 'delivery_history_screen.dart';
 import 'panel_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
+import '../logic/regole_home.dart';
 import 'dart:async';
 
 /// Home Screen per driver - Interfaccia principale turno
@@ -47,6 +48,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Order> _orders = [];
   Timer? _ordersRefreshTimer;
   final Map<int, String> _previousOrderStatuses = {};
+
+  // Ordine su cui il driver ha premuto NAVIGA: la bolla resta su questo
+  // finche' e' in carico, invece di saltare da sola su un altro ordine.
+  int? _ordineBollaId;
 
   // Sistema reminder per ordini non confermati
   final Map<int, Timer?> _confirmationReminderTimers = {};
@@ -256,21 +261,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // a cruscotto e' il "navigatore Lenny", non deve spegnersi.
         WakelockPlus.toggle(enable: orders.isNotEmpty);
 
-        // Bolla overlay: segue l'ordine "piu' avanti" nel flusso (prima
-        // quello in consegna, poi in ritiro, poi il primo confermato);
-        // senza ordini si chiude da sola.
-        Order? attivo;
-        for (final o in orders) {
-          if (o.confirmedAt == null) continue;
-          if (o.isInDelivery) {
-            attivo = o;
-            break;
-          }
-          if (attivo == null || (o.isPickingUp && !attivo.isPickingUp)) {
-            attivo = o;
-          }
+        // Bolla overlay: segue l'ordine su cui il driver ha premuto NAVIGA
+        // (vedi RegoleHome.ordinePerBolla). Se quell'ordine non e' piu' in
+        // carico la scelta decade e si torna all'automatico.
+        if (_ordineBollaId != null &&
+            !orders.any((o) => o.id == _ordineBollaId)) {
+          _ordineBollaId = null;
         }
-        OverlayBollaService().aggiorna(attivo);
+        OverlayBollaService().aggiorna(
+          RegoleHome.ordinePerBolla(orders, _ordineBollaId),
+        );
       }
     } catch (e) {
       print('❌ Errore caricamento ordini: $e');
@@ -946,12 +946,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // UN GIRO STA DENTRO UNA FASCIA. Ordini di fasce diverse si fanno in
     // momenti diversi della giornata: metterli nella stessa card farebbe
     // comparire una consegna delle 14:30 fra le tappe delle 12:30.
-    final perFascia = <String, List<Order>>{};
-    for (final o in singoli.where((o) => o.confirmedAt != null)) {
-      perFascia.putIfAbsent(o.formattedTimeSlot, () => []).add(o);
-    }
-    final fasce = perFascia.keys.toList()..sort();
-    for (final fascia in fasce) {
+    final perFascia = RegoleHome.giriPerFascia(singoli);
+    for (final fascia in perFascia.keys) {
       final daGiro = perFascia[fascia]!;
       if (daGiro.length < 2) continue;
       final steps = <RouteStop>[];
@@ -3527,6 +3523,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     double lng,
     String label,
   ) async {
+    // La bolla si aggancia a QUESTO ordine: e' quello verso cui il driver
+    // sta partendo. Senza memoria, il refresh successivo la spostava sul
+    // primo ordine "piu' avanti nel flusso", che poteva essere un altro.
+    _ordineBollaId = order.id;
     await OverlayBollaService().mostraPerOrdine(context, order);
     await _openMaps(lat, lng, label);
   }
