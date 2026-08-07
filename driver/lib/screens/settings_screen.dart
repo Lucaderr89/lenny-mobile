@@ -24,6 +24,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Serve l'elenco delle voci installate per popolare il selettore.
+    TtsService().init().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
@@ -167,6 +176,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// I nomi di sistema sono sigle tipo "it-it-x-kda-network": illeggibili.
+  /// Se ne mostra la sostanza — quello che cambia davvero e' se la voce e'
+  /// sintetizzata sul server (piu' umana) o sul telefono.
+  String _etichettaVoce(String nome) {
+    final n = nome.toLowerCase();
+    final sigla = RegExp(r'x-([a-z]+)').firstMatch(n)?.group(1) ?? '';
+    final variante = sigla.isEmpty ? '' : ' ${sigla.toUpperCase()}';
+    if (n.contains('network')) return 'Italiana naturale$variante';
+    if (n.contains('neural') || n.contains('wavenet')) {
+      return 'Italiana neurale$variante';
+    }
+    if (n.contains('local')) return 'Italiana sul telefono$variante';
+    return nome;
+  }
+
+  Widget _chipVelocita(String etichetta, double valore, TtsService tts) {
+    final selezionata = (tts.velocita - valore).abs() < 0.001;
+    return Expanded(
+      child: InkWell(
+        onTap: () async {
+          await tts.impostaVelocita(valore);
+          await tts.prova('Nuovo ordine. Fascia delle 19 e 30');
+          if (mounted) setState(() {});
+        },
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        child: Container(
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selezionata
+                ? AppColors.primary.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.chip),
+            border: Border.all(
+              color: selezionata ? AppColors.primary : context.cBordo,
+              width: selezionata ? 1.6 : 1,
+            ),
+          ),
+          child: Text(
+            etichetta,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: selezionata ? AppColors.primary : context.cTestoSec,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCardGuida() {
     final temaScuro = Theme.of(context).brightness == Brightness.dark;
     final tts = TtsService();
@@ -220,7 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              'Nuovo ordine, cambio tappa e revoche letti ad alta voce',
+              'I nuovi ordini vengono letti ad alta voce',
               style: TextStyle(
                 fontSize: 12,
                 color: temaScuro
@@ -231,6 +291,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: AppColors.primary,
             contentPadding: EdgeInsets.zero,
           ),
+
+          // Velocita' e voce: si regolano solo ad annunci accesi, altrimenti
+          // sono comandi che non fanno niente.
+          if (tts.abilitato) ...[
+            const SizedBox(height: 4),
+            Text(
+              'VELOCITA\'',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: context.cTestoSec,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _chipVelocita('Lenta', TtsService.velocitaLenta, tts),
+                const SizedBox(width: 8),
+                _chipVelocita('Normale', TtsService.velocitaNormale, tts),
+                const SizedBox(width: 8),
+                _chipVelocita('Svelta', TtsService.velocitaSvelta, tts),
+              ],
+            ),
+            if (tts.vociItaliane.length > 1) ...[
+              const SizedBox(height: 14),
+              Text(
+                'VOCE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: context.cTestoSec,
+                ),
+              ),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                initialValue: tts.nomeVoce,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                ),
+                style: TextStyle(fontSize: 13, color: context.cTesto),
+                items: [
+                  for (final voce in tts.vociItaliane)
+                    DropdownMenuItem(
+                      value: voce['name'],
+                      child: Text(
+                        _etichettaVoce(voce['name'] ?? ''),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (nome) async {
+                  if (nome == null) return;
+                  final voce = tts.vociItaliane.firstWhere(
+                    (v) => v['name'] == nome,
+                  );
+                  await tts.impostaVoce(voce);
+                  await tts.prova('Nuovo ordine. Fascia delle 19 e 30');
+                  if (mounted) setState(() {});
+                },
+              ),
+            ],
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () =>
+                    tts.prova('Nuovo ordine. Fascia delle 19 e 30'),
+                icon: const Icon(Icons.play_arrow, size: 20),
+                label: const Text('Prova la voce'),
+              ),
+            ),
+          ],
+
           const Divider(height: 8),
           ListTile(
             contentPadding: EdgeInsets.zero,

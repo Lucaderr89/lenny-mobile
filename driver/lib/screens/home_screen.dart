@@ -220,9 +220,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               !_processedNewOrders.contains(order.id)) {
             // Suono iniziale per nuovo ordine
             _playOrderAssignedSound();
-            // UNICO annuncio vocale, corto e scandito: in strada un
-            // messaggio lungo confonde piu' di quanto aiuti.
-            TtsService().annuncia('Nuovo ordine. Fascia ${order.timeSlot}');
+            // UNICO annuncio vocale, corto: in strada un messaggio lungo
+            // confonde piu' di quanto aiuti. La fascia va detta a parole
+            // ("19 e 30"), non letta grezza: "19:30 - 20:00" il motore lo
+            // pronuncia col trattino e la seconda ora, e suona sbagliato.
+            TtsService().annuncia(
+              'Nuovo ordine. Fascia delle '
+              '${TtsService.fasciaParlata(order.timeSlot)}',
+            );
             // Avvia timer reminder
             _startConfirmationReminder(order.id);
             // Marca come processato
