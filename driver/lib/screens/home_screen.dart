@@ -889,6 +889,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // ── 2) Resto: batch stesso ristorante e ordini singoli (come prima) ─────────
     final processedBatches = <String>{};
+    final singoli = <Order>[];
     for (final order in _orders) {
       if (processedOrderIds.contains(order.id)) continue;
       if (processedBatches.contains(order.batchId)) continue;
@@ -917,12 +918,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (batchOrders.length > 1) {
         // BATCH: mostra card unica con più consegne
         widgets.add(_buildBatchCard(batchOrders));
+        for (final o in batchOrders) {
+          processedOrderIds.add(o.id);
+        }
       } else {
-        // Ordine singolo
-        widgets.add(_buildOrderCard(order));
+        // Ordine singolo: raccolto per l'eventuale giro sintetico
+        singoli.add(order);
       }
 
       processedBatches.add(order.batchId);
+    }
+
+    // ── 3) GIRO SINTETICO: piu' ordini singoli confermati e senza percorso
+    // calcolato dal pannello. Prima erano N card scollegate (anche con 4
+    // ritiri da 4 ristoranti diversi): qui diventano UNA sequenza di tappe
+    // ordinata per fascia, cosi' il driver sa sempre cosa viene dopo.
+    final daGiro = singoli.where((o) => o.confirmedAt != null).toList();
+    if (daGiro.length > 1) {
+      daGiro.sort((a, b) => a.formattedTimeSlot.compareTo(b.formattedTimeSlot));
+      final steps = <RouteStop>[];
+      for (final o in daGiro) {
+        steps.add(
+          RouteStop(
+            type: 'pickup',
+            orderId: o.id,
+            lat: o.restaurantLat,
+            lng: o.restaurantLng,
+            cumTime: 0,
+          ),
+        );
+        steps.add(
+          RouteStop(
+            type: 'delivery',
+            orderId: o.id,
+            lat: o.deliveryLat,
+            lng: o.deliveryLng,
+            cumTime: 0,
+          ),
+        );
+      }
+      widgets.add(_buildGiroCard(daGiro, stepsCustom: steps));
+      for (final o in daGiro) {
+        singoli.remove(o);
+      }
+    }
+
+    // Gli ordini ancora da confermare restano card singole (il driver deve
+    // prima accettarli uno per uno).
+    for (final o in singoli) {
+      widgets.add(_buildOrderCard(o));
     }
 
     return widgets;
@@ -933,9 +977,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// ogni tappa è DEDOTTO dallo stato (geofencing) del relativo ordine, senza una
   /// macchina a stati propria. Tap su una tappa → dettaglio ordine (prodotti). La
   /// conferma consegna avviene qui, un ordine alla volta (quello in consegna).
-  Widget _buildGiroCard(List<Order> giroOrders) {
-    final steps = giroOrders.first.routeSteps;
+  Widget _buildGiroCard(List<Order> giroOrders, {List<RouteStop>? stepsCustom}) {
     final orderById = {for (final o in giroOrders) o.id: o};
+    // Tappe di ordini non piu' in carico (riassegnati) vanno tolte: il
+    // giro deve mostrare solo cio' che questo driver deve ancora fare.
+    final steps = (stepsCustom ?? giroOrders.first.routeSteps)
+        .where((s) => orderById.containsKey(s.orderId))
+        .toList();
     final slot = giroOrders.first.timeSlot;
     final total = giroOrders.fold<double>(0, (s, o) => s + o.total);
 
