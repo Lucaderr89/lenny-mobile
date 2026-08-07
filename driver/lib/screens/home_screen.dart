@@ -940,11 +940,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // ── 3) GIRO SINTETICO: piu' ordini singoli confermati e senza percorso
     // calcolato dal pannello. Prima erano N card scollegate (anche con 4
-    // ritiri da 4 ristoranti diversi): qui diventano UNA sequenza di tappe
-    // ordinata per fascia, cosi' il driver sa sempre cosa viene dopo.
-    final daGiro = singoli.where((o) => o.confirmedAt != null).toList();
-    if (daGiro.length > 1) {
-      daGiro.sort((a, b) => a.formattedTimeSlot.compareTo(b.formattedTimeSlot));
+    // ritiri da 4 ristoranti diversi): qui diventano UNA sequenza di tappe,
+    // cosi' il driver sa sempre cosa viene dopo.
+    //
+    // UN GIRO STA DENTRO UNA FASCIA. Ordini di fasce diverse si fanno in
+    // momenti diversi della giornata: metterli nella stessa card farebbe
+    // comparire una consegna delle 14:30 fra le tappe delle 12:30.
+    final perFascia = <String, List<Order>>{};
+    for (final o in singoli.where((o) => o.confirmedAt != null)) {
+      perFascia.putIfAbsent(o.formattedTimeSlot, () => []).add(o);
+    }
+    final fasce = perFascia.keys.toList()..sort();
+    for (final fascia in fasce) {
+      final daGiro = perFascia[fascia]!;
+      if (daGiro.length < 2) continue;
       final steps = <RouteStop>[];
       for (final o in daGiro) {
         steps.add(
