@@ -87,6 +87,10 @@ class _BollaOverlayState extends State<BollaOverlay> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Intestazione e CHIAMA restano SEMPRE visibili; a stringersi e'
+              // solo il blocco di testo in mezzo. Cosi' la bolla si adatta a
+              // qualunque densita' schermo o dimensione carattere di sistema
+              // senza mai sforare (e senza mangiare mezzo schermo a Maps).
               Row(
                 children: [
                   Icon(
@@ -120,39 +124,49 @@ class _BollaOverlayState extends State<BollaOverlay> {
                 ],
               ),
               const SizedBox(height: 2),
-              Text(
-                _soggetto,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.nightText,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _soggetto,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.nightText,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (_indirizzo.isNotEmpty)
+                        Text(
+                          _indirizzo,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.nightTextSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      if (_note.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _note,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFFFFD28A),
+                            fontSize: 12.5,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              if (_indirizzo.isNotEmpty)
-                Text(
-                  _indirizzo,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.nightTextSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              if (_note.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _note,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFFFD28A),
-                    fontSize: 12.5,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
               // Solo CHIAMA: "Apri app" faceva uscire dal navigatore e
               // costringeva a rilanciarlo. La bolla serve a VEDERE i dati
               // restando in navigazione; per tornare all'app c'e' il

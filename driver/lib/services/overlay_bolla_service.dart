@@ -65,7 +65,11 @@ class OverlayBollaService {
       }
 
       await FlutterOverlayWindow.showOverlay(
-        height: 640, // pixel fisici: bolla compatta, non a tutto schermo
+        // Pixel FISICI, non logici: a 640 la finestra lasciava ~130px logici
+        // di spazio utile e il contenuto (soggetto + indirizzo + note +
+        // CHIAMA) ne chiede ~185, da cui l'overflow. 820 basta con margine,
+        // restando comunque una bolla e non mezzo schermo su Maps.
+        height: 820,
         width: WindowSize.matchParent,
         alignment: OverlayAlignment.topCenter,
         flag: OverlayFlag.defaultFlag,
