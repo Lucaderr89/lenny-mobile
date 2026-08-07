@@ -129,10 +129,16 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/images/splash_driver.png',
-                      width: 190,
-                      fit: BoxFit.contain,
+                    // L'ICONA dell'app: stessa immagine che il driver tocca
+                    // sul telefono, per coerenza tra icona e apertura.
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        width: 132,
+                        height: 132,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                     const SizedBox(height: 28),
                     Text(

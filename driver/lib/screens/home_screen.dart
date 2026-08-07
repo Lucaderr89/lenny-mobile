@@ -23,6 +23,8 @@ import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
 import 'delivery_history_screen.dart';
 import 'panel_screen.dart';
+import 'profile_screen.dart';
+import 'settings_screen.dart';
 import 'dart:async';
 
 /// Home Screen per driver - Interfaccia principale turno
@@ -85,9 +87,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         await _playOrderAssignedSound();
         await _loadOrders();
       } else if (event == 'assignment_cancelled') {
-        // Annuncio NEUTRO: revoca o riassegnazione, il motivo non e'
-        // affare dell'app. La card sparisce col reload qui sotto.
-        TtsService().annuncia('Un ordine e stato rimosso dalla tua lista');
+        // Nessun annuncio: la card sparisce e basta (una voce in piu'
+        // in strada distrae senza aggiungere nulla di utile).
         await _loadOrders();
       }
     });
@@ -206,17 +207,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               previousStatus != 'picking_up' &&
               currentStatus == 'picking_up') {
             _showPickupReminder(order);
-            // Annuncio vocale: il telefono parla, gli occhi restano sulla strada
-            TtsService().annuncia('Ritiro da ${order.restaurantName}');
-          }
-
-          // Cambio tappa: l'ordine e' partito in consegna
-          if (previousStatus != null &&
-              previousStatus != 'in_delivery' &&
-              currentStatus == 'in_delivery') {
-            TtsService().annuncia(
-              'In consegna verso ${order.customerName}',
-            );
           }
 
           // NUOVO: Rileva nuovi ordini assigned non confermati (food: 'assigned', partner: 'ready_for_pickup')
@@ -226,10 +216,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               !_processedNewOrders.contains(order.id)) {
             // Suono iniziale per nuovo ordine
             _playOrderAssignedSound();
-            // Annuncio vocale col ristorante e la fascia
-            TtsService().annuncia(
-              'Nuovo ordine da ${order.restaurantName}, fascia ${order.timeSlot}',
-            );
+            // UNICO annuncio vocale, corto e scandito: in strada un
+            // messaggio lungo confonde piu' di quanto aiuti.
+            TtsService().annuncia('Nuovo ordine. Fascia ${order.timeSlot}');
             // Avvia timer reminder
             _startConfirmationReminder(order.id);
             // Marca come processato
@@ -372,6 +361,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PanelScreen()),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            // Il profilo (e da li' le impostazioni) era IRRAGGIUNGIBILE:
+            // il menu aveva solo Pannello e Logout.
+            ListTile(
+              leading: const Icon(
+                Icons.person_outline,
+                color: AppColors.primary,
+              ),
+              title: const Text(
+                'Il mio profilo',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(
+                Icons.settings_outlined,
+                color: AppColors.primary,
+              ),
+              title: const Text(
+                'Impostazioni',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Aspetto, annunci vocali, guida sicura, password',
+                style: TextStyle(fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
               },
             ),
@@ -1457,9 +1488,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final String targetNome = inConsegna
         ? order.customerName
         : order.restaurantName;
-    final String targetTel = inConsegna
+    // Telefono della tappa attiva. In ritiro molti ristoranti non hanno il
+    // numero in anagrafica: invece di far sparire il bottone si ripiega sul
+    // cliente (l'etichetta dice chi si sta chiamando).
+    final String telRistorante = order.restaurantPhone ?? '';
+    final bool chiamaCliente = inConsegna || telRistorante.isEmpty;
+    final String targetTel = chiamaCliente
         ? order.customerPhone
-        : (order.restaurantPhone ?? '');
+        : telRistorante;
+    final String etichettaChiamata = chiamaCliente
+        ? 'CHIAMA CLIENTE'
+        : 'CHIAMA LOCALE';
     final Color coloreAzione = daConfermare
         ? AppColors.warning
         : inConsegna
@@ -1726,7 +1765,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         Expanded(
                           child: BottoneAzione(
                             icona: Icons.phone,
-                            etichetta: 'CHIAMA',
+                            etichetta: etichettaChiamata,
                             colore: coloreAzione,
                             pieno: false,
                             onTap: () => _makePhoneCall(targetTel),
@@ -3265,61 +3304,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// "HO UN PROBLEMA": tre scelte grandi, poi si apre WhatsApp verso il
-  /// titolare con il messaggio GIA' scritto (ordine, tipo problema,
-  /// driver). Canale diretto: niente pannello, niente testo da digitare.
+  /// "HO UN PROBLEMA": UN TOCCO e si apre la chat WhatsApp col titolare,
+  /// con l'intestazione dell'ordine gia' scritta. Il problema lo racconta
+  /// il driver a parole sue: nessuna lista di scelte da navigare in strada.
   Future<void> _segnalaProblema(Order order) async {
-    final String? tipo = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Che problema hai?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 16),
-              BottoneAzione(
-                icona: Icons.two_wheeler,
-                etichetta: 'VEICOLO FERMO',
-                colore: AppColors.danger,
-                onTap: () => Navigator.pop(ctx, 'Veicolo fermo'),
-              ),
-              const SizedBox(height: 10),
-              BottoneAzione(
-                icona: Icons.person_off,
-                etichetta: 'CLIENTE ASSENTE',
-                colore: AppColors.warning,
-                onTap: () => Navigator.pop(ctx, 'Cliente assente'),
-              ),
-              const SizedBox(height: 10),
-              BottoneAzione(
-                icona: Icons.help_outline,
-                etichetta: 'ALTRO PROBLEMA',
-                colore: AppColors.primary,
-                pieno: false,
-                onTap: () => Navigator.pop(ctx, 'Altro problema'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (tipo == null) return;
-
     final testo = Uri.encodeComponent(
-      'PROBLEMA: $tipo\n'
-      'Ordine #${order.id} (${order.restaurantName} -> ${order.customerName})\n'
-      'Driver: $_driverName',
+      'Problema ordine #${order.id} '
+      '(${order.restaurantName} -> ${order.customerName})\n'
+      'Driver: $_driverName\n',
     );
     final uri = Uri.parse('https://wa.me/393346841489?text=$testo');
     if (await canLaunchUrl(uri)) {

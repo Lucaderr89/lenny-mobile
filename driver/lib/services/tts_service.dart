@@ -31,7 +31,10 @@ class TtsService {
     }
     try {
       await _tts.setLanguage('it-IT');
-      await _tts.setSpeechRate(0.5);
+      // Voce LENTA e scandita: in strada, con casco e rumore, la velocita'
+      // standard risultava incomprensibile.
+      await _tts.setSpeechRate(0.38);
+      await _tts.setPitch(1.0);
       await _tts.setVolume(1.0);
       // In coda, non a taglio: due eventi ravvicinati si sentono entrambi
       await _tts.awaitSpeakCompletion(false);

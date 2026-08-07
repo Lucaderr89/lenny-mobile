@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_colors.dart';
 
+
 /// UI della BOLLA flottante che resta sopra Google Maps durante la
 /// navigazione: prossima tappa, note e azioni rapide, senza mai
 /// riaprire l'app. Gira in un engine separato (entry point overlayMain).
@@ -52,15 +53,6 @@ class _BollaOverlayState extends State<BollaOverlay> {
     } catch (_) {}
   }
 
-  Future<void> _apriApp() async {
-    try {
-      await launchUrl(
-        Uri.parse('lennydriver://home'),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {}
-    await FlutterOverlayWindow.closeOverlay();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +64,9 @@ class _BollaOverlayState extends State<BollaOverlay> {
       home: Material(
         color: Colors.transparent,
         child: Container(
-          margin: const EdgeInsets.all(6),
+          // Margine alto generoso: la bolla si posiziona SOTTO la barra di
+          // stato e il notch, non incastrata sul bordo superiore.
+          margin: const EdgeInsets.fromLTRB(8, 54, 8, 6),
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
             color: AppColors.nightSurface,
@@ -156,30 +150,19 @@ class _BollaOverlayState extends State<BollaOverlay> {
                   ),
                 ),
               ],
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  if (_telefono.isNotEmpty) ...[
-                    Expanded(
-                      child: _BottoneBolla(
-                        icona: Icons.phone,
-                        etichetta: 'CHIAMA',
-                        colore: colore,
-                        onTap: _chiama,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: _BottoneBolla(
-                      icona: Icons.open_in_new,
-                      etichetta: 'APRI APP',
-                      colore: AppColors.nightTextSecondary,
-                      onTap: _apriApp,
-                    ),
-                  ),
-                ],
-              ),
+              // Solo CHIAMA: "Apri app" faceva uscire dal navigatore e
+              // costringeva a rilanciarlo. La bolla serve a VEDERE i dati
+              // restando in navigazione; per tornare all'app c'e' il
+              // normale cambio applicazione del telefono.
+              if (_telefono.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _BottoneBolla(
+                  icona: Icons.phone,
+                  etichetta: 'CHIAMA',
+                  colore: colore,
+                  onTap: _chiama,
+                ),
+              ],
             ],
           ),
         ),
