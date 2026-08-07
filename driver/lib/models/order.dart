@@ -66,6 +66,12 @@ class Order {
   final String? routePlanRaw; // JSON grezzo del giro: chiave di raggruppamento
   final List<RouteStop> routeSteps; // sequenza ritiro/consegna del giro completo
 
+  /// Quante volte l'ordine ha cambiato driver prima di arrivare a questo.
+  /// >0 = mostrare il badge NEUTRO "Riassegnato a te" (mai assumere il
+  /// motivo: soccorso, ripensamento o errore di gestione non sono affare
+  /// dell'app).
+  final int reassignedCount;
+
   Order({
     required this.id,
     required this.dateOrder,
@@ -98,6 +104,7 @@ class Order {
     this.deliverySequence,
     this.routePlanRaw,
     this.routeSteps = const [],
+    this.reassignedCount = 0,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -170,8 +177,13 @@ class Order {
       ),
       routePlanRaw: routePlanRaw,
       routeSteps: steps,
+      reassignedCount:
+          int.tryParse(json['reassigned_count']?.toString() ?? '0') ?? 0,
     );
   }
+
+  /// True se l'ordine e' passato di mano prima di arrivare a questo driver
+  bool get riassegnato => reassignedCount > 0;
 
   /// Inizio fascia "HH:MM". La fonte affidabile è `timeSlot` (stringa completa
   /// "HH:MM - HH:MM" già calcolata dall'API dalle colonne denormalizzate).

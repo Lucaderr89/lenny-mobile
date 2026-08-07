@@ -14,6 +14,7 @@ import '../services/shift_service.dart';
 import '../services/fcm_service.dart';
 import '../services/notification_store.dart';
 import '../widgets/location_permission_dialog.dart';
+import '../widgets/azione_card.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
@@ -742,6 +743,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final widgets = <Widget>[];
     final processedOrderIds = <int>{};
 
+    // Banner fisso in testa finche' ci sono ordini NON confermati: il
+    // reminder sonoro esiste gia', ma il conteggio deve restare sotto
+    // gli occhi anche a suono finito.
+    final daConfermare = _orders.where((o) => o.confirmedAt == null).length;
+    if (daConfermare > 0) {
+      widgets.add(
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.warning,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.notifications_active,
+                color: Colors.white,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  daConfermare == 1
+                      ? '1 ordine da confermare'
+                      : '$daConfermare ordini da confermare',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // ── 1) GIRI multi-ristorante (route_plan condiviso, ≥2 ritiri) ──────────────
     final giroGroups = <String, List<Order>>{};
     for (final o in _orders) {
@@ -927,22 +968,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
 
-          // Tappe del giro
+          // Tappe del giro. Le COMPLETATE spariscono (resta il contatore
+          // in alto): niente righe spente che occupano spazio.
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: Column(
               children: [
-                ...steps.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final st = entry.value;
-                  return _buildGiroStepRow(
-                    i,
-                    st,
-                    orderById[st.orderId],
-                    stepDone(st),
-                    stepInProgress(st),
-                  );
-                }),
+                ...steps.asMap().entries
+                    .where((entry) => !stepDone(entry.value))
+                    .map((entry) {
+                      final i = entry.key;
+                      final st = entry.value;
+                      return _buildGiroStepRow(
+                        i,
+                        st,
+                        orderById[st.orderId],
+                        false,
+                        stepInProgress(st),
+                      );
+                    }),
                 ...deliverables.map(
                   (o) => Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -1003,17 +1047,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       onTap: o != null ? () => _showOrderDetailsModal(o) : null,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        // Tappa ATTIVA ben evidenziata: banda tinta + barra colorata a
+        // sinistra, come le sezioni del menu cliente. Le altre restano
+        // neutre.
+        padding: EdgeInsets.symmetric(
+          vertical: inProg ? 8 : 4,
+          horizontal: inProg ? 8 : 0,
+        ),
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: inProg
-              ? AppColors.primary.withValues(alpha: 0.05)
+              ? AppColors.primary.withValues(alpha: 0.08)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            if (inProg) ...[
+              Container(
+                width: 4,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             indicator,
             const SizedBox(width: 10),
             Expanded(
@@ -1234,19 +1295,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     String label;
     Color color;
     if (order.confirmedAt == null) {
-      label = '🔔 NUOVO';
+      label = 'NUOVO';
       color = AppColors.warning;
     } else if (order.isInDelivery) {
-      label = '🚚 IN CONSEGNA';
+      label = 'IN CONSEGNA';
       color = AppColors.success;
     } else if (order.isPickingUp) {
-      label = '📦 IN RITIRO';
+      label = 'IN RITIRO';
       color = AppColors.primary;
     } else if (order.isReadyForPickup) {
-      label = '✅ PRONTO';
+      label = 'PRONTO';
       color = AppColors.primary;
     } else {
-      label = '✓ ASSEGNATO';
+      label = 'ASSEGNATO';
       color = AppColors.primary;
     }
     return Container(
@@ -1275,16 +1336,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     String label;
     Color color;
     if (!allConfirmed) {
-      label = '🔔 NUOVO';
+      label = 'NUOVO';
       color = AppColors.warning;
     } else if (anyInDelivery) {
-      label = '🚚 IN CONSEGNA';
+      label = 'IN CONSEGNA';
       color = AppColors.success;
     } else if (anyPickingUp) {
-      label = '📦 IN RITIRO';
+      label = 'IN RITIRO';
       color = AppColors.primary;
     } else {
-      label = '✓ ASSEGNATO';
+      label = 'ASSEGNATO';
       color = AppColors.primary;
     }
     return Container(
@@ -1306,62 +1367,99 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildOrderCard(Order order) {
     if (order.isPartnerOrder) return _buildPartnerOrderCard(order);
+
+    // GERARCHIA AD AZIONE: in testa alla card, GRANDE, la prossima cosa
+    // da fare. Universale: vale per qualunque combinazione di stati.
+    final bool daConfermare = order.confirmedAt == null;
+    final bool inConsegna = order.isInDelivery;
+
+    final AzioneProssima banner;
+    if (daConfermare) {
+      banner = AzioneProssima(
+        verbo: 'CONFERMA RICEZIONE',
+        soggetto: order.restaurantName,
+        dettaglio: 'Fascia ${order.timeSlot}',
+        colore: AppColors.warning,
+        icona: Icons.notifications_active,
+      );
+    } else if (inConsegna) {
+      banner = AzioneProssima(
+        verbo: 'CONSEGNA A',
+        soggetto: order.customerName,
+        dettaglio: order.deliveryAddress,
+        incasso: order.isPaid
+            ? null
+            : 'INCASSA €${order.total.toStringAsFixed(2)}',
+        colore: AppColors.success,
+        icona: Icons.location_on,
+      );
+    } else {
+      banner = AzioneProssima(
+        verbo: 'RITIRA DA',
+        soggetto: order.restaurantName,
+        dettaglio: '${order.timeSlot} - ${order.restaurantAddress}',
+        colore: AppColors.primary,
+        icona: Icons.storefront,
+      );
+    }
+
+    // Bersaglio dei bottoni grandi = la tappa ATTIVA
+    final double targetLat = inConsegna
+        ? order.deliveryLat
+        : order.restaurantLat;
+    final double targetLng = inConsegna
+        ? order.deliveryLng
+        : order.restaurantLng;
+    final String targetNome = inConsegna
+        ? order.customerName
+        : order.restaurantName;
+    final String targetTel = inConsegna
+        ? order.customerPhone
+        : (order.restaurantPhone ?? '');
+    final Color coloreAzione = daConfermare
+        ? AppColors.warning
+        : inConsegna
+        ? AppColors.success
+        : AppColors.primary;
+
     return InkWell(
       onTap: () => _showOrderDetailsModal(order),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.card),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           border: Border.all(
-            color: order.confirmedAt == null
+            color: daConfermare
                 ? AppColors.warning.withValues(alpha: 0.5)
                 : AppColors.primary.withValues(alpha: 0.3),
-            width: order.confirmedAt == null ? 2 : 1,
+            width: daConfermare ? 2 : 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: const [AppColors.cardShadow],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header con badge stato e time slot
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: order.confirmedAt == null
-                    ? AppColors.warning.withValues(alpha: 0.1)
-                    : AppColors.primary.withValues(alpha: 0.05),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(15),
-                  topRight: Radius.circular(15),
-                ),
-              ),
+            banner,
+
+            // Riga compatta: fascia, numero ordine, totale
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.access_time,
-                    size: 18,
-                    color: order.confirmedAt == null
-                        ? AppColors.warning
-                        : AppColors.primary,
+                    size: 15,
+                    color: AppColors.gray,
                   ),
-                  const SizedBox(width: 8),
-                  // Fascia in evidenza (come la card del giro)
+                  const SizedBox(width: 6),
                   Text(
                     order.timeSlot,
-                    style: TextStyle(
-                      fontSize: 18,
+                    style: const TextStyle(
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: order.confirmedAt == null
-                          ? AppColors.warning
-                          : AppColors.dark,
+                      color: AppColors.dark,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1373,6 +1471,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       color: AppColors.gray,
                     ),
                   ),
+                  if (order.riassegnato) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF343A40),
+                        borderRadius: BorderRadius.circular(AppRadius.chip),
+                      ),
+                      child: const Text(
+                        'RIASSEGNATO A TE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   Text(
                     '€${order.total.toStringAsFixed(2)}',
@@ -1447,31 +1567,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ],
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (order.restaurantPhone != null)
-                            IconButton(
-                              icon: const Icon(
-                                Icons.phone,
-                                color: AppColors.primary,
-                              ),
-                              onPressed: () =>
-                                  _makePhoneCall(order.restaurantPhone!),
-                            ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.navigation,
-                              color: AppColors.primary,
-                            ),
-                            onPressed: () => _openMaps(
-                              order.restaurantLat,
-                              order.restaurantLng,
-                              order.restaurantName,
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
 
@@ -1526,30 +1621,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ],
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.phone,
-                              color: AppColors.success,
-                            ),
-                            onPressed: () =>
-                                _makePhoneCall(order.customerPhone),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.navigation,
-                              color: AppColors.success,
-                            ),
-                            onPressed: () => _openMaps(
-                              order.deliveryLat,
-                              order.deliveryLng,
-                              order.customerName,
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
 
@@ -1587,6 +1658,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ],
 
+                  const SizedBox(height: 12),
+
+                  // Bottoni GRANDI puntati sulla tappa ATTIVA: da usare col
+                  // pollice guantato, senza cercare iconcine.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: BottoneAzione(
+                          icona: Icons.navigation,
+                          etichetta: 'NAVIGA',
+                          colore: coloreAzione,
+                          onTap: () =>
+                              _openMaps(targetLat, targetLng, targetNome),
+                        ),
+                      ),
+                      if (targetTel.isNotEmpty) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: BottoneAzione(
+                            icona: Icons.phone,
+                            etichetta: 'CHIAMA',
+                            colore: coloreAzione,
+                            pieno: false,
+                            onTap: () => _makePhoneCall(targetTel),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
                   const SizedBox(height: 8),
 
                   // Azioni
@@ -1615,10 +1716,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         : AppColors.warning; // arancio altri partner
 
     final String badgeLabel = order.isSupermarket
-        ? '🛒 SPESA'
+        ? 'SPESA'
         : order.isShop
-        ? '🏪 NEGOZIO'
-        : '📦 PARTNER';
+        ? 'NEGOZIO'
+        : 'PARTNER';
 
     const String pickupLabel = 'RITIRO DA';
 
@@ -3024,7 +3125,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         order.id,
         orderSource: order.orderSource,
       );
-      _showToast('Ordine confermato! ✅', isError: false);
+      _showToast('Ordine confermato!', isError: false);
       await _loadOrders();
     } catch (e) {
       _showToast('Errore: $e', isError: true);
@@ -3278,7 +3379,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const SizedBox(height: 12),
             ],
             Text(
-              '✓ Controlla tutti i prodotti\n✓ Verifica le quantità\n✓ Controlla accessori e posate',
+              '- Controlla tutti i prodotti\n- Verifica le quantità\n- Controlla accessori e posate',
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.gray.withValues(alpha: 0.8),
