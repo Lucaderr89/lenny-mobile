@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_colors.dart';
 
@@ -11,8 +10,14 @@ import '../config/app_colors.dart';
 /// navigazione: prossima tappa, note e azioni rapide, senza mai
 /// riaprire l'app. Gira in un engine separato (entry point overlayMain).
 ///
-/// Riceve i dati via FlutterOverlayWindow.shareData come JSON:
-/// { verbo, soggetto, indirizzo, note, telefono }
+/// ATTENZIONE: questo engine NON ha i plugin dell'app registrati (il
+/// plugin overlay lo crea con createAndRunEngine e basta) e nemmeno il
+/// canale usato da closeOverlay. Quindi da qui NON si possono aprire
+/// url_launcher ne' chiudere la bolla: le azioni si mandano all'app
+/// principale con shareData e le esegue lei.
+///
+/// Riceve i dati come JSON:
+/// { verbo, soggetto, indirizzo, note, telefono, margineAlto }
 class BollaOverlay extends StatefulWidget {
   const BollaOverlay({super.key});
 
@@ -26,6 +31,11 @@ class _BollaOverlayState extends State<BollaOverlay> {
   String _indirizzo = '';
   String _note = '';
   String _telefono = '';
+
+  /// Quanto scendere dal bordo alto dello schermo. Lo misura l'app
+  /// principale sul dispositivo reale (barra di stato / notch) e lo manda
+  /// qui: dentro l'overlay il valore non e' affidabile.
+  double? _margineAlto;
 
   @override
   void initState() {
@@ -41,35 +51,45 @@ class _BollaOverlayState extends State<BollaOverlay> {
           _indirizzo = mappa['indirizzo']?.toString() ?? '';
           _note = mappa['note']?.toString() ?? '';
           _telefono = mappa['telefono']?.toString() ?? '';
+          final m = mappa['margineAlto'];
+          if (m is num) _margineAlto = m.toDouble();
         });
       } catch (_) {/* payload inatteso: la bolla resta com'e' */}
     });
   }
 
-  Future<void> _chiama() async {
+  /// Le azioni le esegue l'app principale: qui i plugin non ci sono.
+  void _chiediAllApp(Map<String, dynamic> azione) {
+    try {
+      FlutterOverlayWindow.shareData(jsonEncode(azione));
+    } catch (_) {}
+  }
+
+  void _chiama() {
     // Stessa ripulitura dell'app: i numeri in anagrafica hanno spazi e punti
     // che rompono l'URI tel:.
     final numero = _telefono.replaceAll(RegExp(r'[^0-9+]'), '');
     if (numero.isEmpty) return;
-    try {
-      await launchUrl(Uri.parse('tel:$numero'));
-    } catch (_) {}
+    _chiediAllApp({'azione': 'chiama', 'telefono': numero});
   }
-
 
   @override
   Widget build(BuildContext context) {
     final bool consegna = _verbo.toUpperCase().contains('CONSEGNA');
     final Color colore = consegna ? AppColors.success : AppColors.primary;
 
+    // La finestra parte dal bordo REALE dello schermo (startPosition 0,0):
+    // qui si scende dell'inset misurato dal dispositivo, con un minimo di
+    // sicurezza per i telefoni che non lo dichiarano.
+    final double insetLocale = MediaQuery.of(context).viewPadding.top;
+    final double alto = (_margineAlto ?? insetLocale).clamp(24.0, 96.0) + 8;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Material(
         color: Colors.transparent,
         child: Container(
-          // Margine alto generoso: la bolla si posiziona SOTTO la barra di
-          // stato e il notch, non incastrata sul bordo superiore.
-          margin: const EdgeInsets.fromLTRB(8, 54, 8, 6),
+          margin: EdgeInsets.fromLTRB(8, alto, 8, 6),
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
             color: AppColors.nightSurface,
@@ -111,9 +131,9 @@ class _BollaOverlayState extends State<BollaOverlay> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => FlutterOverlayWindow.closeOverlay(),
+                    onTap: () => _chiediAllApp({'azione': 'chiudi'}),
                     child: const Padding(
-                      padding: EdgeInsets.all(4),
+                      padding: EdgeInsets.all(6),
                       child: Icon(
                         Icons.close,
                         color: AppColors.nightTextSecondary,
