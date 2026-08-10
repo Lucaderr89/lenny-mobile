@@ -7,13 +7,18 @@ import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Il Sunmi del ristorante esegue solo questa app: lo schermo deve
+        // restare sempre acceso, gli ordini si guardano al volo dal banco.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         createNotificationChannels()
+        KeepAliveService.avvia(this)
     }
 
     private fun createNotificationChannels() {

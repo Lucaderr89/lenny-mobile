@@ -44,8 +44,19 @@ class _HomeScreenState extends State<HomeScreen>
   static const int _maxStampatiMemorizzati = 300;
   bool _memoriaCaricata = false;
 
-  bool _autoPrintEnabled = true; // Stampa automatica abilitata
+  /// Stampa automatica: persistita, deve sopravvivere al riavvio del Sunmi.
+  bool _autoPrintEnabled = true;
+  static const String _chiaveAutoPrint = 'partner_stampa_automatica';
+
   bool _stampaInCorso = false; // Evita stampe sovrapposte sulla stessa stampante
+
+  /// Ordini gia' annunciati con suono e vibrazione in questa sessione: se una
+  /// stampa fallisce e resta in coda, il suono non deve ripartire a ogni giro
+  /// di polling (il banner rosso resta comunque).
+  final Set<int> _notificati = {};
+
+  /// Problema stampante rilevato dal controllo periodico (null = tutto ok).
+  String? _problemaStampante;
 
   /// Ordini che non si sono riusciti a stampare, con il motivo: restano in
   /// evidenza finche' non vengono ristampati.
@@ -123,8 +134,10 @@ class _HomeScreenState extends State<HomeScreen>
       final prefs = await SharedPreferences.getInstance();
       _restaurantName =
           prefs.getString(AppConstants.keyRestaurantName) ?? 'Ristorante';
+      _autoPrintEnabled = prefs.getBool(_chiaveAutoPrint) ?? true;
 
       await _loadOrders();
+      await _controllaStampante();
     } catch (e) {
       debugPrint('Errore caricamento dati: $e');
     } finally {
@@ -269,7 +282,11 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (daStampare.isNotEmpty && _autoPrintEnabled) {
         for (final order in daStampare) {
-          _showNewOrderNotification(order);
+          // Suono e vibrazione una volta sola per ordine: le ristampe
+          // automatiche dopo un fallimento non devono suonare di nuovo.
+          if (_notificati.add(order.id)) {
+            _showNewOrderNotification(order);
+          }
         }
         // Sequenziale: due comande in parallelo si sovrappongono sulla stessa
         // stampante e escono mescolate.
@@ -604,8 +621,40 @@ class _HomeScreenState extends State<HomeScreen>
     _ordersRefreshTimer?.cancel();
     _ordersRefreshTimer = Timer.periodic(
       const Duration(seconds: AppConstants.ordersRefreshInterval),
-      (_) => _loadOrders(),
+      (_) {
+        _loadOrders();
+        _controllaStampante();
+      },
     );
+  }
+
+  /// Controllo proattivo dello stato stampante: carta finita o coperchio
+  /// aperto si vedono subito, non alla prima comanda persa.
+  Future<void> _controllaStampante() async {
+    final problema = await _printerService.problemaCorrente();
+    if (!mounted || problema == _problemaStampante) return;
+    setState(() => _problemaStampante = problema);
+  }
+
+  /// Attiva/disattiva la stampa automatica e la persiste: la scelta deve
+  /// sopravvivere al riavvio del Sunmi.
+  Future<void> _setStampaAutomatica(bool valore) async {
+    setState(() => _autoPrintEnabled = valore);
+    Navigator.pop(context); // chiudi drawer
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          valore
+              ? 'Stampa automatica ATTIVA'
+              : 'Stampa automatica DISATTIVATA',
+        ),
+        backgroundColor: valore ? AppColors.success : AppColors.warning,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_chiaveAutoPrint, valore);
   }
 
   Future<void> _handleLogout() async {
@@ -695,6 +744,7 @@ class _HomeScreenState extends State<HomeScreen>
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                _buildAvvisoStampante(),
                 _buildAvvisoStampe(),
                 Expanded(
                   child: TabBarView(
@@ -719,6 +769,39 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
+    );
+  }
+
+  /// Avviso arancione sullo stato della stampante, anche senza comande in
+  /// coda: il rotolo si cambia prima della cena, non durante. Se ci sono
+  /// gia' comande non stampate, il banner rosso dice gia' tutto.
+  Widget _buildAvvisoStampante() {
+    if (_problemaStampante == null || _stampeFallite.isNotEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      width: double.infinity,
+      color: AppColors.warning,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Stampante: $_problemaStampante',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -819,43 +902,9 @@ class _HomeScreenState extends State<HomeScreen>
             trailing: Switch(
               value: _autoPrintEnabled,
               activeThumbColor: AppColors.primary,
-              onChanged: (value) {
-                setState(() => _autoPrintEnabled = value);
-                Navigator.pop(context); // chiudi drawer
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      value
-                          ? 'Stampa automatica ATTIVA'
-                          : 'Stampa automatica DISATTIVATA',
-                    ),
-                    backgroundColor: value
-                        ? AppColors.success
-                        : AppColors.warning,
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
+              onChanged: (value) => _setStampaAutomatica(value),
             ),
-            onTap: () {
-              setState(() => _autoPrintEnabled = !_autoPrintEnabled);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    _autoPrintEnabled
-                        ? 'Stampa automatica ATTIVA'
-                        : 'Stampa automatica DISATTIVATA',
-                  ),
-                  backgroundColor: _autoPrintEnabled
-                      ? AppColors.success
-                      : AppColors.warning,
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onTap: () => _setStampaAutomatica(!_autoPrintEnabled),
           ),
 
           const Divider(height: 1),

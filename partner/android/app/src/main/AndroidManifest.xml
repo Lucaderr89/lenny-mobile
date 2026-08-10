@@ -10,6 +10,11 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Permesso notifiche push (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Avvio automatico al boot: il Sunmi esegue solo questa app -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Servizio in primo piano: l'app non deve essere uccisa tra i polling -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:label="Lenny Ristoranti"
@@ -36,6 +41,22 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Servizio keep-alive: tiene alta la priorita' del processo -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Riavvio automatico dell'app al boot del dispositivo -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <!-- FCM: canale e icona di default -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
