@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../models/order.dart';
@@ -30,6 +31,10 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isLoading = true;
   List<Order> _orders = [];
 
+  /// Ordini annullati arrivati dal server. Non compaiono nelle liste: servono
+  /// per l'avviso bloccante quando l'annullamento arriva dopo la stampa.
+  List<Order> _annullati = [];
+
   /// Ordini gia' stampati, persistiti su disco. Tenerli solo in memoria
   /// significava che dopo un riavvio del tablet gli ordini arrivati ad app
   /// spenta venivano marcati come "gia' visti" e non si stampavano mai.
@@ -45,6 +50,20 @@ class _HomeScreenState extends State<HomeScreen>
   /// Ordini che non si sono riusciti a stampare, con il motivo: restano in
   /// evidenza finche' non vengono ristampati.
   final Map<int, String> _stampeFallite = {};
+
+  /// Ordini annullati per cui il ristorante ha gia' confermato la lettura
+  /// dell'avviso: non vanno riproposti a ogni aggiornamento.
+  final Set<int> _annullatiConfermati = {};
+  static const String _chiaveAnnullati = 'partner_annullati_confermati';
+
+  /// Impronta del pagamento (stato + metodo) al momento della stampa, per
+  /// ordine: se al giro dopo e' diversa, il ristorante ha in mano una comanda
+  /// che dice il falso e va avvisato.
+  final Map<int, String> _pagamentiStampati = {};
+  static const String _chiavePagamenti = 'partner_pagamenti_stampati';
+
+  /// Evita di sovrapporre piu' avvisi bloccanti.
+  bool _avvisoInCorso = false;
   Timer? _ordersRefreshTimer;
   StreamSubscription? _fcmSubscription;
   late TabController _tabController;
@@ -115,10 +134,12 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  /// Carica da disco gli ordini gia' stampati.
+  /// Carica da disco gli ordini gia' stampati, le conferme di lettura degli
+  /// annullati e le impronte pagamento.
   /// Alla primissima apertura dell'app la memoria e' vuota: in quel caso si
-  /// registrano gli ordini presenti senza stamparli, altrimenti il ristorante
-  /// si troverebbe a stampare tutto lo storico.
+  /// registrano gli ordini presenti senza stamparli (altrimenti il ristorante
+  /// si troverebbe a stampare tutto lo storico) e gli annullati gia' presenti
+  /// si danno per letti (sono di prima dell'installazione).
   Future<void> _caricaMemoriaStampe(List<Order> ordiniCorrenti) async {
     if (_memoriaCaricata) return;
 
@@ -126,30 +147,79 @@ class _HomeScreenState extends State<HomeScreen>
     final primoAvvioFatto = prefs.getBool(_chiavePrimoAvvio) ?? false;
 
     if (!primoAvvioFatto) {
-      _stampati.addAll(ordiniCorrenti.map((o) => o.id));
+      for (final o in ordiniCorrenti) {
+        if (o.isCancelled) {
+          _annullatiConfermati.add(o.id);
+        } else {
+          _stampati.add(o.id);
+          _pagamentiStampati[o.id] = o.paymentFingerprint;
+        }
+      }
       await prefs.setBool(_chiavePrimoAvvio, true);
       await _salvaMemoriaStampe();
     } else {
       final salvati = prefs.getStringList(_chiaveStampati) ?? const [];
       _stampati.addAll(salvati.map(int.tryParse).whereType<int>());
+
+      final confermati = prefs.getStringList(_chiaveAnnullati) ?? const [];
+      _annullatiConfermati.addAll(
+        confermati.map(int.tryParse).whereType<int>(),
+      );
+
+      final impronte = prefs.getString(_chiavePagamenti);
+      if (impronte != null && impronte.isNotEmpty) {
+        try {
+          final mappa = jsonDecode(impronte) as Map<String, dynamic>;
+          mappa.forEach((chiave, valore) {
+            final id = int.tryParse(chiave);
+            if (id != null) _pagamentiStampati[id] = valore.toString();
+          });
+        } catch (e) {
+          debugPrint('Impronte pagamento non leggibili: $e');
+        }
+      }
     }
 
     _memoriaCaricata = true;
   }
 
-  Future<void> _salvaMemoriaStampe() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Si tengono solo gli id piu' recenti: la lista non deve crescere all'infinito.
-    final lista = _stampati.toList()..sort();
-    final daSalvare = lista.length > _maxStampatiMemorizzati
+  /// Taglia un elenco ordinato di id tenendo solo i piu' recenti.
+  List<int> _idPiuRecenti(Set<int> ids) {
+    final lista = ids.toList()..sort();
+    return lista.length > _maxStampatiMemorizzati
         ? lista.sublist(lista.length - _maxStampatiMemorizzati)
         : lista;
+  }
+
+  Future<void> _salvaMemoriaStampe() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Si tengono solo gli id piu' recenti: le liste non devono crescere
+    // all'infinito.
+    final daSalvare = _idPiuRecenti(_stampati);
     _stampati
       ..clear()
       ..addAll(daSalvare);
     await prefs.setStringList(
       _chiaveStampati,
       daSalvare.map((e) => e.toString()).toList(),
+    );
+
+    final confermatiDaSalvare = _idPiuRecenti(_annullatiConfermati);
+    _annullatiConfermati
+      ..clear()
+      ..addAll(confermatiDaSalvare);
+    await prefs.setStringList(
+      _chiaveAnnullati,
+      confermatiDaSalvare.map((e) => e.toString()).toList(),
+    );
+
+    // Le impronte pagamento hanno senso solo per ordini ancora in memoria.
+    _pagamentiStampati.removeWhere((id, _) => !_stampati.contains(id));
+    await prefs.setString(
+      _chiavePagamenti,
+      jsonEncode(
+        _pagamentiStampati.map((id, fp) => MapEntry(id.toString(), fp)),
+      ),
     );
   }
 
@@ -161,17 +231,41 @@ class _HomeScreenState extends State<HomeScreen>
       await _caricaMemoriaStampe(orders);
       if (!mounted) return;
 
-      // Da stampare: mai stampato prima e ancora da preparare. Include gli
-      // ordini arrivati mentre l'app era chiusa, che prima andavano persi.
-      final daStampare = orders
-          .where(
-            (o) =>
-                !_stampati.contains(o.id) &&
-                (o.status == 'pending' || o.status == 'assigned'),
-          )
+      final attivi = orders.where((o) => !o.isCancelled).toList();
+      final annullati = orders.where((o) => o.isCancelled).toList();
+
+      // Un ordine annullato non va piu' stampato: se era tra i falliti, il
+      // banner rosso deve sparire (l'avviso di annullamento fa il resto).
+      for (final o in annullati) {
+        _stampeFallite.remove(o.id);
+      }
+
+      // Da stampare: mai stampato prima, in qualunque stato attivo. Prima
+      // uscivano solo pending/assigned: un ordine gia' preso in carico dal
+      // pannello prima che l'app lo vedesse non veniva mai stampato.
+      final daStampare = attivi
+          .where((o) => !_stampati.contains(o.id))
           .toList();
 
-      setState(() => _orders = orders);
+      // Ordini stampati prima che esistesse l'impronta pagamento: si registra
+      // quella attuale senza avvisare, da qui in poi i cambi si vedono.
+      var improntePagamentoAggiunte = false;
+      for (final o in attivi) {
+        if (_stampati.contains(o.id) &&
+            !_pagamentiStampati.containsKey(o.id)) {
+          _pagamentiStampati[o.id] = o.paymentFingerprint;
+          improntePagamentoAggiunte = true;
+        }
+      }
+
+      setState(() {
+        _orders = attivi;
+        _annullati = annullati;
+      });
+
+      if (improntePagamentoAggiunte) {
+        await _salvaMemoriaStampe();
+      }
 
       if (daStampare.isNotEmpty && _autoPrintEnabled) {
         for (final order in daStampare) {
@@ -181,6 +275,8 @@ class _HomeScreenState extends State<HomeScreen>
         // stampante e escono mescolate.
         await _stampaInSequenza(daStampare);
       }
+
+      await _mostraAvvisiBloccanti();
     } catch (e) {
       debugPrint('Errore caricamento ordini: $e');
     }
@@ -195,6 +291,9 @@ class _HomeScreenState extends State<HomeScreen>
         final esito = await _printerService.printOrder(order, _restaurantName);
         if (esito.ok) {
           _stampati.add(order.id);
+          // La comanda in mano al ristorante dice questo pagamento: e' il
+          // riferimento per accorgersi di cambi successivi.
+          _pagamentiStampati[order.id] = order.paymentFingerprint;
           _stampeFallite.remove(order.id);
         } else {
           // Non si segna come stampato: cosi' resta ristampabile.
@@ -225,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '🔔 Nuovo ordine #${order.id} - ${order.customerName}',
+                'Nuovo ordine #${order.id} - ${order.customerName}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -248,14 +347,256 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  /// Ristampa manuale di un ordine la cui stampa era fallita.
+  /// Stampa manuale di un ordine (dalla card o dopo un fallimento).
   Future<void> _ristampa(Order order) async {
     await _stampaInSequenza([order]);
     if (!mounted) return;
     final fallita = _stampeFallite[order.id];
     _showMessage(
-      fallita ?? 'Comanda #${order.id} ristampata',
+      fallita ?? 'Comanda #${order.id} stampata',
       fallita == null,
+    );
+  }
+
+  // ── Avvisi bloccanti ──────────────────────────────────────────────────────
+  //
+  // Due casi in cui la comanda in mano al ristorante dice il falso:
+  // - ordine annullato dopo la stampa: la cucina va fermata;
+  // - pagamento cambiato dopo la stampa: la cassa sbaglierebbe l'incasso.
+  // In entrambi i casi: avviso a tutto schermo, impossibile da ignorare,
+  // che si chiude solo con la conferma di lettura. Uno alla volta.
+
+  Future<void> _mostraAvvisiBloccanti() async {
+    if (_avvisoInCorso || !mounted) return;
+    _avvisoInCorso = true;
+    try {
+      while (mounted) {
+        final annullato = _annullati
+            .where(
+              (o) =>
+                  _stampati.contains(o.id) &&
+                  !_annullatiConfermati.contains(o.id),
+            )
+            .firstOrNull;
+        if (annullato != null) {
+          await _avvisoOrdineAnnullato(annullato);
+          _annullatiConfermati.add(annullato.id);
+          await _salvaMemoriaStampe();
+          continue;
+        }
+
+        final cambiato = _orders
+            .where(
+              (o) =>
+                  _stampati.contains(o.id) &&
+                  _pagamentiStampati.containsKey(o.id) &&
+                  _pagamentiStampati[o.id] != o.paymentFingerprint,
+            )
+            .firstOrNull;
+        if (cambiato != null) {
+          final ristampa = await _avvisoPagamentoCambiato(cambiato);
+          // Confermato: da qui in poi vale il pagamento nuovo.
+          _pagamentiStampati[cambiato.id] = cambiato.paymentFingerprint;
+          await _salvaMemoriaStampe();
+          if (ristampa == true) {
+            await _stampaInSequenza([cambiato]);
+          }
+          continue;
+        }
+
+        break;
+      }
+    } finally {
+      _avvisoInCorso = false;
+    }
+  }
+
+  Future<void> _avvisoOrdineAnnullato(Order order) async {
+    _playNotificationSound();
+    HapticFeedback.vibrate();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: Dialog.fullscreen(
+          backgroundColor: AppColors.danger,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.cancel_outlined,
+                      color: Colors.white, size: 88),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'ORDINE ANNULLATO',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Ordine #${order.id} - ${order.customerName}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (order.timeSlot.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        '${order.formattedDate}  ${order.timeSlot}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'NON preparare questo ordine.\n'
+                    'Se la comanda e\' gia\' in cucina, ritirala.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    height: 64,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.danger,
+                      ),
+                      child: const Text(
+                        'HO LETTO, AVVISO LA CUCINA',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Restituisce true se il ristorante ha scelto di ristampare la comanda.
+  Future<bool?> _avvisoPagamentoCambiato(Order order) async {
+    _playNotificationSound();
+    HapticFeedback.vibrate();
+    final prima = Order.descriviPagamento(_pagamentiStampati[order.id] ?? '');
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: Dialog.fullscreen(
+          backgroundColor: AppColors.primaryDark,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.payments_outlined,
+                      color: Colors.white, size: 88),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'PAGAMENTO CAMBIATO',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Ordine #${order.id} - ${order.customerName}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'La comanda stampata dice:\n$prima',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Ora l\'ordine risulta:\n${order.paymentDescription}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    height: 64,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primaryDark,
+                      ),
+                      child: const Text(
+                        'HO LETTO, RISTAMPA LA COMANDA',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 56,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white, width: 2),
+                      ),
+                      child: const Text(
+                        'HO LETTO, SENZA RISTAMPA',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -485,8 +826,8 @@ class _HomeScreenState extends State<HomeScreen>
                   SnackBar(
                     content: Text(
                       value
-                          ? '✓ Stampa automatica ATTIVA'
-                          : '✗ Stampa automatica DISATTIVATA',
+                          ? 'Stampa automatica ATTIVA'
+                          : 'Stampa automatica DISATTIVATA',
                     ),
                     backgroundColor: value
                         ? AppColors.success
@@ -504,8 +845,8 @@ class _HomeScreenState extends State<HomeScreen>
                 SnackBar(
                   content: Text(
                     _autoPrintEnabled
-                        ? '✓ Stampa automatica ATTIVA'
-                        : '✗ Stampa automatica DISATTIVATA',
+                        ? 'Stampa automatica ATTIVA'
+                        : 'Stampa automatica DISATTIVATA',
                   ),
                   backgroundColor: _autoPrintEnabled
                       ? AppColors.success
@@ -594,7 +935,7 @@ class _HomeScreenState extends State<HomeScreen>
 
         if (success) {
           _showMessage(
-            '✓ Stampante funzionante! Verifica lo scontrino stampato',
+            'Stampante funzionante. Verifica lo scontrino stampato',
             true,
           );
         } else {
@@ -894,6 +1235,10 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     const Spacer(),
+                    // Stampa manuale direttamente dalla card: prima l'unico
+                    // punto di stampa era dentro la scheda di dettaglio.
+                    _buildBottoneStampaCard(order),
+                    const SizedBox(width: 4),
                     Icon(
                       Icons.chevron_right,
                       size: 18,
@@ -961,6 +1306,30 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  /// Bottone di stampa sulla card: rosso se l'ultima stampa e' fallita.
+  Widget _buildBottoneStampaCard(Order order) {
+    final fallita = _stampeFallite.containsKey(order.id);
+    return SizedBox(
+      height: 32,
+      child: OutlinedButton.icon(
+        onPressed: () => _ristampa(order),
+        icon: Icon(fallita ? Icons.print_disabled : Icons.print, size: 16),
+        label: Text(
+          fallita ? 'Ristampa' : 'Stampa',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: fallita ? Colors.white : AppColors.primary,
+          backgroundColor: fallita ? AppColors.danger : null,
+          side: BorderSide(
+            color: fallita ? AppColors.danger : AppColors.primary,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+        ),
+      ),
+    );
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
@@ -1025,7 +1394,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Ritiro confermato!'),
+          content: Text('Ritiro confermato'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -1033,7 +1402,7 @@ class _HomeScreenState extends State<HomeScreen>
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('❌ Errore nella conferma del ritiro. Riprova.'),
+          content: Text('Errore nella conferma del ritiro. Riprova.'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -1360,7 +1729,7 @@ class _OrderDetailsSheet extends StatelessWidget {
         Navigator.pop(context); // Chiudi loading
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✗ Errore: ${e.toString()}'),
+            content: Text('Errore: ${e.toString()}'),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
           ),

@@ -250,6 +250,19 @@ class PrinterService {
           reverse: true,
         ),
       );
+      // Metodo di pagamento: per la cassa "DA PAGARE" da solo non basta,
+      // contanti e bancomat si gestiscono in modo diverso.
+      final metodoPagamento = (order.paymentMethodName ?? '').trim();
+      if (metodoPagamento.isNotEmpty) {
+        await SunmiPrinter.printText(
+          metodoPagamento,
+          style: SunmiTextStyle(
+            fontSize: 28,
+            bold: true,
+            align: SunmiPrintAlign.CENTER,
+          ),
+        );
+      }
       await SunmiPrinter.lineWrap(1);
 
       await SunmiPrinter.printText('--------------------------------');
@@ -361,6 +374,11 @@ class PrinterService {
       }
       if (order.appCreditsUsed > 0) {
         await _riga('Crediti usati', -order.appCreditsUsed);
+      }
+      // Componenti non itemizzate (tipico degli ordini importati): senza
+      // questa voce le righe stampate non sommerebbero al totale.
+      if (order.altreVoci.abs() >= 0.01) {
+        await _riga('Altre voci', order.altreVoci);
       }
       await SunmiPrinter.printText('--------------------------------');
       await SunmiPrinter.printText(

@@ -14,6 +14,8 @@ class Order {
   final String? dateOrder;
   final String pickupDelivery; // 'pickup' o 'delivery'
   final String? paymentStatus; // 'paid', 'pending', ecc.
+  final int? paymentMethodId;
+  final String? paymentMethodName; // 'Contanti', 'Bancomat', 'Online', ...
   final List<OrderItem> items;
 
   /// Somma delle righe articolo. Il totale dell'ordine comprende anche consegna,
@@ -39,6 +41,8 @@ class Order {
     this.dateOrder,
     required this.pickupDelivery,
     this.paymentStatus,
+    this.paymentMethodId,
+    this.paymentMethodName,
     required this.items,
     this.itemsTotal = 0,
     this.deliveryFee = 0,
@@ -49,11 +53,48 @@ class Order {
 
   bool get isDelivery => pickupDelivery == 'delivery';
   bool get isPickup => pickupDelivery == 'pickup';
+  bool get isCancelled => status == 'cancelled';
 
   /// Etichetta pagamento per la stampa
   String get paymentLabel {
     if (paymentStatus == 'paid') return 'PAGATO';
     return 'DA PAGARE';
+  }
+
+  /// Impronta del pagamento cosi' com'e' stato stampato: se cambia dopo la
+  /// stampa (es. da contanti a pagato online) il ristorante va avvisato,
+  /// altrimenti in cassa tornano i conti sbagliati. Il nome del metodo e'
+  /// incluso per poter descrivere il "prima" nell'avviso.
+  String get paymentFingerprint =>
+      '${paymentStatus ?? ''}|${paymentMethodId ?? ''}|${paymentMethodName ?? ''}';
+
+  /// Descrizione leggibile del pagamento, per gli avvisi.
+  String get paymentDescription {
+    final metodo = (paymentMethodName ?? '').trim();
+    if (metodo.isEmpty) return paymentLabel;
+    return '$paymentLabel ($metodo)';
+  }
+
+  /// Descrizione leggibile di un'impronta pagamento salvata.
+  static String descriviPagamento(String impronta) {
+    final parti = impronta.split('|');
+    final stato = parti.isNotEmpty ? parti[0] : '';
+    final metodo = parti.length > 2 ? parti[2].trim() : '';
+    final etichetta = stato == 'paid' ? 'PAGATO' : 'DA PAGARE';
+    return metodo.isEmpty ? etichetta : '$etichetta ($metodo)';
+  }
+
+  /// Quota del totale non spiegata da articoli, consegna, servizio e sconti.
+  /// Negli ordini importati alcune componenti non sono itemizzate: senza
+  /// questa voce la comanda non quadrerebbe mai con il totale.
+  double get altreVoci {
+    final residuo = total -
+        itemsTotal -
+        deliveryFee -
+        orderFee +
+        discountAmount +
+        appCreditsUsed;
+    return (residuo * 100).roundToDouble() / 100;
   }
 
   String get timeSlot {
@@ -140,6 +181,8 @@ class Order {
       dateOrder: json['date_order'],
       pickupDelivery: json['pickup_delivery'] ?? 'delivery',
       paymentStatus: json['payment_status']?.toString(),
+      paymentMethodId: int.tryParse(json['payment_method_id']?.toString() ?? ''),
+      paymentMethodName: json['payment_method_name']?.toString(),
       items: items,
     );
   }
