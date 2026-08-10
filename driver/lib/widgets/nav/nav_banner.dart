@@ -50,6 +50,10 @@ class NavBanner extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(
+                // Senza min la Column si prende TUTTA l'altezza che lo Stack
+                // le concede e il banner copre lo schermo intero: il testo
+                // della manovra e' due righe, l'altezza la fanno loro.
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
