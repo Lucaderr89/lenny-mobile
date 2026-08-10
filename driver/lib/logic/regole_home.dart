@@ -47,4 +47,86 @@ class RegoleHome {
     final ordinate = perFascia.keys.toList()..sort();
     return {for (final f in ordinate) f: perFascia[f]!};
   }
+
+  // ── Cursore tappa del giro ─────────────────────────────────────────────
+  // Stato di ogni tappa DEDOTTO dallo stato (geofencing) del relativo
+  // ordine, senza una macchina a stati propria. Stesse regole della card
+  // giro e della schermata di navigazione: estratte qui perche' le due
+  // viste non divergano mai.
+  //
+  // [statiOverride] = stati piu' freschi degli oggetti Order (es. letti
+  // dalla risposta di track-location): {orderId: status}. Vince sul campo
+  // status dell'ordine, cosi' la navigazione avanza la tappa senza
+  // aspettare il polling ordini.
+
+  static String _stato(Order o, Map<int, String> statiOverride) =>
+      statiOverride[o.id] ?? o.status;
+
+  /// Tappa completata: ritiro fatto o consegna avvenuta.
+  static bool tappaChiusa(
+    RouteStop st,
+    Order? o, {
+    Map<int, String> statiOverride = const {},
+  }) {
+    if (o == null) return true; // ordine non piu' tra gli attivi → consegnato
+    final stato = _stato(o, statiOverride);
+    if (st.isPickup) {
+      return o.pickedUpAt != null ||
+          stato == 'in_delivery' ||
+          stato == 'delivered';
+    }
+    return stato == 'delivered';
+  }
+
+  /// Tappa in corso adesso (geofencing: al ristorante / verso il cliente).
+  static bool tappaInCorso(
+    RouteStop st,
+    Order? o, {
+    Map<int, String> statiOverride = const {},
+  }) {
+    if (o == null) return false;
+    final stato = _stato(o, statiOverride);
+    return st.isPickup ? stato == 'picking_up' : stato == 'in_delivery';
+  }
+
+  /// PROSSIMA TAPPA = prima non completata. E' il perno della card giro e
+  /// il bersaglio della navigazione; si sposta da sola man mano che le
+  /// tappe si chiudono.
+  static RouteStop? prossimaTappa(
+    List<RouteStop> steps,
+    Map<int, Order> orderById, {
+    Map<int, String> statiOverride = const {},
+  }) {
+    for (final st in steps) {
+      if (!tappaChiusa(st, orderById[st.orderId],
+          statiOverride: statiOverride)) {
+        return st;
+      }
+    }
+    return null;
+  }
+
+  /// Sequenza di tappe per ordini SENZA route_plan dal pannello: ritiro e
+  /// consegna di ogni ordine, nell'ordine dato. E' il giro sintetico della
+  /// home, riusato dalla navigazione per ordini singoli e gruppi.
+  static List<RouteStop> stepsSintetici(List<Order> ordini) {
+    final steps = <RouteStop>[];
+    for (final o in ordini) {
+      steps.add(RouteStop(
+        type: 'pickup',
+        orderId: o.id,
+        lat: o.restaurantLat,
+        lng: o.restaurantLng,
+        cumTime: 0,
+      ));
+      steps.add(RouteStop(
+        type: 'delivery',
+        orderId: o.id,
+        lat: o.deliveryLat,
+        lng: o.deliveryLng,
+        cumTime: 0,
+      ));
+    }
+    return steps;
+  }
 }

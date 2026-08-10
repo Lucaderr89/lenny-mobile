@@ -157,4 +157,11 @@ class TtsService {
       await _tts.speak(testo);
     } catch (_) {}
   }
+
+  /// Zittisce subito (es. chiusura della navigazione a meta' frase).
+  Future<void> stop() async {
+    try {
+      await _tts.stop();
+    } catch (_) {}
+  }
 }

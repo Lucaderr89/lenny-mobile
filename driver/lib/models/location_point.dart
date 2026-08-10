@@ -4,6 +4,7 @@ class LocationPoint {
   final double longitude;
   final double? accuracy; // Precisione in metri
   final double? speed; // Velocità in km/h
+  final double? heading; // Direzione di marcia in gradi (0..360, null se ignota)
   final DateTime timestamp;
 
   LocationPoint({
@@ -11,6 +12,7 @@ class LocationPoint {
     required this.longitude,
     this.accuracy,
     this.speed,
+    this.heading,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 

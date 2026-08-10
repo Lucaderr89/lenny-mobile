@@ -13,6 +13,8 @@ class AppConstants {
   static const String updateLocationEndpoint = '$apiUrl/driver/location';
   // Tracking GPS leggero (no sessione): attivo solo quando il driver ha ordini attivi
   static const String trackLocationEndpoint = '$apiUrl/driver/track-location';
+  // Navigazione in-app: percorso GPS attuale -> tappa (geometria + istruzioni)
+  static const String routeEndpoint = '$apiUrl/driver/route';
 
   // App Info
   static const String appName = 'Lenny Driver';

@@ -81,6 +81,7 @@ class DriverLocationService {
         longitude: position.longitude,
         accuracy: position.accuracy,
         speed: position.speed * 3.6, // m/s to km/h
+        heading: position.heading >= 0 ? position.heading : null,
         timestamp: DateTime.now(),
       );
 
@@ -161,6 +162,7 @@ class DriverLocationService {
               longitude: position.longitude,
               accuracy: position.accuracy,
               speed: position.speed * 3.6, // m/s to km/h
+              heading: position.heading >= 0 ? position.heading : null,
               timestamp: DateTime.now(),
             );
 

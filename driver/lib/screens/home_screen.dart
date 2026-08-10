@@ -22,6 +22,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
 import 'delivery_history_screen.dart';
+import 'navigation_screen.dart';
 import 'panel_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
@@ -45,7 +46,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _driverName = '';
   bool _isLoading = true;
   DriverShiftInfo? _shiftInfo;
-  List<Order> _orders = [];
+  // UNICA fonte della lista ordini: il notifier (la navigazione lo ascolta
+  // per far avanzare il cursore tappa). _orders e' solo una vista comoda:
+  // cosi' non esistono due copie da tenere allineate a mano.
+  final ValueNotifier<List<Order>> _ordersNotifier = ValueNotifier(<Order>[]);
+  List<Order> get _orders => _ordersNotifier.value;
   Timer? _ordersRefreshTimer;
   final Map<int, String> _previousOrderStatuses = {};
 
@@ -121,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _audioPlayer.dispose();
     _reminderPlayer.dispose();
     _sessionService.dispose();
+    _ordersNotifier.dispose();
     // Ferma il tracking GPS quando si lascia la home (es. logout).
     GeofenceTrackingService().shutdown();
     super.dispose();
@@ -250,7 +256,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _previousOrderStatuses[order.id] = currentStatus;
         }
 
-        setState(() => _orders = orders);
+        // Il notifier notifica solo su VERI cambiamenti: il polling ogni 30s
+        // che risponde con gli stessi dati non deve far ricomputare nulla
+        // alla schermata di navigazione.
+        if (_ordiniCambiati(_ordersNotifier.value, orders)) {
+          _ordersNotifier.value = orders;
+        }
+        setState(() {});
 
         // Tracking GPS legato alla presenza di ordini attivi (food o partner):
         // la lista contiene SOLO ordini attivi, quindi isNotEmpty = "ha un ordine".
@@ -259,7 +271,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         // Schermo sempre acceso finche' c'e' un ordine attivo: il telefono
         // a cruscotto e' il "navigatore Lenny", non deve spegnersi.
-        WakelockPlus.toggle(enable: orders.isNotEmpty);
+        // Con la NAVIGAZIONE APERTA resta acceso comunque: questo polling
+        // gira anche sotto la schermata di navigazione, e spegnere il
+        // wakelock li' sotto addormenterebbe la mappa a fine giro.
+        WakelockPlus.toggle(
+          enable: orders.isNotEmpty || NavigationScreen.schermataAperta,
+        );
 
         // Bolla overlay: segue l'ordine su cui il driver ha premuto NAVIGA
         // (vedi RegoleHome.ordinePerBolla). Se quell'ordine non e' piu' in
@@ -275,6 +292,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e) {
       print('❌ Errore caricamento ordini: $e');
     }
+  }
+
+  /// True se le due liste differiscono in cio' che conta per le card e per
+  /// la navigazione (id, stato, timestamp di avanzamento, giro).
+  bool _ordiniCambiati(List<Order> vecchi, List<Order> nuovi) {
+    if (vecchi.length != nuovi.length) return true;
+    for (var i = 0; i < vecchi.length; i++) {
+      final a = vecchi[i];
+      final b = nuovi[i];
+      if (a.id != b.id ||
+          a.status != b.status ||
+          a.pickedUpAt != b.pickedUpAt ||
+          a.confirmedAt != b.confirmedAt ||
+          a.routePlanRaw != b.routePlanRaw ||
+          a.deliverySequence != b.deliverySequence) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void _startOrdersRefresh() {
@@ -950,27 +986,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     for (final fascia in perFascia.keys) {
       final daGiro = perFascia[fascia]!;
       if (daGiro.length < 2) continue;
-      final steps = <RouteStop>[];
-      for (final o in daGiro) {
-        steps.add(
-          RouteStop(
-            type: 'pickup',
-            orderId: o.id,
-            lat: o.restaurantLat,
-            lng: o.restaurantLng,
-            cumTime: 0,
-          ),
-        );
-        steps.add(
-          RouteStop(
-            type: 'delivery',
-            orderId: o.id,
-            lat: o.deliveryLat,
-            lng: o.deliveryLng,
-            cumTime: 0,
-          ),
-        );
-      }
+      final steps = RegoleHome.stepsSintetici(daGiro);
       widgets.add(_buildGiroCard(daGiro, stepsCustom: steps));
       for (final o in daGiro) {
         singoli.remove(o);
@@ -1001,20 +1017,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final slot = giroOrders.first.timeSlot;
     final total = giroOrders.fold<double>(0, (s, o) => s + o.total);
 
-    bool stepDone(RouteStop st) {
-      final o = orderById[st.orderId];
-      if (o == null) return true; // ordine non più tra gli attivi → consegnato
-      if (st.isPickup) {
-        return o.pickedUpAt != null || o.isInDelivery || o.status == 'delivered';
-      }
-      return o.status == 'delivered';
-    }
+    // Cursore tappa condiviso con la navigazione (RegoleHome): stesse
+    // regole qui e nella NavigationScreen, mai due verita' diverse.
+    bool stepDone(RouteStop st) =>
+        RegoleHome.tappaChiusa(st, orderById[st.orderId]);
 
-    bool stepInProgress(RouteStop st) {
-      final o = orderById[st.orderId];
-      if (o == null) return false;
-      return st.isPickup ? o.isPickingUp : o.isInDelivery;
-    }
+    bool stepInProgress(RouteStop st) =>
+        RegoleHome.tappaInCorso(st, orderById[st.orderId]);
 
     final doneCount = steps.where(stepDone).length;
 
@@ -1022,17 +1031,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // vengono il banner in testa, il bersaglio del NAVIGA e l'ordine a cui
     // si riferisce HO UN PROBLEMA. Si sposta da sola man mano che le tappe
     // si chiudono, esattamente come il banner della card singola.
-    RouteStop? prossima;
-    for (final st in steps) {
-      if (!stepDone(st)) {
-        prossima = st;
-        break;
-      }
-    }
+    final RouteStop? prossima = RegoleHome.prossimaTappa(steps, orderById);
     final Order? ordineProssimo = prossima == null
         ? null
         : orderById[prossima.orderId];
-    final bool prossimaERitiro = prossima?.isPickup ?? true;
 
     AzioneProssima? banner;
     Color coloreAzione = AppColors.primary;
@@ -1172,17 +1174,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icona: Icons.navigation,
                       etichetta: 'NAVIGA',
                       colore: coloreAzione,
-                      onTap: () => _navigaConBolla(
+                      onTap: () => _apriNavigazione(
                         ordineProssimo,
-                        prossimaERitiro
-                            ? ordineProssimo.restaurantLat
-                            : ordineProssimo.deliveryLat,
-                        prossimaERitiro
-                            ? ordineProssimo.restaurantLng
-                            : ordineProssimo.deliveryLng,
-                        prossimaERitiro
-                            ? ordineProssimo.restaurantName
-                            : ordineProssimo.customerName,
+                        gruppo: giroOrders,
+                        tappe: steps,
                       ),
                     ),
                   ),
@@ -1618,16 +1613,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // Bersaglio dei bottoni grandi = la tappa ATTIVA
-    final double targetLat = inConsegna
-        ? order.deliveryLat
-        : order.restaurantLat;
-    final double targetLng = inConsegna
-        ? order.deliveryLng
-        : order.restaurantLng;
-    final String targetNome = inConsegna
-        ? order.customerName
-        : order.restaurantName;
     // Le chiamate NON stanno piu' fra i bottoni grandi: un solo "CHIAMA" non
     // diceva chi stavi chiamando. Ora ogni riga ha il suo tasto — quella del
     // ristorante chiama il ristorante, quella del cliente chiama il cliente.
@@ -1898,12 +1883,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icona: Icons.navigation,
                       etichetta: 'NAVIGA',
                       colore: coloreAzione,
-                      onTap: () => _navigaConBolla(
-                        order,
-                        targetLat,
-                        targetLng,
-                        targetNome,
-                      ),
+                      onTap: () => _apriNavigazione(order),
                     ),
                   ),
 
@@ -2272,12 +2252,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icona: Icons.navigation,
                       etichetta: 'NAVIGA',
                       colore: coloreAzione,
-                      onTap: () => _navigaConBolla(
-                        order,
-                        inConsegna ? order.deliveryLat : order.restaurantLat,
-                        inConsegna ? order.deliveryLng : order.restaurantLng,
-                        inConsegna ? order.customerName : order.restaurantName,
-                      ),
+                      onTap: () => _apriNavigazione(order),
                     ),
                   ),
 
@@ -2334,9 +2309,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final inConsegna = batchOrders.where((o) => o.isInDelivery).toList();
     final AzioneProssima banner;
     final Color coloreAzione;
-    final double targetLat;
-    final double targetLng;
-    final String targetNome;
     if (!allConfirmed) {
       coloreAzione = AppColors.warning;
       banner = AzioneProssima(
@@ -2346,9 +2318,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         colore: coloreAzione,
         icona: Icons.notifications_active,
       );
-      targetLat = firstOrder.restaurantLat;
-      targetLng = firstOrder.restaurantLng;
-      targetNome = firstOrder.restaurantName;
     } else if (inConsegna.isNotEmpty) {
       final o = inConsegna.first;
       coloreAzione = AppColors.success;
@@ -2360,9 +2329,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         colore: coloreAzione,
         icona: Icons.location_on,
       );
-      targetLat = o.deliveryLat;
-      targetLng = o.deliveryLng;
-      targetNome = o.customerName;
     } else {
       coloreAzione = AppColors.primary;
       banner = AzioneProssima(
@@ -2373,9 +2339,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         colore: coloreAzione,
         icona: Icons.storefront,
       );
-      targetLat = firstOrder.restaurantLat;
-      targetLng = firstOrder.restaurantLng;
-      targetNome = firstOrder.restaurantName;
     }
     final Order ordineAzione = inConsegna.isNotEmpty
         ? inConsegna.first
@@ -2620,11 +2583,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icona: Icons.navigation,
                       etichetta: 'NAVIGA',
                       colore: coloreAzione,
-                      onTap: () => _navigaConBolla(
+                      onTap: () => _apriNavigazione(
                         ordineAzione,
-                        targetLat,
-                        targetLng,
-                        targetNome,
+                        gruppo: batchOrders,
                       ),
                     ),
                   ),
@@ -3514,10 +3475,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// NAVIGA dalla card: prima accende la BOLLA sopra Maps (chiedendo il
-  /// permesso overlay la prima volta, con spiegazione), poi avvia la
-  /// navigazione. La bolla tiene tappa, note e telefono sempre in vista.
-  Future<void> _navigaConBolla(
+  /// NAVIGA dalla card: apre la NAVIGAZIONE INTEGRATA (mappa in-app con
+  /// percorso, tappe e avanzamento automatico) sugli ORDINI DELLA CARD
+  /// toccata — mai ricostruiti per fascia: la navigazione deve mostrare
+  /// esattamente il giro che il driver ha appena guardato. La bolla qui
+  /// non serve piu' (dentro l'app c'e' gia' tutto sotto gli occhi, e al
+  /// rientro si chiuderebbe da sola); resta viva sul percorso "Apri in
+  /// Google Maps" (vedi _navigaEsterno).
+  ///
+  /// [gruppo] = ordini della card (default: solo l'ordine toccato);
+  /// [tappe] = sequenza tappe della card (default: ritiro+consegna di
+  /// ciascun ordine del gruppo, come il giro sintetico).
+  Future<void> _apriNavigazione(
+    Order order, {
+    List<Order>? gruppo,
+    List<RouteStop>? tappe,
+  }) async {
+    final ordini = (gruppo == null || gruppo.isEmpty) ? [order] : gruppo;
+    final steps = (tappe == null || tappe.isEmpty)
+        ? RegoleHome.stepsSintetici(ordini)
+        : tappe;
+
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NavigationScreen(
+          ordini: ordini,
+          tappe: steps,
+          ordiniLive: _ordersNotifier,
+          onNavigaEsterno: _navigaEsterno,
+          onConsegnato: _confirmOrderDelivered,
+        ),
+      ),
+    );
+  }
+
+  /// Via di fuga verso Google Maps: prima accende la BOLLA sopra Maps
+  /// (chiedendo il permesso overlay la prima volta, con spiegazione), poi
+  /// avvia la navigazione esterna. La bolla tiene tappa, note e telefono
+  /// sempre in vista sopra l'app esterna.
+  Future<void> _navigaEsterno(
     Order order,
     double lat,
     double lng,
