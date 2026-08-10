@@ -660,10 +660,12 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ignore: unused_local_variable
   Widget _buildOrderCard(Order order) {
     final statusColor = _getStatusColor(order.status);
-    order.timeSlot.substring(0, 5); // HH:MM
+    // NB: qui c'era `order.timeSlot.substring(0, 5);`, una riga il cui
+    // risultato veniva buttato via ma che poteva far crashare la schermata
+    // con RangeError su un ordine senza fascia (il getter timeSlot in quel
+    // caso restituisce stringa vuota). Zero benefici, un rischio: rimossa.
 
     // Verifica se l'ordine è nuovo (pending o assigned)
     final isNewOrder = order.status == 'pending' || order.status == 'assigned';
