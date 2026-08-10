@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:math' as math;
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 
-/// Splash Screen per l'app Lenny Partner
+/// Splash dell'app Lenny Partner: breve e sobrio, questo e' uno strumento
+/// di lavoro sul banco del ristorante. Logo, nome, e dentro.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -16,90 +16,28 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _slideController;
-  late AnimationController _pulseController;
-  late AnimationController _explosionController;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
-
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeController;
+  late final Animation<double> _fade;
   final AuthService _authService = AuthService();
-  bool _showExplosion = false;
-
-  // Emoji per partner (ristorante e cibo)
-  final List<String> _restaurantEmojis = [
-    '🍕', // Pizza
-    '🍔', // Burger
-    '🍝', // Pasta
-    '🍜', // Ramen
-    '🍱', // Bento
-    '🍣', // Sushi
-    '🥗', // Insalata
-    '🌮', // Taco
-    '🥙', // Kebab
-    '🍛', // Curry
-    '🍲', // Pentola
-    '👨‍🍳', // Chef
-    '📋', // Ordini
-    '⏰', // Timer
-    '✅', // Pronto
-    '🔔', // Notifica
-  ];
 
   @override
   void initState() {
     super.initState();
-
-    // Animazione ingresso slide dal basso con bounce
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 1.5), end: Offset.zero).animate(
-          CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
-        );
-
-    // Animazione pulsante continua
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    // Animazione esplosione
-    _explosionController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    );
-
-    // Listener per attivare esplosione
-    _slideController.addListener(() {
-      if (_slideController.value > 0.5 && !_showExplosion) {
-        setState(() => _showExplosion = true);
-        _explosionController.forward();
-      }
-    });
-
-    _startAnimations();
+    _fade = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _fadeController.forward();
+    _avvia();
   }
 
-  void _startAnimations() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _slideController.forward();
+  Future<void> _avvia() async {
+    await Future.delayed(const Duration(seconds: AppConstants.splashDuration));
+    if (!mounted) return;
 
-    // Controlla dove navigare dopo 4 secondi
-    await Future.delayed(const Duration(seconds: 4));
-    _navigateNext();
-  }
-
-  void _navigateNext() async {
     final isLoggedIn = await _authService.isLoggedIn();
-
     if (!mounted) return;
 
     if (isLoggedIn) {
@@ -112,110 +50,42 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _slideController.dispose();
-    _pulseController.dispose();
-    _explosionController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final logoCenterY = screenHeight / 2 - 30;
-    final logoCenterX = screenWidth / 2;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.splashGradient),
-        child: Stack(
-          children: [
-            // Esplosione di emoji centrata sul logo
-            if (_showExplosion)
-              ..._buildRestaurantExplosion(logoCenterX, logoCenterY),
-
-            // Logo e tagline centrati
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo con animazione pulsante
-                  ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Image.asset(
-                        'assets/images/splash_partners.png',
-                        width: 300,
-                        height: 300,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+        child: Center(
+          child: FadeTransition(
+            opacity: _fade,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/splash_partners.png',
+                  width: 260,
+                  height: 260,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Lenny Partner',
+                  style: GoogleFonts.poppins(
+                    color: AppColors.splashDark,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 24,
+                    letterSpacing: 0.5,
                   ),
-
-                  const SizedBox(height: 40),
-
-                  // Tagline
-                  Text(
-                    'Lenny Partner',
-                    style: GoogleFonts.poppins(
-                      color: AppColors.splashDark,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 24,
-                      letterSpacing: 0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  List<Widget> _buildRestaurantExplosion(double centerX, double centerY) {
-    final random = math.Random(42);
-    return List.generate(_restaurantEmojis.length, (index) {
-      final angle =
-          (index * (360.0 / _restaurantEmojis.length)) * (math.pi / 180);
-      final distance = 130.0 + random.nextDouble() * 60;
-
-      return AnimatedBuilder(
-        animation: _explosionController,
-        builder: (context, child) {
-          final progress = Curves.easeOutCubic.transform(
-            _explosionController.value,
-          );
-
-          final opacity = progress < 0.6
-              ? 1.0
-              : (1.0 - ((progress - 0.6) / 0.4)).clamp(0.0, 1.0);
-
-          final xOffset = math.cos(angle) * distance * progress;
-          final yOffset = math.sin(angle) * distance * progress;
-
-          return Positioned(
-            left: centerX + xOffset - 18,
-            top: centerY + yOffset - 18,
-            child: Opacity(
-              opacity: opacity,
-              child: Transform.scale(
-                scale: 0.5 + (progress * 0.9),
-                child: Transform.rotate(
-                  angle: progress * math.pi * 3,
-                  child: Text(
-                    _restaurantEmojis[index],
-                    style: const TextStyle(fontSize: 36),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    });
   }
 }

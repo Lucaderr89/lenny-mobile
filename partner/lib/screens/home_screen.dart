@@ -717,11 +717,11 @@ class _HomeScreenState extends State<HomeScreen>
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white60,
               labelStyle: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
               unselectedLabelStyle: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.normal,
               ),
               labelPadding: EdgeInsets.zero,
@@ -1114,7 +1114,7 @@ class _HomeScreenState extends State<HomeScreen>
                         order.partnerBadgeLabel,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.3,
                         ),
@@ -1125,7 +1125,7 @@ class _HomeScreenState extends State<HomeScreen>
                     Text(
                       '#${order.id}',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppColors.dark,
                       ),
@@ -1135,7 +1135,7 @@ class _HomeScreenState extends State<HomeScreen>
                     Text(
                       '€${order.total.toStringAsFixed(2)}',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppColors.dark,
                       ),
@@ -1159,7 +1159,7 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Text(
                         order.formattedDate,
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: AppColors.info,
                         ),
@@ -1167,12 +1167,12 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(width: 8),
                     // Orario slot completo
-                    Icon(Icons.access_time, size: 13, color: statusColor),
+                    Icon(Icons.access_time, size: 16, color: statusColor),
                     const SizedBox(width: 4),
                     Text(
                       order.timeSlot,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: statusColor,
                       ),
@@ -1201,7 +1201,7 @@ class _HomeScreenState extends State<HomeScreen>
                       child: const Icon(
                         Icons.person,
                         color: AppColors.primary,
-                        size: 14,
+                        size: 16,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1215,7 +1215,7 @@ class _HomeScreenState extends State<HomeScreen>
                               Text(
                                 order.customerName,
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.dark,
                                 ),
@@ -1223,7 +1223,7 @@ class _HomeScreenState extends State<HomeScreen>
                               const Text(
                                 ' • ',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   color: AppColors.gray,
                                 ),
                               ),
@@ -1231,7 +1231,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 child: Text(
                                   order.deliveryAddress,
                                   style: const TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 13,
                                     color: AppColors.dark,
                                   ),
                                   maxLines: 1,
@@ -1246,7 +1246,7 @@ class _HomeScreenState extends State<HomeScreen>
                               child: Text(
                                 order.customerPhone,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   color: AppColors.gray.withValues(alpha: 0.8),
                                 ),
                               ),
@@ -1271,14 +1271,14 @@ class _HomeScreenState extends State<HomeScreen>
                       child: const Icon(
                         Icons.restaurant_menu,
                         color: AppColors.warning,
-                        size: 14,
+                        size: 16,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${order.items.length} ${order.items.length == 1 ? 'prodotto' : 'prodotti'}',
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.dark,
                       ),
@@ -1303,12 +1303,12 @@ class _HomeScreenState extends State<HomeScreen>
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () => _confirmPickup(order),
-                      icon: const Icon(Icons.check_circle, size: 18),
+                      icon: const Icon(Icons.check_circle, size: 20),
                       label: const Text(
                         'Conferma ritiro',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                          fontSize: 15,
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -1359,13 +1359,13 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildBottoneStampaCard(Order order) {
     final fallita = _stampeFallite.containsKey(order.id);
     return SizedBox(
-      height: 32,
+      height: 36,
       child: OutlinedButton.icon(
         onPressed: () => _ristampa(order),
-        icon: Icon(fallita ? Icons.print_disabled : Icons.print, size: 16),
+        icon: Icon(fallita ? Icons.print_disabled : Icons.print, size: 18),
         label: Text(
           fallita ? 'Ristampa' : 'Stampa',
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor: fallita ? Colors.white : AppColors.primary,

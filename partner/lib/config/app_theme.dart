@@ -3,7 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_constants.dart';
 
-/// Tema dell'app Lenny Partner
+/// Tema dell'app Lenny Partner.
+/// Stessa famiglia visiva di cliente e driver: UNA sola famiglia (Poppins)
+/// su tutto il TextTheme, con fontFamily impostata anche a livello di tema
+/// cosi' pure gli slot non ridefiniti restano coerenti.
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
@@ -17,13 +20,14 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      textTheme: GoogleFonts.interTextTheme(),
+      fontFamily: GoogleFonts.poppins().fontFamily,
+      textTheme: GoogleFonts.poppinsTextTheme(),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -38,7 +42,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(AppConstants.borderRadius),
           ),
           elevation: 2,
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),

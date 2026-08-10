@@ -38,7 +38,8 @@ class AppConstants {
 
   // Timeouts
   static const int apiTimeout = 30; // seconds
-  static const int splashDuration = 3; // seconds
+  // Splash breve: e' uno strumento di lavoro, non una presentazione.
+  static const int splashDuration = 2; // seconds
 
   // Orders
   static const int ordersRefreshInterval = 20; // seconds
