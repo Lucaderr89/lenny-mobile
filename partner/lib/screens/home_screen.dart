@@ -58,6 +58,11 @@ class _HomeScreenState extends State<HomeScreen>
   /// Problema stampante rilevato dal controllo periodico (null = tutto ok).
   String? _problemaStampante;
 
+  /// Rete ballerina: quando un giro di polling fallisce, il ristorante deve
+  /// sapere che la lista che guarda potrebbe essere vecchia.
+  bool _connessioneAssente = false;
+  DateTime? _ultimoAggiornamento;
+
   /// Ordini che non si sono riusciti a stampare, con il motivo: restano in
   /// evidenza finche' non vengono ristampati.
   final Map<int, String> _stampeFallite = {};
@@ -293,9 +298,21 @@ class _HomeScreenState extends State<HomeScreen>
         await _stampaInSequenza(daStampare);
       }
 
+      if (mounted && (_connessioneAssente || _ultimoAggiornamento == null)) {
+        setState(() {
+          _connessioneAssente = false;
+          _ultimoAggiornamento = DateTime.now();
+        });
+      } else {
+        _ultimoAggiornamento = DateTime.now();
+      }
+
       await _mostraAvvisiBloccanti();
     } catch (e) {
       debugPrint('Errore caricamento ordini: $e');
+      if (mounted && !_connessioneAssente) {
+        setState(() => _connessioneAssente = true);
+      }
     }
   }
 
@@ -744,6 +761,7 @@ class _HomeScreenState extends State<HomeScreen>
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                _buildAvvisoRete(),
                 _buildAvvisoStampante(),
                 _buildAvvisoStampe(),
                 Expanded(
@@ -769,6 +787,37 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
+    );
+  }
+
+  /// Avviso scuro quando il polling fallisce: la lista potrebbe essere
+  /// vecchia e il ristorante deve saperlo, non scoprirlo a fine serata.
+  Widget _buildAvvisoRete() {
+    if (!_connessioneAssente) return const SizedBox.shrink();
+    final ora = _ultimoAggiornamento;
+    final quando = ora == null
+        ? 'mai in questa sessione'
+        : 'alle ${ora.hour.toString().padLeft(2, '0')}:${ora.minute.toString().padLeft(2, '0')}';
+    return Container(
+      width: double.infinity,
+      color: AppColors.dark,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off, color: Colors.white, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Connessione assente: ordini aggiornati $quando. '
+              'Riprovo da solo ogni ${AppConstants.ordersRefreshInterval} secondi.',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

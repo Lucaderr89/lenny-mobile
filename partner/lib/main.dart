@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
 import 'config/app_router.dart';
@@ -31,14 +30,9 @@ void main() async {
   // Abilita edge-to-edge per gestire correttamente SafeArea
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  // Inizializza stampante Sunmi (se disponibile)
-  try {
-    await SunmiPrinter.initPrinter();
-    await SunmiPrinter.bindingPrinter();
-    debugPrint('Stampante Sunmi inizializzata');
-  } catch (e) {
-    debugPrint('Stampante Sunmi non disponibile: $e');
-  }
+  // NB: nessuna inizializzazione stampante: su sunmi_printer_plus 4.x
+  // initPrinter/bindingPrinter sono no-op deprecati; la disponibilita'
+  // reale la da' SunmiConfig.getStatus() (vedi PrinterService).
 
   runApp(const LennyPartnerApp());
 }

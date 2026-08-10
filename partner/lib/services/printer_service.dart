@@ -110,21 +110,17 @@ class PrinterService {
     );
   }
 
-  /// Verifica se la stampante è disponibile
+  /// Verifica se la stampante e' disponibile.
+  /// Su sunmi_printer_plus 4.x initPrinter/bindingPrinter sono no-op
+  /// deprecati (restituivano sempre null e il vecchio check era sempre
+  /// vero anche su dispositivi non Sunmi): l'unico segnale reale e' che
+  /// il servizio di stampa risponda a una richiesta di stato.
   Future<bool> isPrinterAvailable() async {
     try {
-      // Prima inizializza la stampante
-      await SunmiPrinter.initPrinter();
-
-      // Poi verifica il binding
-      final result = await SunmiPrinter.bindingPrinter();
-
-
-      // Su alcuni modelli Sunmi, bindingPrinter restituisce null ma la stampante funziona
-      // Accettiamo true o null come validi
-      return result != false;
+      final stato = await SunmiConfig.getStatus();
+      return stato != null;
     } catch (e) {
-      debugPrint('Errore verifica stampante: $e');
+      debugPrint('Stampante Sunmi non disponibile: $e');
       return false;
     }
   }

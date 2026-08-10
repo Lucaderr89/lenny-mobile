@@ -25,8 +25,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   List<Order> _delivered = [];
   List<Order> _cancelled = [];
 
-  // Paginazione (tutti = 30 giorni, pagina 1 per default)
+  // Paginazione lato server: 30 ordini a pagina. Prima la schermata
+  // caricava solo la pagina 1 e il resto del periodo era invisibile.
   int _days = 30;
+  int _deliveredPage = 1;
+  int _cancelledPage = 1;
+  int _deliveredTotal = 0;
+  int _cancelledTotal = 0;
+  bool _caricamentoAltri = false;
 
   @override
   void initState() {
@@ -41,10 +47,20 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     super.dispose();
   }
 
+  static int _totale(Map<String, dynamic> risposta) {
+    final pag = risposta['pagination'];
+    if (pag is Map) {
+      return int.tryParse(pag['total']?.toString() ?? '') ?? 0;
+    }
+    return 0;
+  }
+
   Future<void> _loadHistory() async {
     setState(() {
       _isLoading = true;
       _error = null;
+      _deliveredPage = 1;
+      _cancelledPage = 1;
     });
     try {
       final results = await Future.wait([
@@ -56,6 +72,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         setState(() {
           _delivered = (results[0]['orders'] as List<Order>? ?? []);
           _cancelled = (results[1]['orders'] as List<Order>? ?? []);
+          _deliveredTotal = _totale(results[0]);
+          _cancelledTotal = _totale(results[1]);
         });
       }
     } catch (e) {
@@ -64,6 +82,46 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Carica la pagina successiva di un tab e la accoda alla lista.
+  Future<void> _caricaAltri(String status) async {
+    if (_caricamentoAltri) return;
+    setState(() => _caricamentoAltri = true);
+    try {
+      final paginaSuccessiva =
+          (status == 'delivered' ? _deliveredPage : _cancelledPage) + 1;
+      final risposta = await _orderService.getOrderHistory(
+        status: status,
+        days: _days,
+        page: paginaSuccessiva,
+      );
+      if (!mounted) return;
+      final nuovi = risposta['orders'] as List<Order>? ?? [];
+      setState(() {
+        if (status == 'delivered') {
+          _delivered.addAll(nuovi);
+          _deliveredPage = paginaSuccessiva;
+          _deliveredTotal = _totale(risposta);
+        } else {
+          _cancelled.addAll(nuovi);
+          _cancelledPage = paginaSuccessiva;
+          _cancelledTotal = _totale(risposta);
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore nel caricamento. Riprova.'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _caricamentoAltri = false);
     }
   }
 
@@ -121,7 +179,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     children: [
                       const Icon(Icons.check_circle_outline, size: 14),
                       const SizedBox(width: 4),
-                      Text('Consegnati (${_delivered.length})'),
+                      Text('Consegnati ($_deliveredTotal)'),
                     ],
                   ),
                 ),
@@ -132,7 +190,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     children: [
                       const Icon(Icons.cancel_outlined, size: 14),
                       const SizedBox(width: 4),
-                      Text('Annullati (${_cancelled.length})'),
+                      Text('Annullati ($_cancelledTotal)'),
                     ],
                   ),
                 ),
@@ -156,13 +214,21 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         onRefresh: _loadHistory,
                         child: _delivered.isEmpty
                             ? _buildEmpty('Nessun ordine consegnato')
-                            : _buildList(_delivered),
+                            : _buildList(
+                                _delivered,
+                                'delivered',
+                                _deliveredTotal,
+                              ),
                       ),
                       RefreshIndicator(
                         onRefresh: _loadHistory,
                         child: _cancelled.isEmpty
                             ? _buildEmpty('Nessun ordine annullato')
-                            : _buildList(_cancelled),
+                            : _buildList(
+                                _cancelled,
+                                'cancelled',
+                                _cancelledTotal,
+                              ),
                       ),
                     ],
                   ),
@@ -190,7 +256,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           ),
           const Spacer(),
           Text(
-            '${_delivered.length + _cancelled.length} ordini totali',
+            '${_deliveredTotal + _cancelledTotal} ordini totali',
             style: TextStyle(fontSize: 12, color: AppColors.gray),
           ),
         ],
@@ -256,11 +322,30 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
   }
 
-  Widget _buildList(List<Order> orders) {
+  Widget _buildList(List<Order> orders, String status, int totale) {
+    final altriDaCaricare = orders.length < totale;
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: orders.length,
-      itemBuilder: (_, index) => _buildHistoryCard(orders[index]),
+      itemCount: orders.length + (altriDaCaricare ? 1 : 0),
+      itemBuilder: (_, index) {
+        if (index >= orders.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: _caricamentoAltri
+                  ? const CircularProgressIndicator()
+                  : OutlinedButton.icon(
+                      onPressed: () => _caricaAltri(status),
+                      icon: const Icon(Icons.expand_more),
+                      label: Text(
+                        'Carica altri (${totale - orders.length} rimasti)',
+                      ),
+                    ),
+            ),
+          );
+        }
+        return _buildHistoryCard(orders[index]);
+      },
     );
   }
 
@@ -665,7 +750,7 @@ class _HistoryOrderSheet extends StatelessWidget {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✗ Errore: $e'),
+            content: Text('Errore: $e'),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
           ),
