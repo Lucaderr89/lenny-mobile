@@ -40,6 +40,11 @@ class NavMapView extends StatefulWidget {
   /// Centro di ripiego se non c'e' ancora un fix GPS (San Marino).
   final LatLng fallbackCenter;
 
+  /// Controller iniettabile: serve ai TEST per osservare la camera
+  /// (centro e rotazione) mentre si simula un tragitto. In app resta null
+  /// e la mappa usa il proprio.
+  final MapController? controller;
+
   const NavMapView({
     super.key,
     required this.posizione,
@@ -47,6 +52,7 @@ class NavMapView extends StatefulWidget {
     required this.tappeMarkers,
     this.recenterBottomInset = 16,
     this.fallbackCenter = const LatLng(43.9424, 12.4578),
+    this.controller,
   });
 
   @override
@@ -87,7 +93,7 @@ class _NavMapViewState extends State<NavMapView> {
     0, 0, 0, 1, 0,
   ]);
 
-  final MapController _map = MapController();
+  late final MapController _map = widget.controller ?? MapController();
   LocationPoint? _pos;
   double _heading = 0;
   bool _vistaGuida = true;
