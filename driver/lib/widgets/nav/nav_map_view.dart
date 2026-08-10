@@ -13,11 +13,14 @@ import '../../models/location_point.dart';
 /// disegna il percorso e i marker tappa, tasto ricentra.
 ///
 /// Due visuali, con bottone di scambio e scelta RICORDATA:
-/// - GUIDA (default, stile Maps): la mappa ruota nella direzione di marcia,
-///   la freccia resta ferma verso l'alto e la camera guarda un po' avanti,
-///   cosi' il mezzo sta nella parte bassa dello schermo. Niente tilt 3D:
-///   flutter_map non lo ha, la prospettiva resta dall'alto.
-/// - NORD: mappa fissa a nord, ruota solo la freccia.
+/// - GUIDA (default, stile Maps): la mappa ruota nella direzione di marcia
+///   ED e' inclinata in prospettiva (piano che "sale" davanti, come la
+///   navigazione di Maps). flutter_map non ha un tilt nativo: l'effetto e'
+///   una trasformazione prospettica sul widget, con la mappa disegnata piu'
+///   grande del viewport cosi' l'inclinazione non lascia buchi ai bordi.
+///   La freccia resta ferma verso l'alto e la camera guarda un po' avanti:
+///   il mezzo sta in basso, la strada arriva incontro.
+/// - NORD: mappa piatta fissa a nord, ruota solo la freccia.
 ///
 /// L'heading GPS a bassa velocita' gira a vuoto: sotto la soglia si congela
 /// l'ultimo valore valido, quindi da fermi la mappa non balla.
@@ -51,13 +54,23 @@ class NavMapView extends StatefulWidget {
 }
 
 class _NavMapViewState extends State<NavMapView> {
-  static const double _zoomGuida = 17.0;
+  static const double _zoomGuida = 17.5;
   static const double _zoomNord = 16.5;
 
   /// In visuale guida la camera punta questo tanto di metri AVANTI al
   /// mezzo lungo la direzione di marcia: il driver finisce nella parte
   /// bassa dello schermo e si vede la strada che arriva, come su Maps.
-  static const double _metriAvanti = 120;
+  static const double _metriAvanti = 150;
+
+  /// Inclinazione del piano in visuale guida (radianti, ~30 gradi) e
+  /// prospettiva della trasformazione. Valori piu' alti = effetto piu'
+  /// marcato ma tile piu' stirate in cima.
+  static const double _inclinazione = 0.55;
+  static const double _prospettiva = 0.0013;
+
+  /// La mappa inclinata si restringe verso l'alto: va disegnata piu'
+  /// grande del viewport per coprire i bordi dopo la trasformazione.
+  static const double _sovradimensione = 1.6;
 
   /// Sotto questa velocita' (km/h) l'heading GPS gira a vuoto: si congela
   /// l'ultimo valore valido (la freccia ferma al semaforo non deve ruotare).
@@ -171,6 +184,39 @@ class _NavMapViewState extends State<NavMapView> {
     _applicaCamera();
   }
 
+  /// Effetto navigatore: piano inclinato in prospettiva, cerniera sul bordo
+  /// basso (il mezzo resta a grandezza naturale, la strada "sale" davanti).
+  /// La mappa e' disegnata piu' grande del viewport (sovradimensione) perche'
+  /// inclinandola si restringe verso l'alto e ai lati; il ClipRect ritaglia.
+  Widget _pianoInclinato(Widget mappa) {
+    return LayoutBuilder(
+      builder: (context, vincoli) {
+        final larghezza = vincoli.maxWidth * _sovradimensione;
+        final altezza = vincoli.maxHeight * _sovradimensione;
+        return ClipRect(
+          child: Transform(
+            alignment: Alignment.bottomCenter,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, _prospettiva)
+              ..rotateX(-_inclinazione),
+            child: OverflowBox(
+              alignment: Alignment.bottomCenter,
+              minWidth: 0,
+              minHeight: 0,
+              maxWidth: larghezza,
+              maxHeight: altezza,
+              child: SizedBox(
+                width: larghezza,
+                height: altezza,
+                child: mappa,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final notte = context.notte;
@@ -219,52 +265,67 @@ class _NavMapViewState extends State<NavMapView> {
         ),
     ];
 
+    final mappa = FlutterMap(
+      mapController: _map,
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: _zoomGuida,
+        // La rotazione la comanda solo la visuale guida, non il gesto
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+        ),
+        onMapReady: () {
+          _mapReady = true;
+          _applicaCamera();
+        },
+        onPositionChanged: (position, hasGesture) {
+          // L'utente ha toccato la mappa: la camera smette di inseguire
+          if (hasGesture && _following) {
+            setState(() => _following = false);
+          }
+        },
+      ),
+      children: [
+        if (notte)
+          ColorFiltered(colorFilter: _filtroNotte, child: tileLayer)
+        else
+          tileLayer,
+        if (widget.percorso.length >= 2)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.percorso,
+                strokeWidth: 7,
+                color: notte ? AppColors.nightPrimary : AppColors.primary,
+              ),
+            ],
+          ),
+        MarkerLayer(markers: markers),
+      ],
+    );
+
     return Stack(
       children: [
         Positioned.fill(
-          child: FlutterMap(
-            mapController: _map,
-            options: MapOptions(
-              initialCenter: center,
-              initialZoom: _zoomGuida,
-              // La rotazione la comanda solo la visuale guida, non il gesto
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+          child: _vistaGuida ? _pianoInclinato(mappa) : mappa,
+        ),
+        // Attribution obbligatoria OSM: fuori dal piano inclinato, cosi'
+        // resta dritta e leggibile in entrambe le visuali.
+        Positioned(
+          left: 10,
+          bottom: widget.recenterBottomInset,
+          child: IgnorePointer(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: context.cCard.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(6),
               ),
-              onMapReady: () {
-                _mapReady = true;
-                _applicaCamera();
-              },
-              onPositionChanged: (position, hasGesture) {
-                // L'utente ha toccato la mappa: la camera smette di inseguire
-                if (hasGesture && _following) {
-                  setState(() => _following = false);
-                }
-              },
+              child: Text(
+                'OpenStreetMap contributors',
+                style: TextStyle(fontSize: 10, color: context.cTestoSec),
+              ),
             ),
-            children: [
-              if (notte)
-                ColorFiltered(colorFilter: _filtroNotte, child: tileLayer)
-              else
-                tileLayer,
-              if (widget.percorso.length >= 2)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: widget.percorso,
-                      strokeWidth: 7,
-                      color: notte
-                          ? AppColors.nightPrimary
-                          : AppColors.primary,
-                    ),
-                  ],
-                ),
-              MarkerLayer(markers: markers),
-              // Attribution obbligatoria OSM
-              const SimpleAttributionWidget(
-                source: Text('OpenStreetMap contributors'),
-              ),
-            ],
           ),
         ),
         Positioned(
