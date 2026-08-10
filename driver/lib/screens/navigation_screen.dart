@@ -556,6 +556,8 @@ class _NavigationScreenState extends State<NavigationScreen>
           point: LatLng(st.lat, st.lng),
           width: corrente ? 40 : 30,
           height: corrente ? 40 : 30,
+          // La visuale guida ruota la mappa: i numeri restano dritti
+          rotate: true,
           child: Container(
             decoration: BoxDecoration(
               color: colore,
