@@ -11,6 +11,13 @@ class AppConstants {
   static const String confirmPickupEndpoint =
       '$apiUrl/partner/orders/{id}/confirm-pickup';
   static const String orderHistoryEndpoint = '$apiUrl/partner/orders/history';
+  static const String profileEndpoint = '$apiUrl/partner/profile';
+  static const String closureCreateEndpoint = '$apiUrl/partner/closures/create';
+  static const String closureDeleteEndpoint =
+      '$apiUrl/partner/closures/{id}/delete';
+
+  // Menu pubblico: stessa API che usa l'app cliente, per l'anteprima fedele
+  static const String menuEndpoint = '$apiUrl/restaurants/menu';
 
   // App Info
   static const String appName = 'Lenny Partner';

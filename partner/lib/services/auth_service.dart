@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import '../models/auth_response.dart';
+import 'credenziali_sicure.dart';
 
 /// Service per gestire l'autenticazione del partner
 class AuthService {
@@ -27,6 +28,9 @@ class AuthService {
       // Salva i dati in local storage se il login ha successo
       if (authResponse.success && authResponse.token != null) {
         await _saveAuthData(authResponse);
+        // La password serve all'autologin del pannello platform: va
+        // nell'archivio cifrato, mai in SharedPreferences.
+        await CredenzialiSicure.salvaPassword(password);
       }
 
       return authResponse;
@@ -98,6 +102,7 @@ class AuthService {
 
   /// Pulisce i dati di autenticazione
   Future<void> _clearAuthData() async {
+    await CredenzialiSicure.cancella();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConstants.keyIsLoggedIn);
     await prefs.remove(AppConstants.keyApiToken);

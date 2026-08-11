@@ -30,6 +30,12 @@ dependencies:
   
   # Sunmi Printer
   sunmi_printer_plus: ^4.1.1
+
+  # Pannello platform in WebView con autologin (come app driver)
+  webview_flutter: ^4.10.0
+
+  # Password cifrata per l'autologin del pannello (come app driver)
+  flutter_secure_storage: ^9.2.2
   
   # Audio notifications
   audioplayers: ^6.0.0

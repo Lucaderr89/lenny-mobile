@@ -12,6 +12,9 @@ import '../services/auth_service.dart';
 import '../services/printer_service.dart';
 import '../services/fcm_service.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'menu_preview_screen.dart';
+import 'panel_screen.dart';
+import 'profile_screen.dart';
 
 /// Home Screen per partner - Visualizzazione ordini
 class HomeScreen extends StatefulWidget {
@@ -906,6 +909,27 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  /// Voce del drawer nello stile delle app cliente e driver: icona outlined
+  /// blu, titolo w600, divisore sottile.
+  Widget _voceDrawer({
+    required IconData icona,
+    required String titolo,
+    String? sottotitolo,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icona, color: AppColors.primary),
+      title: Text(
+        titolo,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: sottotitolo != null
+          ? Text(sottotitolo, style: const TextStyle(fontSize: 12))
+          : null,
+      onTap: onTap,
+    );
+  }
+
   /// Costruisce il Drawer laterale
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
@@ -923,7 +947,11 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             child: Row(
               children: [
-                const Icon(Icons.restaurant, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.storefront_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -941,50 +969,75 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
 
+          _voceDrawer(
+            icona: Icons.person_outline,
+            titolo: 'Profilo',
+            sottotitolo: 'Orari, consegne, chiusure',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          const Divider(height: 1),
+
+          _voceDrawer(
+            icona: Icons.dashboard_outlined,
+            titolo: 'Pannello',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PanelScreen()),
+              );
+            },
+          ),
+          const Divider(height: 1),
+
+          _voceDrawer(
+            icona: Icons.menu_book_outlined,
+            titolo: 'Anteprima menu',
+            sottotitolo: 'Come lo vede il cliente',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MenuPreviewScreen()),
+              );
+            },
+          ),
+          const Divider(height: 1),
+
+          _voceDrawer(
+            icona: Icons.history,
+            titolo: 'Storico Ordini',
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/history');
+            },
+          ),
+          const Divider(height: 1),
+
           // ── Stampa Automatica ──
           ListTile(
             leading: Icon(
-              _autoPrintEnabled ? Icons.print : Icons.print_disabled,
+              _autoPrintEnabled
+                  ? Icons.print_outlined
+                  : Icons.print_disabled_outlined,
               color: _autoPrintEnabled ? AppColors.primary : AppColors.gray,
             ),
-            title: const Text('Stampa Automatica'),
+            title: const Text(
+              'Stampa Automatica',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             trailing: Switch(
               value: _autoPrintEnabled,
               activeThumbColor: AppColors.primary,
               onChanged: (value) => _setStampaAutomatica(value),
             ),
             onTap: () => _setStampaAutomatica(!_autoPrintEnabled),
-          ),
-
-          const Divider(height: 1),
-
-          // ── Storico Ordini ──
-          ListTile(
-            leading: const Icon(Icons.history, color: AppColors.info),
-            title: const Text('Storico Ordini'),
-            trailing: const Icon(Icons.chevron_right, size: 18),
-            onTap: () {
-              Navigator.pop(context); // chiudi drawer
-              context.push('/history');
-            },
-          ),
-
-          const Divider(height: 1),
-
-          // ── Fatture ──
-          ListTile(
-            leading: const Icon(Icons.receipt_long, color: AppColors.accent),
-            title: const Text('Fatture'),
-            trailing: const Icon(Icons.chevron_right, size: 18),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sezione Fatture in arrivo'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
           ),
 
           const Spacer(),
