@@ -61,29 +61,6 @@ class Order {
     return 'DA PAGARE';
   }
 
-  /// Impronta del pagamento cosi' com'e' stato stampato: se cambia dopo la
-  /// stampa (es. da contanti a pagato online) il ristorante va avvisato,
-  /// altrimenti in cassa tornano i conti sbagliati. Il nome del metodo e'
-  /// incluso per poter descrivere il "prima" nell'avviso.
-  String get paymentFingerprint =>
-      '${paymentStatus ?? ''}|${paymentMethodId ?? ''}|${paymentMethodName ?? ''}';
-
-  /// Descrizione leggibile del pagamento, per gli avvisi.
-  String get paymentDescription {
-    final metodo = (paymentMethodName ?? '').trim();
-    if (metodo.isEmpty) return paymentLabel;
-    return '$paymentLabel ($metodo)';
-  }
-
-  /// Descrizione leggibile di un'impronta pagamento salvata.
-  static String descriviPagamento(String impronta) {
-    final parti = impronta.split('|');
-    final stato = parti.isNotEmpty ? parti[0] : '';
-    final metodo = parti.length > 2 ? parti[2].trim() : '';
-    final etichetta = stato == 'paid' ? 'PAGATO' : 'DA PAGARE';
-    return metodo.isEmpty ? etichetta : '$etichetta ($metodo)';
-  }
-
   /// Quota del totale non spiegata da articoli, consegna, servizio e sconti.
   /// Negli ordini importati alcune componenti non sono itemizzate: senza
   /// questa voce la comanda non quadrerebbe mai con il totale.
