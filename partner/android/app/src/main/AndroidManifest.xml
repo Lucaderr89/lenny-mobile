@@ -15,6 +15,10 @@
     <!-- "Mostra sopra altre app": senza, su Android recenti il BootReceiver
          non puo' riaprire l'app dal background dopo il riavvio -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Stampa a schermo spento: CPU sveglia (wakelock del servizio) ed
+         esenzione dal Doze, altrimenti Android taglia la rete -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Servizio in primo piano: l'app non deve essere uccisa tra i polling -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

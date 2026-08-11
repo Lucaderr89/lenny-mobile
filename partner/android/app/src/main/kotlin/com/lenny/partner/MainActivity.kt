@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.WindowManager
 import android.widget.Toast
@@ -21,18 +22,40 @@ class MainActivity : FlutterActivity() {
         // restare sempre acceso, gli ordini si guardano al volo dal banco.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         createNotificationChannels()
-        richiediPermessoAvvioAutomatico()
+        richiediPermessi()
         KeepAliveService.avvia(this)
     }
 
-    /// Il riavvio automatico al boot su Android recenti richiede il permesso
-    /// "Mostra sopra altre app": senza, il BootReceiver non puo' aprire
-    /// l'activity dal background. Si chiede a ogni avvio finche' non viene
-    /// concesso: sul Sunmi si fa una volta sola e non ci si pensa piu'.
-    private fun richiediPermessoAvvioAutomatico() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-            !Settings.canDrawOverlays(this)
-        ) {
+    /// Permessi di affidabilita', chiesti UNO alla volta a ogni avvio
+    /// finche' non concessi (sul Sunmi si fa una volta sola):
+    /// 1) esenzione dal risparmio batteria: senza, a SCHERMO SPENTO Android
+    ///    taglia rete e CPU (Doze) e le comande non escono piu';
+    /// 2) "Mostra sopra altre app": senza, il BootReceiver non puo' riaprire
+    ///    l'app dal background dopo un riavvio.
+    private fun richiediPermessi() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            Toast.makeText(
+                this,
+                "Consenti: serve a stampare le comande anche a schermo spento",
+                Toast.LENGTH_LONG
+            ).show()
+            try {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:$packageName")
+                    )
+                )
+            } catch (e: Exception) {
+                // ROM senza la schermata dedicata: si riprova al prossimo avvio.
+            }
+            return // un permesso alla volta
+        }
+
+        if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(
                 this,
                 "Concedi \"Mostra sopra altre app\": serve a riaprire " +
@@ -47,8 +70,7 @@ class MainActivity : FlutterActivity() {
                     )
                 )
             } catch (e: Exception) {
-                // Alcune ROM non hanno la schermata dedicata: pazienza,
-                // l'app resta usabile e riprova al prossimo avvio.
+                // Come sopra: non bloccante.
             }
         }
     }
