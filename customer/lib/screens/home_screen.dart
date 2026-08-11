@@ -1140,7 +1140,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           shape: BoxShape.circle,
           boxShadow: [AppColors.cardShadow],
         ),
-        child: const Icon(FontAwesomeIcons.robot, color: lightColor, size: 20),
+        child: const FaIcon(FontAwesomeIcons.robot, color: lightColor, size: 20),
       ),
     );
   }
