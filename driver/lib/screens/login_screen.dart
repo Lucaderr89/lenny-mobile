@@ -183,11 +183,22 @@ class _LoginScreenState extends State<LoginScreen> {
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(fontSize: 14),
+            // Sfondo e card di questa schermata hanno colori chiari fissi,
+            // quindi anche il testo va fissato: senza colore esplicito lo
+            // eredita dal tema, e col tema scuro (automatico di notte)
+            // diventava bianco su bianco.
+            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
             decoration: const InputDecoration(
               hintText: 'Email',
-              hintStyle: TextStyle(fontSize: 14),
-              prefixIcon: Icon(Icons.email_outlined, size: 20),
+              hintStyle: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: Icon(
+                Icons.email_outlined,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -206,15 +217,23 @@ class _LoginScreenState extends State<LoginScreen> {
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
-            style: const TextStyle(fontSize: 14),
+            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Password',
-              hintStyle: const TextStyle(fontSize: 14),
-              prefixIcon: const Icon(Icons.lock_outline, size: 20),
+              hintStyle: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                   size: 20,
+                  color: AppColors.textSecondary,
                 ),
                 onPressed: () {
                   setState(() => _obscurePassword = !_obscurePassword);

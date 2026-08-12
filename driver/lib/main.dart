@@ -28,9 +28,12 @@ void main() async {
       // sono che stampano il corpo delle richieste di login e registrazione,
       // quindi password e IBAN in chiaro, e il token di sessione.
       // In debug restano, perche' li' servono.
+      // La profile e' inclusa perche' non viene distribuita e serve a
+      // collaudare su dispositivo reale: senza log non si leggerebbe
+      // nemmeno il token FCM. La release resta muta.
       zoneSpecification: ZoneSpecification(
         print: (self, parent, zone, riga) {
-          if (kDebugMode) parent.print(zone, riga);
+          if (kDebugMode || kProfileMode) parent.print(zone, riga);
         },
       ));
 }

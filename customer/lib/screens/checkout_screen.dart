@@ -26,6 +26,7 @@ import 'restaurant_menu_screen.dart';
 import 'order_completed_screen.dart';
 import '../widgets/app_icon.dart';
 import '../widgets/foto_rete.dart';
+import '../widgets/gate_account_sheet.dart';
 
 /// Checkout Screen - Basato sul prototipo 9-checkout.html
 class CheckoutScreen extends StatefulWidget {
@@ -461,11 +462,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               // Messaggio
               Text(
                 'Siamo spiacenti, ma questo ristorante non effettua consegne nella tua zona.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: grayColor,
-                  height: 1.5,
-                ),
+                style: TextStyle(fontSize: 14, color: grayColor, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               if (_deliveryFeeResult?.matchedRule != null) ...[
@@ -497,10 +494,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   child: const Text(
                     'Ho capito',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -562,10 +556,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 // Messaggio
                 Text(
                   'Per la consegna nella tua zona è richiesto un ordine minimo di:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: grayColor,
-                  ),
+                  style: TextStyle(fontSize: 14, color: grayColor),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -583,10 +574,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         children: [
                           const Text(
                             'Minimo richiesto:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: darkColor,
-                            ),
+                            style: TextStyle(fontSize: 14, color: darkColor),
                           ),
                           Text(
                             '€${minOrder.toStringAsFixed(2)}',
@@ -604,10 +592,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         children: [
                           const Text(
                             'Importo attuale:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: grayColor,
-                            ),
+                            style: TextStyle(fontSize: 14, color: grayColor),
                           ),
                           Text(
                             '€${current.toStringAsFixed(2)}',
@@ -1410,8 +1395,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         service: _deliveryType == 'delivery' ? 'delivery' : 'pickup',
         savedAddressId: usaIndirizzoSalvato ? _selectedSavedAddress!.id : null,
         latitude: usaIndirizzoSalvato ? null : locationProvider.activeLatitude,
-        longitude: usaIndirizzoSalvato ? null : locationProvider.activeLongitude,
-        postalCode: usaIndirizzoSalvato ? null : locationProvider.activePostalCode,
+        longitude: usaIndirizzoSalvato
+            ? null
+            : locationProvider.activeLongitude,
+        postalCode: usaIndirizzoSalvato
+            ? null
+            : locationProvider.activePostalCode,
       );
 
       print('📅 Caricati ${_availableSlots.length} slot per $dateStr');
@@ -1547,10 +1536,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         padding: EdgeInsets.only(top: 4),
                         child: Text(
                           'Fascia al completo',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: dangerColor,
-                          ),
+                          style: TextStyle(fontSize: 11, color: dangerColor),
                         ),
                       )
                     else if (availableSpots <= 3)
@@ -1590,7 +1576,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     // Letto PRIMA di qualsiasi await: il context non va usato dopo un async gap.
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
 
     setState(() => _couponLoading = true);
 
@@ -1606,7 +1595,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       };
 
       if (_deliveryType == 'delivery') {
-        if (_deliveryMode == 'saved_address' && _selectedSavedAddress?.id != null) {
+        if (_deliveryMode == 'saved_address' &&
+            _selectedSavedAddress?.id != null) {
           body['delivery'] = {
             'source': 'saved_address',
             'saved_address_id': _selectedSavedAddress!.id,
@@ -1635,15 +1625,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       final data = decoded['data'] as Map<String, dynamic>?;
 
-      if (response.statusCode == 200 && data != null && data['coupon_valid'] == true) {
+      if (response.statusCode == 200 &&
+          data != null &&
+          data['coupon_valid'] == true) {
         setState(() {
           _couponApplied = true;
           _couponDiscount = (data['discount_amount'] as num).toDouble();
         });
         _showToast('Coupon applicato');
       } else {
-        final message = data?['coupon_error'] as String? ??
-            (decoded['error'] is Map ? decoded['error']['message'] as String? : null) ??
+        final message =
+            data?['coupon_error'] as String? ??
+            (decoded['error'] is Map
+                ? decoded['error']['message'] as String?
+                : null) ??
             'Codice coupon non valido';
         setState(() {
           _couponApplied = false;
@@ -1722,95 +1717,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   /// Invito ad accedere o registrarsi mostrato quando un ospite prova a
   /// completare l'ordine. Il carrello e' persistente: dopo l'accesso lo ritrova.
+  ///
+  /// Lo stesso invito compare gia' PRIMA di entrare qui, dal carrello e dal
+  /// menu del ristorante. Questa chiamata resta come rete di sicurezza per la
+  /// sessione che scade mentre l'ordine e' in corso.
   void _mostraGateAccount() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          20,
-          24,
-          24 + MediaQuery.of(ctx).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.grayLight,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Icon(Icons.lock_open_outlined, size: 40, color: AppColors.primary),
-            const SizedBox(height: 14),
-            const Text(
-              'Ci siamo quasi!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Accedi o crea un account per completare l\'ordine. Il tuo carrello resta salvato.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.grayDark),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  context.push('/register');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text(
-                  'Crea un account',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 50,
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  context.push('/login');
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text(
-                  'Ho già un account',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    mostraGateAccount(context);
   }
 
   void _placeOrder() async {
@@ -2048,7 +1960,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           orderFee: serviceFee,
           total: total,
           discountAmount: _couponDiscount,
-          couponCode: _couponApplied ? _couponController.text.trim().toUpperCase() : null,
+          couponCode: _couponApplied
+              ? _couponController.text.trim().toUpperCase()
+              : null,
           appCreditsUsed: _useAppCredits ? _calculatedCreditsToUse : 0.0,
           note: _instructionsController.text.isNotEmpty
               ? _instructionsController.text
@@ -2215,11 +2129,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     'Scegli un altro orario per completare l\'ordine.'
               : 'La fascia selezionata non è più disponibile. '
                     'Scegli un altro orario per completare l\'ordine.',
-          style: const TextStyle(
-            color: grayColor,
-            fontSize: 14,
-            height: 1.5,
-          ),
+          style: const TextStyle(color: grayColor, fontSize: 14, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -2375,7 +2285,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final oggi = DateTime.now();
     final d = _selectedDate!;
-    final isOggi = d.year == oggi.year && d.month == oggi.month && d.day == oggi.day;
+    final isOggi =
+        d.year == oggi.year && d.month == oggi.month && d.day == oggi.day;
     final domani = oggi.add(const Duration(days: 1));
     final isDomani =
         d.year == domani.year && d.month == domani.month && d.day == domani.day;
@@ -2502,7 +2413,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: isPickup
                       ? const Icon(Icons.store, color: Colors.white, size: 20)
                       : AppIcon(
-'assets/icons/icons8-in-transito-32.png',
+                          'assets/icons/icons8-in-transito-32.png',
                           width: 20,
                           height: 20,
                           color: Colors.white,
@@ -2543,10 +2454,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(height: 4),
                       Text(
                         widget.restaurant.address,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: grayColor,
-                        ),
+                        style: const TextStyle(fontSize: 12, color: grayColor),
                       ),
                     ],
                   ),
@@ -2591,7 +2499,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(width: 8),
                   AppIcon(
-'assets/icons/icons8-piu-di-32.png',
+                    'assets/icons/icons8-piu-di-32.png',
                     width: 16,
                     height: 16,
                     color: primaryColor,
@@ -2616,7 +2524,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppIcon(
-'assets/icons/icons8-ripeti-32.png',
+                    'assets/icons/icons8-ripeti-32.png',
                     width: 14,
                     height: 14,
                     color: primaryColor,
@@ -2759,18 +2667,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             minLines: 2,
             maxLength: 250,
             textCapitalization: TextCapitalization.sentences,
-            style: const TextStyle(
-              fontSize: 14,
-              color: darkColor,
-            ),
+            style: const TextStyle(fontSize: 14, color: darkColor),
             decoration: InputDecoration(
               hintText:
                   'Es. pizza ben cotta, senza cipolla, '
                   'citofono rotto: chiamami all\'arrivo...',
-              hintStyle: const TextStyle(
-                fontSize: 13,
-                color: grayColor,
-              ),
+              hintStyle: const TextStyle(fontSize: 13, color: grayColor),
               counterText: '',
               filled: true,
               fillColor: lightGrayColor.withValues(alpha: 0.3),
@@ -2816,7 +2718,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
                 AppIcon(
-'assets/icons/icons8-piu-di-32.png',
+                  'assets/icons/icons8-piu-di-32.png',
                   width: 16,
                   height: 16,
                   color: primaryColor,
@@ -2960,10 +2862,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         '+ $customization',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: grayColor,
-                        ),
+                        style: const TextStyle(fontSize: 11, color: grayColor),
                       ),
                     );
                   }),
@@ -3043,7 +2942,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Row(
               children: [
                 AppIcon(
-'assets/icons/icons8-ottieni-denaro-32.png',
+                  'assets/icons/icons8-ottieni-denaro-32.png',
                   width: 18,
                   height: 18,
                 ),
@@ -3165,9 +3064,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         borderSide: BorderSide(color: primaryColor, width: 1.5),
                       ),
                     ),
-                    style: const TextStyle(
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -3260,10 +3157,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         const Text(
                           'Coupon applicato!',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: grayColor,
-                          ),
+                          style: TextStyle(fontSize: 11, color: grayColor),
                         ),
                       ],
                     ),
@@ -3313,7 +3207,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Row(
               children: [
                 AppIcon(
-'assets/icons/icons8-copia-32.png',
+                  'assets/icons/icons8-copia-32.png',
                   width: 14,
                   height: 14,
                   color: primaryColor,
@@ -3338,10 +3232,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Flexible(
               child: Text(
                 description,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: grayColor,
-                ),
+                style: const TextStyle(fontSize: 11, color: grayColor),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -3374,10 +3265,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (_earnedPoints > 0)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(8),
@@ -3468,13 +3356,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: grayColor,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 13, color: grayColor)),
           Text(
             '€${amount.toStringAsFixed(2)}',
             style: TextStyle(
@@ -3499,7 +3381,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       decoration: BoxDecoration(
         color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -3512,10 +3397,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: darkColor,
-                ),
+                style: const TextStyle(fontSize: 11, color: darkColor),
                 children: [
                   const TextSpan(text: 'Ti mancano '),
                   TextSpan(
@@ -3576,7 +3458,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         decoration: BoxDecoration(
           color: successColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: successColor.withValues(alpha: 0.3), width: 1),
+          border: Border.all(
+            color: successColor.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
@@ -3589,10 +3474,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Expanded(
               child: RichText(
                 text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: darkColor,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: darkColor),
                   children: [
                     const TextSpan(text: 'Ti mancano '),
                     TextSpan(
@@ -3623,7 +3505,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       decoration: BoxDecoration(
         color: successColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: successColor.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: successColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -3636,10 +3521,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: darkColor,
-                ),
+                style: const TextStyle(fontSize: 12, color: darkColor),
                 children: [
                   const TextSpan(text: 'Ti mancano '),
                   TextSpan(
@@ -3671,10 +3553,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         children: [
           const Text(
             'Costo consegna',
-            style: TextStyle(
-              fontSize: 13,
-              color: grayColor,
-            ),
+            style: TextStyle(fontSize: 13, color: grayColor),
           ),
           if (isFree)
             Row(
@@ -3834,7 +3713,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withValues(alpha: 0.1) : lightGrayColor,
+          color: isSelected
+              ? primaryColor.withValues(alpha: 0.1)
+              : lightGrayColor,
           border: Border.all(
             color: isSelected ? primaryColor : lightGrayColor,
             width: isSelected ? 2 : 1,
@@ -3911,7 +3792,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Row(
           children: [
             AppIcon(
-'assets/icons/icons8-card-32.png',
+              'assets/icons/icons8-card-32.png',
               width: 20,
               height: 20,
               color: isSelected ? primaryColor : grayColor,
@@ -3980,7 +3861,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             decoration: BoxDecoration(
-              color: isSelected ? primaryColor.withValues(alpha: 0.08) : Colors.white,
+              color: isSelected
+                  ? primaryColor.withValues(alpha: 0.08)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: isSelected ? primaryColor : lightGrayColor,
@@ -3994,7 +3877,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Row(
                   children: [
                     AppIcon(
-'assets/icons/icons8-card-32.png',
+                      'assets/icons/icons8-card-32.png',
                       width: 16,
                       height: 16,
                       color: isSelected ? primaryColor : grayColor,

@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,8 +75,24 @@ class FcmService {
     return true;
   }
 
+  /// Su iOS il token FCM non esiste finche' APNs non ha consegnato il proprio
+  /// device token alla SDK Firebase: chiamare getToken() subito dopo aver
+  /// ottenuto il permesso fallisce con [firebase_messaging/apns-token-not-set].
+  /// Su Android il token e' disponibile subito e l'attesa non serve.
+  Future<void> _attendiApnsToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+
+    for (var tentativo = 0; tentativo < 20; tentativo++) {
+      if (await _messaging.getAPNSToken() != null) return;
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+    debugPrint('⚠️ APNs non ha consegnato il token entro 10s');
+  }
+
   /// Token, handlers e canale notifiche: eseguito solo a permesso concesso
   Future<void> _setupMessaging() async {
+    await _attendiApnsToken();
+
     // 2. Ottieni token FCM
     try {
       _token = await _messaging.getToken();

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,20 +41,73 @@ class FcmService {
   Stream<RemoteMessage> get onForegroundMessage =>
       _messageStreamController.stream;
 
+  /// Su iOS il token FCM non esiste finche' APNs non ha consegnato il proprio
+  /// device token alla SDK Firebase: chiamare getToken() subito dopo aver
+  /// ottenuto il permesso fallisce con [firebase_messaging/apns-token-not-set].
+  /// Su Android il token e' disponibile subito e l'attesa non serve.
+  Future<void> _attendiApnsToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+
+    for (var tentativo = 0; tentativo < 20; tentativo++) {
+      if (await _messaging.getAPNSToken() != null) return;
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+    debugPrint('⚠️ APNs non ha consegnato il token entro 10s');
+  }
+
+  /// Il prompt di sistema al bootstrap e' il momento con il massimo tasso di
+  /// rifiuto: la richiesta avviene dopo il login, insieme a quella della
+  /// posizione e preceduta dal dialog che spiega a cosa servono, tramite
+  /// [requestPermissionWithContext]. Qui si procede solo se il permesso
+  /// risulta gia' concesso in passato.
   Future<void> initialize() async {
+    final settings = await _messaging.getNotificationSettings();
+    debugPrint('🔔 FCM Driver permission: ${settings.authorizationStatus}');
+
+    if (settings.authorizationStatus == AuthorizationStatus.denied ||
+        settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+      // Mai chiesto o negato: nessun prompt qui.
+      return;
+    }
+
+    await _setupMessaging();
+  }
+
+  /// Chiede il permesso notifiche nel momento giusto: dopo il login, quando il
+  /// driver ha appena accettato il dialog che spiega perche' servono.
+  /// Ritorna true se concesso.
+  Future<bool> requestPermissionWithContext() async {
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-    debugPrint('🔔 FCM Driver permission: ${settings.authorizationStatus}');
+    debugPrint(
+      '🔔 FCM Driver permission (richiesta): ${settings.authorizationStatus}',
+    );
 
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      return false;
+    }
 
-    _token = await _messaging.getToken();
-    debugPrint('📱 FCM Driver Token: $_token');
+    await _setupMessaging();
+    return true;
+  }
 
-    await _registerTokenOnBackend();
+  /// Token, handler e canale notifiche: eseguito solo a permesso concesso.
+  Future<void> _setupMessaging() async {
+    await _attendiApnsToken();
+
+    try {
+      _token = await _messaging.getToken();
+      debugPrint('📱 FCM Driver Token: $_token');
+      await _registerTokenOnBackend();
+    } catch (e) {
+      // initialize() non e' awaited in main: un throw qui diventerebbe un
+      // errore asincrono non gestito, che runZonedGuarded segnalerebbe a
+      // Crashlytics come crash fatale a ogni avvio.
+      debugPrint('⚠️ FCM Driver token non ottenibile: $e');
+    }
 
     _messaging.onTokenRefresh.listen((t) {
       _token = t;

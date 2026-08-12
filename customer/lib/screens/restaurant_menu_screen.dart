@@ -17,6 +17,8 @@ import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 import '../widgets/app_icon.dart';
 import '../widgets/foto_rete.dart';
+import '../widgets/gate_account_sheet.dart';
+import '../services/auth_service.dart';
 
 /// Restaurant Menu Screen - Basato sul prototipo 7-menu.html
 class RestaurantMenuScreen extends StatefulWidget {
@@ -44,6 +46,15 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   bool _isLoadingMenu = true;
   double _overScrollOffset = 0.0; // Per l'effetto pull-to-reveal
   String _searchQuery = '';
+
+  /// Altezza della fascia trasparente in cima al contenuto scorrevole: e' lo
+  /// spiraglio da cui si vede la copertina, che sta dietro. Scorrendo di questa
+  /// quantita' il contenuto opaco arriva al bordo dell'area di sistema, ed e'
+  /// il momento in cui la striscia sotto l'isola deve diventare bianca.
+  static const double _altezzaTestata = 176;
+
+  /// Scorrimento su cui la striscia sfuma dalla copertina al bianco.
+  static const double _sfumaturaStriscia = 24;
 
   // Scroll-spy: il menu scorre TUTTO in continuo; le tab sono ancore.
   // Una GlobalKey stabile per sezione permette di calcolare la posizione
@@ -585,7 +596,12 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     // Calcola il fattore di scala per lo zoom dell'immagine durante il pull
     final double imageScale = 1.0 + (_overScrollOffset / 400);
     // Espandi anche l'altezza del contenitore durante il pull
-    final double containerHeight = 200 + (_overScrollOffset / 2);
+    // Il contenuto scorrevole parte sotto l'area di sistema (vedi SafeArea piu'
+    // sotto): la copertina, che sta fuori da quella SafeArea, cresce della
+    // stessa quantita' cosi' a riposo l'allineamento resta identico su ogni
+    // dispositivo, dal telefono senza notch alla Dynamic Island.
+    final double topInset = MediaQuery.paddingOf(context).top;
+    final double containerHeight = 200 + topInset + (_overScrollOffset / 2);
 
     return Scaffold(
       body: Stack(
@@ -655,23 +671,69 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               }
               return false;
             },
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildHeader(),
-                // Ristorante chiuso ora: lo si dice SUBITO, non al checkout.
-                // Ordinare resta possibile (preordine su fasce future).
-                if (widget.restaurant.isOpenNow == false)
-                  SliverToBoxAdapter(child: _buildClosedBanner()),
-                _buildCategoryTabs(), // Tab aderenti al box
-                if (!_isSearchActive) _buildFeaturedItems(),
-                // Dynamic menu sections from API categories
-                ..._buildDynamicMenuSections(),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-              ],
+            // Le tab categorie sono un header ancorato: si fissano in cima al
+            // viewport. Facendo partire il viewport sotto l'area di sistema
+            // restano cliccabili invece di finire sotto la Dynamic Island, e a
+            // riposo non si crea nessuno spazio vuoto in piu'.
+            child: SafeArea(
+              bottom: false,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  _buildHeader(),
+                  // Ristorante chiuso ora: lo si dice SUBITO, non al checkout.
+                  // Ordinare resta possibile (preordine su fasce future).
+                  // Sfondo bianco esplicito: il banner ha margini laterali, e
+                  // senza una base opaca da quei margini si vedeva la copertina
+                  // che sta dietro nello Stack.
+                  if (widget.restaurant.isOpenNow == false)
+                    SliverToBoxAdapter(
+                      child: ColoredBox(
+                        color: Colors.white,
+                        child: _buildClosedBanner(),
+                      ),
+                    ),
+                  _buildCategoryTabs(), // Tab aderenti al box
+                  if (!_isSearchActive) _buildFeaturedItems(),
+                  // Dynamic menu sections from API categories
+                  ..._buildDynamicMenuSections(),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                ],
+              ),
             ),
           ),
+          // Striscia sotto l'area di sistema. A riposo e' trasparente e lascia
+          // vedere la copertina a tutto schermo; diventa bianca quando il
+          // contenuto opaco arriva al bordo, cioe' quando le tab si ancorano.
+          // Senza, sotto la Dynamic Island resterebbe visibile un ritaglio di
+          // copertina sopra la barra bianca delle categorie.
+          if (topInset > 0)
+            AnimatedBuilder(
+              animation: _scrollController,
+              builder: (context, child) {
+                final scrollOffset = _scrollController.hasClients
+                    ? _scrollController.offset
+                    : 0.0;
+                final opacita =
+                    ((scrollOffset - _altezzaTestata + _sfumaturaStriscia) /
+                            _sfumaturaStriscia)
+                        .clamp(0.0, 1.0);
+                if (opacita == 0) return const SizedBox.shrink();
+                return Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Opacity(
+                    opacity: opacita,
+                    child: SizedBox(
+                      height: topInset,
+                      child: const ColoredBox(color: Colors.white),
+                    ),
+                  ),
+                );
+              },
+            ),
           // Pulsanti sull'header: scorrono via col contenuto invece di
           // restare fissi sopra le tab categorie. Per tornare indietro,
           // oltre al pulsante (visibile a inizio pagina), c'e' il gesto
@@ -682,7 +744,10 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               final scrollOffset = _scrollController.hasClients
                   ? _scrollController.offset
                   : 0.0;
-              final top = 40.0 - scrollOffset;
+              // Sotto l'area di sistema, non a un'altezza fissa: 40 era tarato
+              // su un telefono senza notch e su Dynamic Island finiva coperto.
+              final top =
+                  MediaQuery.paddingOf(context).top + 8.0 - scrollOffset;
               if (top < -50) return const SizedBox.shrink();
               return Positioned(top: top, left: 0, right: 0, child: child!);
             },
@@ -922,7 +987,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            height: 176,
+            height: _altezzaTestata,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -1051,37 +1116,37 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           child: Row(
             spacing: 8,
             children: [
-            _buildGlovoChip(
-              icon: Icons.directions_bike,
-              text: deliveryCostText,
-              backgroundColor: const Color(0xFFF5F5F5),
-            ),
-            if (widget.restaurant.deliveryTime.isNotEmpty)
               _buildGlovoChip(
-                icon: Icons.schedule,
-                text: widget.restaurant.deliveryTime,
+                icon: Icons.directions_bike,
+                text: deliveryCostText,
                 backgroundColor: const Color(0xFFF5F5F5),
               ),
-            if (minOrderText != null)
-              _buildGlovoChip(
-                icon: Icons.shopping_bag,
-                text: 'Min $minOrderText',
-                backgroundColor: const Color(0xFFF5F5F5),
-              ),
-            if (distanceText != null)
-              _buildGlovoChip(
-                icon: Icons.location_on,
-                text: distanceText,
-                backgroundColor: const Color(0xFFF5F5F5),
-              ),
-            // Stella solo con un rating reale (oggi nessuna recensione:
-            // si accendera' da sola quando esisteranno)
-            if (widget.restaurant.rating > 0)
-              _buildGlovoChip(
-                icon: Icons.star,
-                text: widget.restaurant.rating.toStringAsFixed(1),
-                backgroundColor: const Color(0xFFF5F5F5),
-              ),
+              if (widget.restaurant.deliveryTime.isNotEmpty)
+                _buildGlovoChip(
+                  icon: Icons.schedule,
+                  text: widget.restaurant.deliveryTime,
+                  backgroundColor: const Color(0xFFF5F5F5),
+                ),
+              if (minOrderText != null)
+                _buildGlovoChip(
+                  icon: Icons.shopping_bag,
+                  text: 'Min $minOrderText',
+                  backgroundColor: const Color(0xFFF5F5F5),
+                ),
+              if (distanceText != null)
+                _buildGlovoChip(
+                  icon: Icons.location_on,
+                  text: distanceText,
+                  backgroundColor: const Color(0xFFF5F5F5),
+                ),
+              // Stella solo con un rating reale (oggi nessuna recensione:
+              // si accendera' da sola quando esisteranno)
+              if (widget.restaurant.rating > 0)
+                _buildGlovoChip(
+                  icon: Icons.star,
+                  text: widget.restaurant.rating.toStringAsFixed(1),
+                  backgroundColor: const Color(0xFFF5F5F5),
+                ),
             ],
           ),
         ),
@@ -1555,326 +1620,368 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       child: Opacity(
         opacity: nonDisponibile ? 0.45 : 1.0,
         child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _showProductDetail(item),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: darkColor,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _showProductDetail(item),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            // Rete di sicurezza: senza questi due, un nome
+                            // lungo accanto a badge ingombranti andava a capo
+                            // all'infinito, una lettera per riga.
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: darkColor,
+                            ),
                           ),
                         ),
-                      ),
-                      if (item.badges.isNotEmpty)
-                        Wrap(
-                          spacing: 4,
-                          children: item.badges
-                              .take(2)
-                              .map(
-                                (badge) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _getBadgeColor(badge),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
+                        if (item.badges.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: item.badges
+                                .take(2)
+                                .map(_buildBadge)
+                                .toList(),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description,
+                      style: const TextStyle(fontSize: 12, color: grayColor),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // Vincolo orario dal pannello (es. "Disponibile dalle 18:00"):
+                    // il piatto resta ordinabile per una fascia serale, ma il cliente
+                    // sa subito che a pranzo non glielo portiamo.
+                    if (item.availabilityLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Builder(
+                        builder: (context) {
+                          // "Non disponibile oggi" e' uno stop, non un orario: rosso.
+                          // Un vincolo di fascia ("Disponibile dalle 18:00") e' un
+                          // avviso: arancione.
+                          final bloccante = item.availabilityLabel!
+                              .toLowerCase()
+                              .startsWith('non disponibile');
+                          final testo = bloccante
+                              ? const Color(0xFFB3261E)
+                              : const Color(0xFF9A6400);
+                          final sfondo = bloccante
+                              ? const Color(0xFFFDECEA)
+                              : const Color(0xFFFFF4E5);
+                          final bordo = bloccante
+                              ? const Color(0xFFF5C2BD)
+                              : const Color(0xFFFFD9A0);
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: sfondo,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: bordo),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  bloccante
+                                      ? Icons.do_not_disturb_on_outlined
+                                      : Icons.schedule,
+                                  size: 12,
+                                  color: testo,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
                                   child: Text(
-                                    badge,
-                                    style: const TextStyle(
+                                    item.availabilityLabel!,
+                                    style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: testo,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              )
-                              .toList(),
-                        ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.description,
-                    style: const TextStyle(fontSize: 12, color: grayColor),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // Vincolo orario dal pannello (es. "Disponibile dalle 18:00"):
-                  // il piatto resta ordinabile per una fascia serale, ma il cliente
-                  // sa subito che a pranzo non glielo portiamo.
-                  if (item.availabilityLabel != null) ...[
-                    const SizedBox(height: 4),
-                    Builder(
-                      builder: (context) {
-                        // "Non disponibile oggi" e' uno stop, non un orario: rosso.
-                        // Un vincolo di fascia ("Disponibile dalle 18:00") e' un
-                        // avviso: arancione.
-                        final bloccante = item.availabilityLabel!
-                            .toLowerCase()
-                            .startsWith('non disponibile');
-                        final testo = bloccante
-                            ? const Color(0xFFB3261E)
-                            : const Color(0xFF9A6400);
-                        final sfondo = bloccante
-                            ? const Color(0xFFFDECEA)
-                            : const Color(0xFFFFF4E5);
-                        final bordo = bloccante
-                            ? const Color(0xFFF5C2BD)
-                            : const Color(0xFFFFD9A0);
+                    const SizedBox(height: 6),
+                    if (item.hasDiscount)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '€${item.originalPrice!.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: grayColor,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          Text(
+                            '€${item.price.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: successColor,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        '€${item.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: darkColor,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
 
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
+            // Foto del piatto: il primo driver di conversione di un menu.
+            // Solo se esiste (niente placeholder grigi a vuoto); il widget
+            // sparisce da solo se l'immagine non si carica.
+            if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
+              GestureDetector(
+                onTap: () => _showProductDetail(item),
+                // Nella riga basta la thumbnail 150px (13KB): l'originale
+                // da centinaia di KB rendeva il menu lentissimo.
+                child: _MenuItemImage(
+                  imageUrl: item.thumbnailUrl ?? item.imageUrl!,
+                ),
+              ),
+
+            const SizedBox(width: 8),
+            // Pulsanti +/- per aggiunta rapida al carrello
+            Consumer<CartProvider>(
+              builder: (context, cart, _) {
+                final itemInCart = cart.items
+                    .where((cartItem) => cartItem.menuItem.id == item.id)
+                    .toList();
+                final totalQuantity = itemInCart.fold<int>(
+                  0,
+                  (sum, cartItem) => sum + cartItem.quantity,
+                );
+
+                if (totalQuantity > 0) {
+                  // Mostra selettore con - quantità +
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: lightGrayColor),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Pulsante -
+                        InkWell(
+                          onTap: () {
+                            if (itemInCart.isNotEmpty) {
+                              final index = cart.items.indexOf(itemInCart.last);
+                              if (itemInCart.last.quantity > 1) {
+                                cart.updateQuantity(
+                                  index,
+                                  itemInCart.last.quantity - 1,
+                                );
+                              } else {
+                                cart.removeItem(index);
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            child: const Icon(
+                              Icons.remove,
+                              size: 16,
+                              color: darkColor,
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: sfondo,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: bordo),
+                        ),
+                        // Quantità
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            totalQuantity.toString(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: darkColor,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                bloccante
-                                    ? Icons.do_not_disturb_on_outlined
-                                    : Icons.schedule,
-                                size: 12,
-                                color: testo,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  item.availabilityLabel!,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: testo,
+                        ),
+                        // Pulsante +
+                        InkWell(
+                          onTap: () {
+                            // Piatto non disponibile oggi: niente aggiunta
+                            if (_isDishUnavailable(item)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    item.availabilityLabel ??
+                                        'Piatto non disponibile oggi',
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  backgroundColor: dangerColor,
+                                  duration: const Duration(seconds: 2),
                                 ),
-                              ),
-                            ],
+                              );
+                              return;
+                            }
+
+                            // Controlla se ha varianti obbligatorie
+                            final hasRequiredCustomizations = item
+                                .customizations
+                                .any((group) => group.isRequired);
+
+                            if (hasRequiredCustomizations) {
+                              // Mostra product detail con avviso
+                              _showProductDetailWithCustomizationWarning(item);
+                            } else {
+                              // Aggiungi direttamente al carrello
+                              _quickAddToCart(item, cart);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            child: const Icon(
+                              Icons.add,
+                              size: 16,
+                              color: darkColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  // Mostra solo pulsante +
+                  return GestureDetector(
+                    onTap: () {
+                      // Piatto non disponibile oggi: niente aggiunta
+                      if (_isDishUnavailable(item)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              item.availabilityLabel ??
+                                  'Piatto non disponibile oggi',
+                            ),
+                            backgroundColor: dangerColor,
+                            duration: const Duration(seconds: 2),
                           ),
                         );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  if (item.hasDiscount)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '€${item.originalPrice!.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: grayColor,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        Text(
-                          '€${item.price.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: successColor,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Text(
-                      '€${item.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: darkColor,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+                        return;
+                      }
 
-          // Foto del piatto: il primo driver di conversione di un menu.
-          // Solo se esiste (niente placeholder grigi a vuoto); il widget
-          // sparisce da solo se l'immagine non si carica.
-          if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-            GestureDetector(
-              onTap: () => _showProductDetail(item),
-              // Nella riga basta la thumbnail 150px (13KB): l'originale
-              // da centinaia di KB rendeva il menu lentissimo.
-              child: _MenuItemImage(
-                imageUrl: item.thumbnailUrl ?? item.imageUrl!,
-              ),
-            ),
-
-          const SizedBox(width: 8),
-          // Pulsanti +/- per aggiunta rapida al carrello
-          Consumer<CartProvider>(
-            builder: (context, cart, _) {
-              final itemInCart = cart.items
-                  .where((cartItem) => cartItem.menuItem.id == item.id)
-                  .toList();
-              final totalQuantity = itemInCart.fold<int>(
-                0,
-                (sum, cartItem) => sum + cartItem.quantity,
-              );
-
-              if (totalQuantity > 0) {
-                // Mostra selettore con - quantità +
-                return Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: lightGrayColor),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Pulsante -
-                      InkWell(
-                        onTap: () {
-                          if (itemInCart.isNotEmpty) {
-                            final index = cart.items.indexOf(itemInCart.last);
-                            if (itemInCart.last.quantity > 1) {
-                              cart.updateQuantity(
-                                index,
-                                itemInCart.last.quantity - 1,
-                              );
-                            } else {
-                              cart.removeItem(index);
-                            }
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.remove,
-                            size: 16,
-                            color: darkColor,
-                          ),
-                        ),
-                      ),
-                      // Quantità
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          totalQuantity.toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: darkColor,
-                          ),
-                        ),
-                      ),
-                      // Pulsante +
-                      InkWell(
-                        onTap: () {
-                          // Piatto non disponibile oggi: niente aggiunta
-                          if (_isDishUnavailable(item)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  item.availabilityLabel ??
-                                      'Piatto non disponibile oggi',
-                                ),
-                                backgroundColor: dangerColor,
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                            return;
-                          }
-
-                          // Controlla se ha varianti obbligatorie
-                          final hasRequiredCustomizations = item.customizations
-                              .any((group) => group.isRequired);
-
-                          if (hasRequiredCustomizations) {
-                            // Mostra product detail con avviso
-                            _showProductDetailWithCustomizationWarning(item);
-                          } else {
-                            // Aggiungi direttamente al carrello
-                            _quickAddToCart(item, cart);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.add,
-                            size: 16,
-                            color: darkColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              } else {
-                // Mostra solo pulsante +
-                return GestureDetector(
-                  onTap: () {
-                    // Piatto non disponibile oggi: niente aggiunta
-                    if (_isDishUnavailable(item)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            item.availabilityLabel ??
-                                'Piatto non disponibile oggi',
-                          ),
-                          backgroundColor: dangerColor,
-                          duration: const Duration(seconds: 2),
-                        ),
+                      // Controlla se ha varianti obbligatorie
+                      final hasRequiredCustomizations = item.customizations.any(
+                        (group) => group.isRequired,
                       );
-                      return;
-                    }
 
-                    // Controlla se ha varianti obbligatorie
-                    final hasRequiredCustomizations = item.customizations.any(
-                      (group) => group.isRequired,
-                    );
-
-                    if (hasRequiredCustomizations) {
-                      // Mostra product detail con avviso
-                      _showProductDetailWithCustomizationWarning(item);
-                    } else {
-                      // Aggiungi direttamente al carrello
-                      _quickAddToCart(item, cart);
-                    }
-                  },
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      if (hasRequiredCustomizations) {
+                        // Mostra product detail con avviso
+                        _showProductDetailWithCustomizationWarning(item);
+                      } else {
+                        // Aggiungi direttamente al carrello
+                        _quickAddToCart(item, cart);
+                      }
+                    },
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: const Icon(Icons.add, size: 16, color: Colors.white),
-                  ),
-                );
-              }
-            },
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Icona del set "Lenny Icons" per i badge che ne hanno una.
+  ///
+  /// Le etichette lunghe come "Personalizzabile" e "Consigliato", affiancate,
+  /// rubavano tutta la larghezza al nome del piatto, che si incolonnava una
+  /// lettera per riga. L'icona occupa spazio fisso e non puo' piu' succedere,
+  /// qualunque etichetta si aggiunga in futuro.
+  static const Map<String, String> _iconeBadge = {
+    'consigliato': 'icons8-stella-32',
+    'personalizzabile': 'lenny-mixer',
+  };
+
+  /// Un badge: icona se prevista, altrimenti la pastiglia testuale di prima.
+  Widget _buildBadge(String badge) {
+    final icona = _iconeBadge[badge.toLowerCase()];
+
+    if (icona != null) {
+      // Tooltip e Semantics restituiscono la parola: l'icona da sola non si
+      // spiega da se', e uno screen reader senza etichetta non leggerebbe nulla.
+      return Padding(
+        padding: const EdgeInsets.only(left: 5),
+        child: Tooltip(
+          message: badge,
+          child: AppIcon(
+            'assets/icons_svg/$icona.svg',
+            size: 17,
+            semanticLabel: badge,
           ),
-        ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: _getBadgeColor(badge),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(
+          badge,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -1936,73 +2043,78 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
 
   Widget _buildCartBarButton(CartProvider cart) {
     return ElevatedButton(
-              onPressed: cart.itemCount > 0
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CheckoutScreen(
-                            restaurant: widget.restaurant,
-                            cartItems: cart.items,
-                            subtotal: cart.total,
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cart.itemCount > 0 ? primaryColor : grayColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      AppIcon(
-'assets/icons/icons8-basket-2-32.png',
-                        width: 20,
-                        height: 20,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '• ${cart.itemCount} ${cart.itemCount == 1 ? 'articolo' : 'articoli'}',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+      onPressed: cart.itemCount > 0
+          ? () async {
+              // Seconda porta d'ingresso al checkout, oltre a quella dal
+              // carrello: anche qui l'ospite viene invitato a registrarsi
+              // prima di aprire una schermata che senza account fallirebbe.
+              if (!await AuthService().isLoggedIn()) {
+                if (!mounted) return;
+                await mostraGateAccount(context);
+                return;
+              }
+              if (!mounted) return;
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CheckoutScreen(
+                    restaurant: widget.restaurant,
+                    cartItems: cart.items,
+                    subtotal: cart.total,
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        '€${cart.total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      AppIcon(
-'assets/icons/icons8-arrow-WHITE-32.png',
-                        width: 16,
-                        height: 16,
-                      ),
-                    ],
-                  ),
-                ],
+                ),
+              );
+            }
+          : null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: cart.itemCount > 0 ? primaryColor : grayColor,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              AppIcon(
+                'assets/icons/icons8-basket-2-32.png',
+                width: 20,
+                height: 20,
+                color: Colors.white,
               ),
-            );
+              const SizedBox(width: 8),
+              Text(
+                '• ${cart.itemCount} ${cart.itemCount == 1 ? 'articolo' : 'articoli'}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Text(
+                '€${cart.total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              AppIcon(
+                'assets/icons/icons8-arrow-WHITE-32.png',
+                width: 16,
+                height: 16,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -2013,6 +2125,7 @@ class _CategoryTabsDelegate extends SliverPersistentHeaderDelegate {
   final Function(String) onCategorySelected;
 
   static const Color primaryColor = AppColors.primary;
+  static const double _altezzaTab = 48;
 
   _CategoryTabsDelegate({
     required this.categories,
@@ -2022,10 +2135,10 @@ class _CategoryTabsDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  double get minExtent => 48;
+  double get minExtent => _altezzaTab;
 
   @override
-  double get maxExtent => 48;
+  double get maxExtent => _altezzaTab;
 
   @override
   Widget build(

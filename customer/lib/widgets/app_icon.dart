@@ -19,6 +19,11 @@ class AppIcon extends StatelessWidget {
   final Color? color;
   final BoxFit fit;
 
+  /// Testo letto dagli screen reader. Va sempre valorizzato quando l'icona
+  /// sostituisce una parola (es. i badge dei piatti): senza, chi usa VoiceOver
+  /// perde del tutto l'informazione che i vedenti ricavano dal simbolo.
+  final String? semanticLabel;
+
   const AppIcon(
     this.asset, {
     super.key,
@@ -27,6 +32,7 @@ class AppIcon extends StatelessWidget {
     this.size,
     this.color,
     this.fit = BoxFit.contain,
+    this.semanticLabel,
   });
 
   /// Nomi rimappati: icone eliminate dal set per decisione di prodotto
@@ -50,6 +56,7 @@ class AppIcon extends StatelessWidget {
       width: size ?? width,
       height: size ?? height,
       fit: fit,
+      semanticsLabel: semanticLabel,
       colorFilter: color != null
           ? ColorFilter.mode(color!, BlendMode.srcIn)
           : null,

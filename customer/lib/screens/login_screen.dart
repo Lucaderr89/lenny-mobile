@@ -112,6 +112,18 @@ class _LoginScreenState extends State<LoginScreen> {
           FocusScope.of(context).unfocus(), // Chiudi tastiera toccando fuori
       child: Scaffold(
         backgroundColor: AppColors.cream,
+        // Barra col solo tasto indietro, e solo quando c'e' davvero dove
+        // tornare: l'ospite che arriva qui per curiosita' deve poter
+        // riprendere a navigare. Dopo un logout invece il login e' la radice,
+        // canPop e' falso e la barra non compare.
+        appBar: context.canPop()
+            ? AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                foregroundColor: AppColors.dark,
+              )
+            : null,
         body: SafeArea(
           bottom: false, // La card bianca estende fino al bordo inferiore
           child: Column(
@@ -177,7 +189,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.card),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.card,
+                                  ),
                                 ),
                               ),
                               child: _isLoading
@@ -290,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: AppIcon(
-'assets/icons/icons8-email-32.png',
+                  'assets/icons/icons8-email-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -356,7 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: AppIcon(
-'assets/icons/icons8-password-32.png',
+                  'assets/icons/icons8-password-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,
@@ -364,7 +378,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               suffixIcon: IconButton(
                 icon: AppIcon(
-'assets/icons/icons8-hide-32.png',
+                  'assets/icons/icons8-hide-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.gray,

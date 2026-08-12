@@ -154,7 +154,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                   shape: BoxShape.circle,
                 ),
                 child: AppIcon(
-'assets/icons/icons8-uscita-32.png',
+                  'assets/icons/icons8-uscita-32.png',
                   width: 48,
                   height: 48,
                   color: AppColors.primary,
@@ -349,7 +349,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                     ? IconButton(
                         onPressed: () => _handleLogout(context),
                         icon: AppIcon(
-'assets/icons/icons8-uscita-32.png',
+                          'assets/icons/icons8-uscita-32.png',
                           width: 24,
                           height: 24,
                           color: AppColors.primary,
@@ -357,7 +357,11 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                         padding: EdgeInsets.zero,
                       )
                     : IconButton(
-                        onPressed: () => context.go('/login'),
+                        // push e non go: l'ospite che tocca "accedi" non ha
+                        // ancora deciso nulla, deve poter tornare a navigare.
+                        // Con go lo stack verrebbe sostituito e resterebbe
+                        // intrappolato nel login.
+                        onPressed: () => context.push('/login'),
                         icon: const Icon(
                           Icons.person_outline,
                           size: 26,
@@ -762,7 +766,7 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                         child: Row(
                           children: [
                             AppIcon(
-'assets/icons/icons8-location-32.png',
+                              'assets/icons/icons8-location-32.png',
                               width: 20,
                               height: 20,
                               color: AppColors.primary,
@@ -907,7 +911,9 @@ class _OrganicShapePainter extends CustomPainter {
     // Bordo grigio per definire i contorni (come Glovo)
     final strokePaint = Paint()
       ..color = const Color(0xFFCC8800)
-          .withValues(alpha: 0.40) // Tonalità scura del giallo/arancione di sfondo
+          .withValues(
+            alpha: 0.40,
+          ) // Tonalità scura del giallo/arancione di sfondo
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5.0;
 

@@ -16,6 +16,8 @@ import 'checkout_screen.dart';
 import 'package:flutter/foundation.dart';
 import '../widgets/app_icon.dart';
 import '../widgets/foto_rete.dart';
+import '../widgets/gate_account_sheet.dart';
+import '../services/auth_service.dart';
 
 /// Cart Screen - Basato sul prototipo 8-carrello.html
 class CartScreen extends StatefulWidget {
@@ -498,11 +500,21 @@ class _CartScreenState extends State<CartScreen> {
     return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   }
 
-  void _proceedToCheckout() {
+  void _proceedToCheckout() async {
     if (_cartItems.isEmpty) {
       _showToast('Il carrello è vuoto');
       return;
     }
+
+    // Guest-first: riempire il carrello e' libero, ma il checkout senza account
+    // non ha indirizzi ne' fasce orarie da caricare e mostrerebbe solo errori.
+    // L'invito arriva quindi PRIMA di aprirlo. Il carrello resta salvato.
+    if (!await AuthService().isLoggedIn()) {
+      if (!mounted) return;
+      await mostraGateAccount(context);
+      return;
+    }
+    if (!mounted) return;
 
     // Naviga allo schermo di checkout
     Navigator.push(
@@ -596,10 +608,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             child: const Text(
               'Svuota',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),
         ],
@@ -757,19 +766,12 @@ class _CartScreenState extends State<CartScreen> {
       '•',
       style: TextStyle(color: lightGrayColor, fontSize: 13),
     );
-    const infoStyle = TextStyle(
-      fontSize: 13,
-      color: grayColor,
-    );
+    const infoStyle = TextStyle(fontSize: 13, color: grayColor);
     final segments = <Widget>[];
 
     if (_rest.deliveryTime.isNotEmpty) {
       segments.addAll([
-        const FaIcon(
-          FontAwesomeIcons.motorcycle,
-          size: 11,
-          color: grayColor,
-        ),
+        const FaIcon(FontAwesomeIcons.motorcycle, size: 11, color: grayColor),
         Text(_rest.deliveryTime, style: infoStyle),
       ]);
     }
@@ -778,11 +780,7 @@ class _CartScreenState extends State<CartScreen> {
     if (distanceKm != null) {
       if (segments.isNotEmpty) segments.add(dot);
       segments.addAll([
-        const FaIcon(
-          FontAwesomeIcons.locationDot,
-          size: 11,
-          color: grayColor,
-        ),
+        const FaIcon(FontAwesomeIcons.locationDot, size: 11, color: grayColor),
         Text('${distanceKm.toStringAsFixed(1)} km', style: infoStyle),
       ]);
     }
@@ -823,11 +821,7 @@ class _CartScreenState extends State<CartScreen> {
             const Text(
               'Aggiungi qualcosa dal menu per iniziare a ordinare',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                color: grayColor,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 15, color: grayColor, height: 1.5),
             ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
@@ -889,10 +883,7 @@ class _CartScreenState extends State<CartScreen> {
     final missingForMin = minOrder - _subtotal;
     final missingForFree = freeOver != null ? freeOver - _subtotal : null;
 
-    const labelStyle = TextStyle(
-      fontSize: 13,
-      color: grayColor,
-    );
+    const labelStyle = TextStyle(fontSize: 13, color: grayColor);
     const valueStyle = TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w600,
@@ -1017,7 +1008,7 @@ class _CartScreenState extends State<CartScreen> {
           child: Row(
             children: [
               AppIcon(
-'assets/icons/icons8-basket-2-32.png',
+                'assets/icons/icons8-basket-2-32.png',
                 width: 16,
                 height: 16,
                 color: primaryColor,
@@ -1103,9 +1094,7 @@ class _CartScreenState extends State<CartScreen> {
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        textStyle: const TextStyle(
-                          fontSize: 12,
-                        ),
+                        textStyle: const TextStyle(fontSize: 12),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1118,9 +1107,7 @@ class _CartScreenState extends State<CartScreen> {
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        textStyle: const TextStyle(
-                          fontSize: 12,
-                        ),
+                        textStyle: const TextStyle(fontSize: 12),
                       ),
                     ),
                   ],
@@ -1175,7 +1162,9 @@ class _CartScreenState extends State<CartScreen> {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: onPressed != null ? lightColor : lightColor.withValues(alpha: 0.5),
+        color: onPressed != null
+            ? lightColor
+            : lightColor.withValues(alpha: 0.5),
         shape: BoxShape.circle,
       ),
       child: IconButton(
@@ -1454,10 +1443,7 @@ class _CartScreenState extends State<CartScreen> {
                 if (item.description.isNotEmpty)
                   Text(
                     item.description,
-                    style: const TextStyle(
-                      color: grayColor,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: grayColor, fontSize: 12),
                   ),
               ],
             ),
@@ -1508,9 +1494,7 @@ class _CartScreenState extends State<CartScreen> {
   /// Carica il menu completo del ristorante
   Future<List<MenuItem>> _loadRestaurantMenu() async {
     try {
-      final url = Uri.parse(
-        '$apiBaseUrl/restaurants/${_rest.id}/menu',
-      );
+      final url = Uri.parse('$apiBaseUrl/restaurants/${_rest.id}/menu');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -1573,7 +1557,7 @@ class _CartScreenState extends State<CartScreen> {
                 Row(
                   children: [
                     AppIcon(
-'assets/icons/icons8-basket-2-32.png',
+                      'assets/icons/icons8-basket-2-32.png',
                       width: 20,
                       height: 20,
                       color: Colors.white,
@@ -1599,7 +1583,7 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     const SizedBox(width: 8),
                     AppIcon(
-'assets/icons/icons8-arrow-WHITE-32.png',
+                      'assets/icons/icons8-arrow-WHITE-32.png',
                       width: 16,
                       height: 16,
                     ),
@@ -1656,11 +1640,7 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 12),
             Text(
               message,
-              style: TextStyle(
-                fontSize: 15,
-                color: grayColor,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 15, color: grayColor, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

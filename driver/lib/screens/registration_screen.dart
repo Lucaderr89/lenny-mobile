@@ -423,11 +423,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: const TextStyle(fontSize: 14),
+      // Come nel login: la card ha colori chiari fissi, quindi il testo non
+      // puo' ereditare il colore dal tema, che di notte passa allo scuro.
+      style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(fontSize: 14),
-        prefixIcon: Icon(icon, size: 20),
+        labelStyle: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textSecondary,
+        ),
+        prefixIcon: Icon(icon, size: 20, color: AppColors.textSecondary),
         suffixIcon: suffixIcon,
         helperText: helperText,
         helperStyle: TextStyle(fontSize: 11, color: AppColors.gray),

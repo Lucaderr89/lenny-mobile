@@ -33,7 +33,7 @@ class LocationPermissionDialog extends StatelessWidget {
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
-              'Abilita GPS',
+              'Abilita GPS e notifiche',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
           ),
@@ -45,10 +45,17 @@ class LocationPermissionDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
           const Text(
-            'Ci serve la tua posizione solo mentre hai una consegna in corso, per:',
+            'Per lavorare ci servono due permessi. La posizione solo mentre hai '
+            'una consegna in corso, le notifiche per avvisarti dei nuovi ordini:',
             style: TextStyle(fontSize: 15),
           ),
           const SizedBox(height: 20),
+          _buildBenefit(
+            Icons.notifications_active_rounded,
+            'Avvisarti subito quando ti viene assegnata una consegna',
+            AppColors.primary,
+          ),
+          const SizedBox(height: 14),
           _buildBenefit(
             Icons.sync_rounded,
             'Aggiornare da solo lo stato dell\'ordine quando arrivi al ritiro e quando consegni',
@@ -115,7 +122,7 @@ class LocationPermissionDialog extends StatelessWidget {
             ),
           ),
           child: const Text(
-            'Abilita GPS',
+            'Abilita',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,

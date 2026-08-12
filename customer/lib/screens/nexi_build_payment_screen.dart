@@ -200,7 +200,12 @@ class _NexiBuildPaymentScreenState extends State<NexiBuildPaymentScreen> {
         );
         return shouldPop ?? false;
       },
-      child: Scaffold(backgroundColor: Colors.white, body: _buildBody()),
+      // Come nell'altra schermata Nexi: senza AppBar il corpo partirebbe da
+      // coordinata zero e finirebbe sotto notch e Dynamic Island.
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(child: _buildBody()),
+      ),
     );
   }
 

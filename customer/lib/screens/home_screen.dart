@@ -1135,6 +1135,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Container(
         width: 46,
         height: 46,
+        // FaIcon, a differenza di Icon, non avvolge il glifo in SizedBox+Center:
+        // senza allineamento esplicito riceve vincoli stretti e si appoggia in
+        // alto a sinistra invece di stare al centro del cerchio.
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.primary,
           shape: BoxShape.circle,

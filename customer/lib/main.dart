@@ -33,9 +33,12 @@ void main() async {
       // token di sessione, dati personali dei clienti e, al login, la password.
       // Su logcat sarebbero leggibili da chi ha accesso al dispositivo via ADB.
       // In debug restano, perche' li' servono.
+      // La profile e' inclusa perche' non viene distribuita e serve a
+      // collaudare su dispositivo reale: senza log non si leggerebbe
+      // nemmeno il token FCM. La release resta muta.
       zoneSpecification: ZoneSpecification(
         print: (self, parent, zone, riga) {
-          if (kDebugMode) parent.print(zone, riga);
+          if (kDebugMode || kProfileMode) parent.print(zone, riga);
         },
       ));
 }

@@ -177,6 +177,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (accept == true) {
       await locService.requestPermission();
+      // Le notifiche si chiedono qui e non al bootstrap: il dialog ha appena
+      // spiegato a cosa servono, che e' il momento con meno rifiuti.
+      await FcmService().requestPermissionWithContext();
     }
 
     // In ogni caso non riproporre il dialog ad ogni avvio: l'OS gestisce il resto.

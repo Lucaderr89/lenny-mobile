@@ -252,7 +252,13 @@ class _NexiPaymentScreenState extends State<NexiPaymentScreen> {
         // Previeni back durante il pagamento
         return false;
       },
-      child: Scaffold(backgroundColor: Colors.white, body: _buildBody()),
+      // Nessuna AppBar qui, quindi il corpo partirebbe da coordinata zero e
+      // finirebbe sotto notch e Dynamic Island. Su una schermata di pagamento
+      // un campo coperto e' inaccettabile: SafeArea su tutti i lati.
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(child: _buildBody()),
+      ),
     );
   }
 
