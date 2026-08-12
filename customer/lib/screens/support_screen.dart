@@ -38,7 +38,7 @@ class SupportScreen extends StatelessWidget {
         toolbarHeight: 56,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -73,7 +73,7 @@ class SupportScreen extends StatelessWidget {
                 ),
                 child: Center(
                   child: AppIcon(
-'assets/icons/icons8-supporto-32.png',
+                    'assets/icons/icons8-supporto-32.png',
                     width: 40,
                     height: 40,
                     color: AppColors.primary,
@@ -147,7 +147,7 @@ class SupportScreen extends StatelessWidget {
           Row(
             children: [
               AppIcon(
-'assets/icons/icons8-telephone-32.png',
+                'assets/icons/icons8-telephone-32.png',
                 width: 24,
                 height: 24,
                 color: AppColors.primary,
@@ -181,7 +181,7 @@ class SupportScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AppIcon(
-'assets/icons/icons8-telephone-32.png',
+                  'assets/icons/icons8-telephone-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.dark,
@@ -208,7 +208,7 @@ class SupportScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: _makePhoneCall,
                   icon: AppIcon(
-'assets/icons/icons8-telephone-32.png',
+                    'assets/icons/icons8-telephone-32.png',
                     width: 20,
                     height: 20,
                     color: AppColors.light,
@@ -275,7 +275,7 @@ class SupportScreen extends StatelessWidget {
           Row(
             children: [
               AppIcon(
-'assets/icons/icons8-indirizzo-32.png',
+                'assets/icons/icons8-indirizzo-32.png',
                 width: 24,
                 height: 24,
                 color: AppColors.primary,
@@ -334,7 +334,7 @@ class SupportScreen extends StatelessWidget {
           Row(
             children: [
               AppIcon(
-'assets/icons/icons8-orologio-32.png',
+                'assets/icons/icons8-orologio-32.png',
                 width: 24,
                 height: 24,
                 color: AppColors.primary,

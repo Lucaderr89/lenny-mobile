@@ -215,8 +215,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.favorite,
+                      child: const AppIcon(
+                        'assets/icons_svg/icons8-mi-piace-32.svg',
                         color: AppColors.danger,
                         size: 50,
                       ),
@@ -342,7 +342,11 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.celebration, size: 60, color: accentYellow),
+            const AppIcon(
+              'assets/icons_svg/icons8-esplosione-fuochi-artificio-48.svg',
+              size: 60,
+              color: accentYellow,
+            ),
             const SizedBox(height: 16),
             Text(
               'Hai swipato $_swipeCount piatti e fatto $_likesCount like!',
@@ -544,7 +548,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
         centerTitle: true,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: darkColor,
@@ -573,7 +577,7 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
             ),
           IconButton(
             icon: AppIcon(
-'assets/icons/icons8-informazioni-32.png',
+              'assets/icons/icons8-informazioni-32.png',
               width: 24,
               height: 24,
             ),
@@ -713,8 +717,8 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             color: lightGrayColor,
-                            child: const Icon(
-                              Icons.restaurant,
+                            child: const AppIcon(
+                              'assets/icons_svg/icons8-ristorante-32.svg',
                               size: 80,
                               color: grayColor,
                             ),
@@ -776,7 +780,11 @@ class _FoodSwipeGameScreenState extends State<FoodSwipeGameScreen>
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Icon(Icons.restaurant, size: 14, color: grayColor),
+                            AppIcon(
+                              'assets/icons_svg/icons8-ristorante-32.svg',
+                              size: 14,
+                              color: grayColor,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(

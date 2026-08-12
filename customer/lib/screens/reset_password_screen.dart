@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import 'package:go_router/go_router.dart';
 import '../config/app_colors.dart';
 import '../services/auth_service.dart';
@@ -156,10 +157,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const AppIcon(
+                      'assets/icons_svg/icons8-password-32.svg',
+                    ),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscure ? Icons.visibility_off : Icons.visibility,
+                      icon: AppIcon(
+                        _obscure
+                            ? 'assets/icons_svg/icons8-hide-32.svg'
+                            : 'assets/icons_svg/icons8-hide-32.svg',
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
@@ -183,7 +188,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const AppIcon(
+                      'assets/icons_svg/icons8-password-32.svg',
+                    ),
                   ),
                   validator: (v) {
                     if (v != _passwordController.text) {

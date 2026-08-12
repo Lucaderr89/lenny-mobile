@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 
@@ -12,8 +13,8 @@ class FirstLaunchLocationDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          Icon(
-            Icons.location_on,
+          AppIcon(
+            'assets/icons_svg/icons8-location-32.svg',
             color: Theme.of(context).primaryColor,
             size: 28,
           ),

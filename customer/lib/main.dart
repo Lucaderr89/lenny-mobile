@@ -23,24 +23,27 @@ void main() async {
   // runZonedGuarded cattura anche gli errori asincroni che sfuggono a Flutter
   // (Future senza catch, callback, isolate del main): senza, in beta resterebbero
   // invisibili.
-  runZonedGuarded<Future<void>>(() async {
-    await _avvia();
-  }, (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  },
-      // In release nessuna print() finisce nel log di sistema. Nel codice ce ne
-      // sono centinaia che stampano corpi di risposta e di richiesta: contengono
-      // token di sessione, dati personali dei clienti e, al login, la password.
-      // Su logcat sarebbero leggibili da chi ha accesso al dispositivo via ADB.
-      // In debug restano, perche' li' servono.
-      // La profile e' inclusa perche' non viene distribuita e serve a
-      // collaudare su dispositivo reale: senza log non si leggerebbe
-      // nemmeno il token FCM. La release resta muta.
-      zoneSpecification: ZoneSpecification(
-        print: (self, parent, zone, riga) {
-          if (kDebugMode || kProfileMode) parent.print(zone, riga);
-        },
-      ));
+  runZonedGuarded<Future<void>>(
+    () async {
+      await _avvia();
+    },
+    (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    },
+    // In release nessuna print() finisce nel log di sistema. Nel codice ce ne
+    // sono centinaia che stampano corpi di risposta e di richiesta: contengono
+    // token di sessione, dati personali dei clienti e, al login, la password.
+    // Su logcat sarebbero leggibili da chi ha accesso al dispositivo via ADB.
+    // In debug restano, perche' li' servono.
+    // La profile e' inclusa perche' non viene distribuita e serve a
+    // collaudare su dispositivo reale: senza log non si leggerebbe
+    // nemmeno il token FCM. La release resta muta.
+    zoneSpecification: ZoneSpecification(
+      print: (self, parent, zone, riga) {
+        if (kDebugMode || kProfileMode) parent.print(zone, riga);
+      },
+    ),
+  );
 }
 
 Future<void> _avvia() async {
@@ -49,13 +52,15 @@ Future<void> _avvia() async {
   // Inizializza Firebase
   try {
     await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform);
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
     // ── Crash reporting ────────────────────────────────────────────────────
     // In debug non si inviano segnalazioni: altrimenti ogni prova durante lo
     // sviluppo sporcherebbe la dashboard usata per la beta.
-    await FirebaseCrashlytics.instance
-        .setCrashlyticsCollectionEnabled(!kDebugMode);
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+      !kDebugMode,
+    );
 
     // Errori del framework (build, layout, gesture)
     FlutterError.onError = (details) {

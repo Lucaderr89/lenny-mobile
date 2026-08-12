@@ -535,8 +535,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     color: Colors.orange.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.shopping_cart_outlined,
+                  child: const AppIcon(
+                    'assets/icons_svg/icons8-cart-32.svg',
                     size: 48,
                     color: Colors.orange,
                   ),
@@ -1004,7 +1004,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.store_rounded, size: 22),
+                      const AppIcon(
+                        'assets/icons_svg/icons8-negozio-32.svg',
+                        size: 22,
+                      ),
                       const SizedBox(width: 12),
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1064,7 +1067,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.home_rounded, size: 22),
+                      const AppIcon(
+                        'assets/icons_svg/icons8-home-32.svg',
+                        size: 22,
+                      ),
                       const SizedBox(width: 12),
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1556,7 +1562,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
               if (isDisabled)
-                const Icon(Icons.lock_outline, color: grayColor, size: 18)
+                const AppIcon(
+                  'assets/icons_svg/icons8-password-32.svg',
+                  color: grayColor,
+                  size: 18,
+                )
               else if (isSelected)
                 const Icon(Icons.check_circle, color: primaryColor, size: 20),
             ],
@@ -2109,7 +2119,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.schedule, color: AppColors.warning),
+            AppIcon(
+              'assets/icons_svg/icons8-orologio-32.svg',
+              color: AppColors.warning,
+            ),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -2334,8 +2347,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        isPickup ? Icons.storefront : Icons.delivery_dining,
+                      AppIcon(
+                        isPickup
+                            ? 'assets/icons_svg/icons8-negozio-32.svg'
+                            : 'assets/icons_svg/lenny-consegna.svg',
                         color: textColor,
                         size: 16,
                       ),
@@ -2411,7 +2426,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 child: Center(
                   child: isPickup
-                      ? const Icon(Icons.store, color: Colors.white, size: 20)
+                      ? const AppIcon(
+                          'assets/icons_svg/icons8-negozio-32.svg',
+                          color: Colors.white,
+                          size: 20,
+                        )
                       : AppIcon(
                           'assets/icons/icons8-in-transito-32.png',
                           width: 20,
@@ -2471,7 +2490,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: primaryColor, width: 1.5),
                     ),
-                    child: const Icon(Icons.map, color: primaryColor, size: 28),
+                    child: const AppIcon(
+                      'assets/icons_svg/icons8-mappa-32.svg',
+                      color: primaryColor,
+                      size: 28,
+                    ),
                   ),
                 ),
               ],
@@ -2582,8 +2605,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.schedule,
+                        AppIcon(
+                          'assets/icons_svg/icons8-orologio-32.svg',
                           color: _selectedDate != null
                               ? primaryColor
                               : grayColor,
@@ -2818,8 +2841,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       width: 45,
                       height: 45,
                       color: lightGrayColor,
-                      child: const Icon(
-                        Icons.restaurant,
+                      child: const AppIcon(
+                        'assets/icons_svg/icons8-ristorante-32.svg',
                         color: grayColor,
                         size: 22,
                       ),
@@ -2829,8 +2852,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     width: 45,
                     height: 45,
                     color: lightGrayColor,
-                    child: const Icon(
-                      Icons.restaurant,
+                    child: const AppIcon(
+                      'assets/icons_svg/icons8-ristorante-32.svg',
                       color: grayColor,
                       size: 22,
                     ),
@@ -3273,7 +3296,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.stars, size: 16, color: primaryColor),
+                  const AppIcon(
+                    'assets/icons_svg/icons8-stella-32.svg',
+                    size: 16,
+                    color: primaryColor,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -3465,8 +3492,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.local_shipping_outlined,
+            const AppIcon(
+              'assets/icons_svg/lenny-consegna.svg',
               color: successColor,
               size: 16,
             ),
@@ -3512,8 +3539,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.local_shipping_outlined,
+          const AppIcon(
+            'assets/icons_svg/lenny-consegna.svg',
             color: successColor,
             size: 18,
           ),

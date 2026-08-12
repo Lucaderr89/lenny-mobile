@@ -722,13 +722,17 @@ class _CartScreenState extends State<CartScreen> {
                       width: 35,
                       height: 35,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.restaurant,
+                      errorBuilder: (_, _, _) => const AppIcon(
+                        'assets/icons_svg/icons8-ristorante-32.svg',
                         color: primaryColor,
                         size: 30,
                       ),
                     )
-                  : const Icon(Icons.restaurant, color: primaryColor, size: 30),
+                  : const AppIcon(
+                      'assets/icons_svg/icons8-ristorante-32.svg',
+                      color: primaryColor,
+                      size: 30,
+                    ),
             ),
           ),
           const SizedBox(width: 15),
@@ -803,8 +807,8 @@ class _CartScreenState extends State<CartScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.shopping_cart_outlined,
+            const AppIcon(
+              'assets/icons_svg/icons8-cart-32.svg',
               size: 70,
               color: lightGrayColor,
             ),
@@ -974,8 +978,8 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(
-                  Icons.local_shipping_outlined,
+                const AppIcon(
+                  'assets/icons_svg/lenny-consegna.svg',
                   size: 14,
                   color: successColor,
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import 'package:go_router/go_router.dart';
 import '../config/app_colors.dart';
 
@@ -51,7 +52,11 @@ Future<void> mostraGateAccount(
             ),
           ),
           const SizedBox(height: 20),
-          Icon(Icons.lock_open_outlined, size: 40, color: AppColors.primary),
+          AppIcon(
+            'assets/icons_svg/icons8-password-32.svg',
+            size: 40,
+            color: AppColors.primary,
+          ),
           const SizedBox(height: 14),
           const Text(
             'Ci siamo quasi!',

@@ -100,8 +100,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
     );
 
     try {
@@ -134,8 +135,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       var conExtra = false;
 
       for (final orderItem in order.items) {
-        final menuItem =
-            orderItem.foodId != null ? menuById[orderItem.foodId] : null;
+        final menuItem = orderItem.foodId != null
+            ? menuById[orderItem.foodId]
+            : null;
         if (menuItem == null) {
           saltati++;
           continue;
@@ -217,7 +219,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         toolbarHeight: 56,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -238,7 +240,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         actions: [
           IconButton(
             icon: AppIcon(
-'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,
@@ -279,8 +281,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.history,
+            AppIcon(
+              'assets/icons_svg/icons8-ripeti-32.svg',
               size: 80,
               color: AppColors.gray.withValues(alpha: 0.5),
             ),
@@ -316,7 +318,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     // Colori diversi per consegnato/annullato
     final bool isDelivered = order.statusId == 5;
     final Color cardColor = isDelivered
-        ? AppColors.success // Verde per consegnato
+        ? AppColors
+              .success // Verde per consegnato
         : AppColors.danger; // Rosso per annullato
 
     return Container(
@@ -553,7 +556,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.payment, size: 14, color: Colors.grey),
+                        const AppIcon(
+                          'assets/icons_svg/icons8-card-32.svg',
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           order.paymentMethod!,
@@ -571,7 +578,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                       height: 42,
                       child: ElevatedButton.icon(
                         onPressed: () => _reorder(order),
-                        icon: const Icon(Icons.replay, size: 18),
+                        icon: const AppIcon(
+                          'assets/icons_svg/icons8-ripeti-32.svg',
+                          size: 18,
+                        ),
                         label: const Text(
                           'Riordina',
                           style: TextStyle(

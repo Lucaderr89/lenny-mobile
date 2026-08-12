@@ -130,10 +130,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       appBar: AppBar(
         title: const Text(
           'I miei indirizzi',
-          style: TextStyle(
-            color: AppColors.dark,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: AppColors.dark, fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.cream,
         elevation: 0,
@@ -335,7 +332,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                 message: 'Predefinito',
                                 child: IconButton(
                                   onPressed: () => _setDefaultAddress(address),
-                                  icon: const Icon(Icons.star_border),
+                                  icon: const AppIcon(
+                                    'assets/icons_svg/icons8-stella-32.svg',
+                                  ),
                                   color: AppColors.primary,
                                   iconSize: 18,
                                   padding: EdgeInsets.zero,
@@ -349,7 +348,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
                               message: 'Modifica',
                               child: IconButton(
                                 onPressed: () => _navigateToAddAddress(address),
-                                icon: const Icon(Icons.edit),
+                                icon: const AppIcon(
+                                  'assets/icons_svg/icons8-modifica-32.svg',
+                                ),
                                 color: AppColors.primary,
                                 iconSize: 18,
                                 padding: EdgeInsets.zero,
@@ -363,7 +364,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
                               message: 'Elimina',
                               child: IconButton(
                                 onPressed: () => _deleteAddress(address),
-                                icon: const Icon(Icons.delete),
+                                icon: const AppIcon(
+                                  'assets/icons_svg/lenny-cestino.svg',
+                                ),
                                 color: AppColors.danger,
                                 iconSize: 18,
                                 padding: EdgeInsets.zero,

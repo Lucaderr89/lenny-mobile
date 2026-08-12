@@ -31,7 +31,8 @@ class OrderService {
     required String dateOrder,
     required int timeSlotId,
     required String durationSlot,
-    String? slotStartTime, // "HH:MM:SS" esatto scelto dal cliente (necessario per fasce da 20 min)
+    String?
+    slotStartTime, // "HH:MM:SS" esatto scelto dal cliente (necessario per fasce da 20 min)
     required String pickupDelivery,
     DeliveryData? delivery, // NUOVO: oggetto delivery con coordinate
     @Deprecated('Usa delivery invece') int? deliveryAddressId,
@@ -90,7 +91,8 @@ class OrderService {
         'extra_fee': extraFee,
         // Lo sconto lo calcola e lo valida il server a partire dal codice:
         // il client non decide piu' l'importo scontato.
-        if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
+        if (couponCode != null && couponCode.isNotEmpty)
+          'coupon_code': couponCode,
         if (note != null && note.isNotEmpty) 'note': note,
       };
 
@@ -148,9 +150,7 @@ class OrderService {
           // Crashlytics non disponibile: non deve impedire la gestione dell'errore
         }
 
-        throw Exception(
-          serverMessage ?? 'Errore nella creazione dell\'ordine',
-        );
+        throw Exception(serverMessage ?? 'Errore nella creazione dell\'ordine');
       }
     } catch (e) {
       print('❌ [ORDER] Eccezione: $e');
@@ -272,7 +272,9 @@ class OrderService {
   }) async {
     try {
       print('🕐 [SLOTS] Recupero slot disponibili...');
-      print('📍 [SLOTS] Ristorante: $restaurantId, Data: $date, Servizio: $service');
+      print(
+        '📍 [SLOTS] Ristorante: $restaurantId, Data: $date, Servizio: $service',
+      );
 
       final headers = await _getHeaders();
       final params = <String, String>{'date': date, 'service': service};

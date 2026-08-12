@@ -55,48 +55,49 @@ class _OrderTypeDialogState extends State<OrderTypeDialog> {
           bottom: false,
           child: Column(
             children: [
-                // Header con testo e immagine in stile login
-                SizedBox(
-                  width: double.infinity,
-                  height: 140,
-                  child: Stack(
-                    children: [
-                      // Testo a sinistra
-                      Positioned(
-                        left: 28,
-                        top: 40,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Come vuoi\nordinare?',
-                              style: GoogleFonts.poppins(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                color: darkColor,
-                                height: 1.1,
-                              ),
+              // Header con testo e immagine in stile login
+              SizedBox(
+                width: double.infinity,
+                height: 140,
+                child: Stack(
+                  children: [
+                    // Testo a sinistra
+                    Positioned(
+                      left: 28,
+                      top: 40,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Come vuoi\nordinare?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: darkColor,
+                              height: 1.1,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      // Immagine a destra
-                      Positioned(
-                        right: -10,
-                        bottom: -40,
-                        child: Image.asset(
-                          'assets/images/ORDINA.png',
-                          width: 198,
-                          height: 198,
-                          fit: BoxFit.contain,
-                        ),
+                    ),
+                    // Immagine a destra
+                    Positioned(
+                      right: -10,
+                      bottom: -40,
+                      child: Image.asset(
+                        'assets/images/ORDINA.png',
+                        width: 198,
+                        height: 198,
+                        fit: BoxFit.contain,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
 
-                // Card bianca - Expanded riempie tutto lo spazio rimanente
-                Expanded(child: ClipPath(
+              // Card bianca - Expanded riempie tutto lo spazio rimanente
+              Expanded(
+                child: ClipPath(
                   clipper: const WaveClipper(),
                   child: Container(
                     width: double.infinity,
@@ -110,69 +111,78 @@ class _OrderTypeDialogState extends State<OrderTypeDialog> {
                         ),
                       ],
                     ),
-                    child: SingleChildScrollView(child: Padding(
-                      padding: EdgeInsets.fromLTRB(28, 80, 28, 40 + MediaQuery.of(context).padding.bottom),
-                      child: Column(
-                        children: [
-                          // Pulsante CONSEGNA
-                          _OrderTypeButton(
-                            iconPath: 'assets/icons/icons8-in-transito-32.png',
-                            title: 'Consegna a domicilio',
-                            subtitle: 'Ti portiamo il cibo dove vuoi',
-                            color: primaryDarkPink,
-                            textColor: darkColor,
-                            onTap: _handleDeliverySelection,
-                          ),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          28,
+                          80,
+                          28,
+                          40 + MediaQuery.of(context).padding.bottom,
+                        ),
+                        child: Column(
+                          children: [
+                            // Pulsante CONSEGNA
+                            _OrderTypeButton(
+                              iconPath:
+                                  'assets/icons/icons8-in-transito-32.png',
+                              title: 'Consegna a domicilio',
+                              subtitle: 'Ti portiamo il cibo dove vuoi',
+                              color: primaryDarkPink,
+                              textColor: darkColor,
+                              onTap: _handleDeliverySelection,
+                            ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          // Pulsante RITIRO
-                          _OrderTypeButton(
-                            iconPath: 'assets/icons/icons8-negozio-32.png',
-                            title: 'Ritiro al ristorante',
-                            subtitle: 'Passa a prendere il tuo ordine',
-                            color: accentYellow,
-                            textColor: darkColor,
-                            onTap: _handlePickupSelection,
-                          ),
+                            // Pulsante RITIRO
+                            _OrderTypeButton(
+                              iconPath: 'assets/icons/icons8-negozio-32.png',
+                              title: 'Ritiro al ristorante',
+                              subtitle: 'Passa a prendere il tuo ordine',
+                              color: accentYellow,
+                              textColor: darkColor,
+                              onTap: _handlePickupSelection,
+                            ),
 
-                          const SizedBox(height: 28),
+                            const SizedBox(height: 28),
 
-                          // Una riga sola: la spiegazione del badge in home
-                          // avviene sul badge vero (coach-mark alla prima
-                          // visita), non con un tutorial preventivo qui.
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Colors.grey[600],
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Potrai cambiare in qualsiasi momento',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[700],
-                                  ),
-                                  textAlign: TextAlign.center,
+                            // Una riga sola: la spiegazione del badge in home
+                            // avviene sul badge vero (coach-mark alla prima
+                            // visita), non con un tutorial preventivo qui.
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Colors.grey[600],
+                                  size: 16,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Potrai cambiare in qualsiasi momento',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey[700],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                   ),
-                )),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
     );
   }
 
@@ -292,11 +302,7 @@ class _OrderTypeButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
-                  child: AppIcon(
-                    iconPath,
-                    size: 26,
-                    color: textColor,
-                  ),
+                  child: AppIcon(iconPath, size: 26, color: textColor),
                 ),
               ),
 
@@ -343,4 +349,3 @@ class _OrderTypeButton extends StatelessWidget {
     );
   }
 }
-

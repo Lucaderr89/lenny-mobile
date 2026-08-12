@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../config/app_colors.dart';
 import '../../models/restaurant.dart';
 import '../../services/games_service.dart';
@@ -104,8 +105,9 @@ class _PrezzoGiustoScreenState extends State<PrezzoGiustoScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
     );
 
     Restaurant? restaurant;
@@ -318,10 +320,7 @@ class _PrezzoGiustoScreenState extends State<PrezzoGiustoScreen> {
                   children: [
                     const Text(
                       'La tua stima',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.grayDark,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.grayDark),
                     ),
                     Text(
                       '€${_stima.toStringAsFixed(1)}',
@@ -338,10 +337,7 @@ class _PrezzoGiustoScreenState extends State<PrezzoGiustoScreen> {
                   children: [
                     const Text(
                       'Prezzo vero',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.grayDark,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.grayDark),
                     ),
                     Text(
                       '€${_prezzoVero.toStringAsFixed(2)}',
@@ -361,7 +357,10 @@ class _PrezzoGiustoScreenState extends State<PrezzoGiustoScreen> {
               height: 52,
               child: ElevatedButton.icon(
                 onPressed: _ordina,
-                icon: const Icon(Icons.restaurant_menu, size: 20),
+                icon: const AppIcon(
+                  'assets/icons_svg/icons8-ristorante-32.svg',
+                  size: 20,
+                ),
                 label: const Text(
                   'Ordinalo',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

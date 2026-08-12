@@ -212,7 +212,8 @@ class AuthService {
       final error = decoded['error'];
       return AuthResponse(
         success: false,
-        message: (error is Map ? error['message'] as String? : null) ??
+        message:
+            (error is Map ? error['message'] as String? : null) ??
             decoded['message'] as String? ??
             'Impossibile eliminare l\'account',
       );
@@ -273,8 +274,9 @@ class AuthService {
     // solo l'id numerico.
     try {
       if (data.customer?.id != null) {
-        await FirebaseCrashlytics.instance
-            .setUserIdentifier(data.customer!.id.toString());
+        await FirebaseCrashlytics.instance.setUserIdentifier(
+          data.customer!.id.toString(),
+        );
       }
     } catch (_) {
       // Crashlytics non disponibile (es. test): non deve bloccare il login

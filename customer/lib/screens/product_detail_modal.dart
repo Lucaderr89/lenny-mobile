@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import '../config/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../models/menu_item.dart';
@@ -290,8 +291,8 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                           width: double.infinity,
                           height: 200,
                           color: lightGrayColor,
-                          child: const Icon(
-                            Icons.restaurant,
+                          child: const AppIcon(
+                            'assets/icons_svg/icons8-ristorante-32.svg',
                             color: grayColor,
                             size: 60,
                           ),
@@ -301,8 +302,8 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                         width: double.infinity,
                         height: 200,
                         color: lightGrayColor,
-                        child: const Icon(
-                          Icons.restaurant,
+                        child: const AppIcon(
+                          'assets/icons_svg/icons8-ristorante-32.svg',
                           color: grayColor,
                           size: 60,
                         ),
@@ -378,8 +379,10 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       iconSize: 16,
-                      icon: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                      icon: AppIcon(
+                        isFavorite
+                            ? 'assets/icons_svg/icons8-mi-piace-32.svg'
+                            : 'assets/icons_svg/icons8-mi-piace-32.svg',
                         color: isFavorite ? primaryColor : grayColor,
                       ),
                       onPressed: () {
@@ -897,7 +900,9 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
         decoration: BoxDecoration(
           color: isSelected
               ? primaryLight
-              : (canSelect ? lightGrayColor : lightGrayColor.withValues(alpha: 0.5)),
+              : (canSelect
+                    ? lightGrayColor
+                    : lightGrayColor.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected

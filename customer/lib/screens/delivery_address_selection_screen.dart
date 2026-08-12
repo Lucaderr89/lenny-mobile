@@ -76,7 +76,7 @@ class _DeliveryAddressSelectionScreenState
                       child: IconButton(
                         onPressed: () => Navigator.pop(context),
                         icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+                          'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
                           width: 24,
                           height: 24,
                           color: AppColors.dark,
@@ -124,10 +124,11 @@ class _DeliveryAddressSelectionScreenState
                 child: Container(
                   width: double.infinity,
                   constraints: BoxConstraints(
-                    minHeight: MediaQuery.of(context).size.height
-                        - 140
-                        - MediaQuery.of(context).padding.top
-                        + MediaQuery.of(context).padding.bottom,
+                    minHeight:
+                        MediaQuery.of(context).size.height -
+                        140 -
+                        MediaQuery.of(context).padding.top +
+                        MediaQuery.of(context).padding.bottom,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -149,7 +150,12 @@ class _DeliveryAddressSelectionScreenState
                           ),
                         )
                       : Padding(
-                          padding: EdgeInsets.fromLTRB(20, 110, 20, 40 + MediaQuery.of(context).padding.bottom),
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            110,
+                            20,
+                            40 + MediaQuery.of(context).padding.bottom,
+                          ),
                           child: Column(
                             children: [
                               // Opzione: Posizione corrente
@@ -339,11 +345,7 @@ class _AddressOptionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
-                  child: AppIcon(
-                    iconPath,
-                    size: 22,
-                    color: iconColor,
-                  ),
+                  child: AppIcon(iconPath, size: 22, color: iconColor),
                 ),
               ),
               const SizedBox(width: 14),
@@ -473,4 +475,3 @@ class _SavedAddressCard extends StatelessWidget {
     );
   }
 }
-

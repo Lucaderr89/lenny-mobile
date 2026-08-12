@@ -222,7 +222,7 @@ class _AddressSelectorBottomSheetState
 
     return ListTile(
       leading: AppIcon(
-'assets/icons/icons8-codice-regione-32.png',
+        'assets/icons/icons8-codice-regione-32.png',
         width: 32,
         height: 32,
         color: AppColors.primary,
@@ -268,7 +268,10 @@ class _AddressSelectorBottomSheetState
               children: [
                 // Icona modifica
                 IconButton(
-                  icon: const Icon(Icons.edit, size: 18),
+                  icon: const AppIcon(
+                    'assets/icons_svg/icons8-modifica-32.svg',
+                    size: 18,
+                  ),
                   color: Colors.blue[700],
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -448,11 +451,7 @@ class _AddressSelectorBottomSheetState
     }
 
     return ListTile(
-      leading: AppIcon(
-        iconPath,
-        size: 32,
-        color: AppColors.primary,
-      ),
+      leading: AppIcon(iconPath, size: 32, color: AppColors.primary),
       title: Row(
         children: [
           Flexible(

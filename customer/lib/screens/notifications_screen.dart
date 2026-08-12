@@ -24,8 +24,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     super.initState();
     // Carica le notifiche e poi segna tutte come lette
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider =
-          Provider.of<NotificationProvider>(context, listen: false);
+      final provider = Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      );
       provider.loadNotifications().then((_) => provider.markAllRead());
     });
   }
@@ -84,7 +86,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: darkColor),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 18,
+            color: darkColor,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -112,8 +118,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.notifications_off_outlined,
-                      size: 64, color: lightGrayColor),
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 64,
+                    color: lightGrayColor,
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'Nessuna notifica',
@@ -149,8 +158,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildItem(
-      CustomerNotification notif, NotificationProvider provider) {
+  Widget _buildItem(CustomerNotification notif, NotificationProvider provider) {
     final color = _colorForEvent(notif.triggerEvent);
     final icon = _iconForEvent(notif.triggerEvent);
 
@@ -164,7 +172,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: notif.isRead ? Colors.white : const Color(0xFFEEF3FF),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: notif.isRead ? Colors.transparent : primaryBlue.withAlpha(60),
+            color: notif.isRead
+                ? Colors.transparent
+                : primaryBlue.withAlpha(60),
           ),
           boxShadow: [
             BoxShadow(

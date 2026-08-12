@@ -333,8 +333,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: accentYellow.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.shopping_bag_outlined,
+                child: const AppIcon(
+                  'assets/icons_svg/icons8-borsa-della-spesa-32.svg',
                   size: 50,
                   color: warningOrange,
                 ),
@@ -549,10 +549,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(
+                                            AppIcon(
                                               locationProvider.isPickup
-                                                  ? Icons.storefront
-                                                  : Icons.delivery_dining,
+                                                  ? 'assets/icons_svg/icons8-negozio-32.svg'
+                                                  : 'assets/icons_svg/lenny-consegna.svg',
                                               color: locationProvider.isPickup
                                                   ? darkColor
                                                   : lightColor,
@@ -601,8 +601,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                       ),
                                                 )
                                               else
-                                                const Icon(
-                                                  Icons.location_on,
+                                                const AppIcon(
+                                                  'assets/icons_svg/icons8-location-32.svg',
                                                   color: primaryBlue,
                                                   size: 14,
                                                 ),
@@ -865,10 +865,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                AppIcon(
                                   locationProvider.isPickup
-                                      ? Icons.storefront
-                                      : Icons.delivery_dining,
+                                      ? 'assets/icons_svg/icons8-negozio-32.svg'
+                                      : 'assets/icons_svg/lenny-consegna.svg',
                                   color: locationProvider.isPickup
                                       ? darkColor
                                       : lightColor,
@@ -912,8 +912,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       ),
                                     )
                                   else
-                                    const Icon(
-                                      Icons.location_on,
+                                    const AppIcon(
+                                      'assets/icons_svg/icons8-location-32.svg',
                                       color: primaryBlue,
                                       size: 13,
                                     ),
@@ -963,8 +963,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               color: primaryBlue.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.my_location,
+                            child: const AppIcon(
+                              'assets/icons_svg/icons8-mirino-32.svg',
                               color: primaryBlue,
                               size: 14,
                             ),
@@ -1047,8 +1047,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     errorBuilder: (context, error, stackTrace) {
                       // Il fondo e' chiaro in entrambi gli stati: il bianco
                       // di prima sarebbe sparito sulla pastiglia selezionata.
-                      return Icon(
-                        Icons.restaurant,
+                      return AppIcon(
+                        'assets/icons_svg/icons8-ristorante-32.svg',
                         color: coloreCategoria,
                         size: 27,
                       );

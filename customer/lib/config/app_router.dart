@@ -45,9 +45,8 @@ class AppRouter {
       ),
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) => ResetPasswordScreen(
-          email: (state.extra as String?) ?? '',
-        ),
+        builder: (context, state) =>
+            ResetPasswordScreen(email: (state.extra as String?) ?? ''),
       ),
       GoRoute(
         path: '/categories',

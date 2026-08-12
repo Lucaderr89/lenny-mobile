@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../config/app_colors.dart';
 
 /// Tab "Per te" - Sezione personalizzata con funzionalità coming soon
@@ -74,8 +75,8 @@ class _PerTeTabState extends State<PerTeTab>
                   color: Colors.white.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.workspace_premium,
+                child: const AppIcon(
+                  'assets/icons_svg/icons8-premium-32.svg',
                   color: Colors.white,
                   size: 20,
                 ),
@@ -183,8 +184,8 @@ class _PerTeTabState extends State<PerTeTab>
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.emoji_events,
+                child: const AppIcon(
+                  'assets/icons_svg/icons8-coppa-32.svg',
                   color: lightColor,
                   size: 28,
                 ),
@@ -336,8 +337,8 @@ class _PerTeTabState extends State<PerTeTab>
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.card_giftcard,
+                child: const AppIcon(
+                  'assets/icons_svg/icons8-regalo-32.svg',
                   color: lightColor,
                   size: 28,
                 ),

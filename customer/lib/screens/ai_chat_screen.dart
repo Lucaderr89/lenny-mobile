@@ -1,5 +1,6 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import 'package:provider/provider.dart';
 import '../services/gemini_service.dart';
 import '../services/restaurant_service.dart';
@@ -260,18 +261,15 @@ class _AIChatScreenState extends State<AIChatScreen> {
   /// piu' di un generico "si e' verificato un errore", che lascia l'utente
   /// senza sapere se riprovare ha senso.
   void _addFallbackError([String? messaggioDalServer]) {
-    final testo = (messaggioDalServer != null && messaggioDalServer.trim().isNotEmpty)
+    final testo =
+        (messaggioDalServer != null && messaggioDalServer.trim().isNotEmpty)
         ? messaggioDalServer
         : 'Non riesco a risponderti in questo momento. Riprova tra poco!';
 
     setState(() {
       _isTyping = false;
       _messages.add(
-        ChatMessage(
-          text: testo,
-          isUser: false,
-          timestamp: DateTime.now(),
-        ),
+        ChatMessage(text: testo, isUser: false, timestamp: DateTime.now()),
       );
     });
     _scrollToBottom();
@@ -463,8 +461,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 color: AppColors.primaryDark,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.smart_toy_outlined,
+              child: const AppIcon(
+                'assets/icons_svg/lenny-robot.svg',
                 color: AppColors.surface,
                 size: 20,
               ),
@@ -526,8 +524,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   CircleAvatar(
                     radius: 16,
                     backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                    child: const Icon(
-                      Icons.smart_toy_outlined,
+                    child: const AppIcon(
+                      'assets/icons_svg/lenny-robot.svg',
                       size: 16,
                       color: AppColors.primary,
                     ),
@@ -591,8 +589,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
             CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-              child: const Icon(
-                Icons.smart_toy_outlined,
+              child: const AppIcon(
+                'assets/icons_svg/lenny-robot.svg',
                 size: 16,
                 color: AppColors.primary,
               ),
@@ -648,8 +646,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: const Icon(
-                    Icons.smart_toy_outlined,
+                  child: const AppIcon(
+                    'assets/icons_svg/lenny-robot.svg',
                     size: 16,
                     color: AppColors.primary,
                   ),
@@ -688,8 +686,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
     return Container(
       color: AppColors.primary.withValues(alpha: 0.08),
       child: Center(
-        child: Icon(
-          Icons.restaurant_menu,
+        child: AppIcon(
+          'assets/icons_svg/icons8-ristorante-32.svg',
           size: 22,
           color: AppColors.primary.withValues(alpha: 0.45),
         ),
@@ -814,8 +812,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: const Icon(
-                    Icons.smart_toy_outlined,
+                  child: const AppIcon(
+                    'assets/icons_svg/lenny-robot.svg',
                     size: 16,
                     color: AppColors.primary,
                   ),
@@ -861,8 +859,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
             color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            Icons.storefront_outlined,
+          child: AppIcon(
+            'assets/icons_svg/icons8-negozio-32.svg',
             size: 20,
             color: AppColors.primary.withValues(alpha: 0.7),
           ),
@@ -884,10 +882,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             if (!rest.isOpen) ...[
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 1,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: AppColors.gray.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),

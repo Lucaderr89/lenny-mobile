@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -216,7 +217,12 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
         'icon': Icons.credit_card,
         'color': Colors.blue,
       },
-      {'id': 3, 'name': 'SMAC', 'icon': Icons.payment, 'color': AppColors.primary},
+      {
+        'id': 3,
+        'name': 'SMAC',
+        'icon': Icons.payment,
+        'color': AppColors.primary,
+      },
     ];
 
     return showDialog<int>(
@@ -353,8 +359,8 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.receipt_long,
+                              AppIcon(
+                                'assets/icons_svg/icons8-fattura-32.svg',
                                 color: Colors.grey.shade600,
                                 size: 18,
                               ),
@@ -444,7 +450,10 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
-                              side: BorderSide(color: AppColors.primary, width: 2),
+                              side: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -463,7 +472,10 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
                               context,
                             ).popUntil((route) => route.isFirst);
                           },
-                          icon: const Icon(Icons.home, size: 20),
+                          icon: const AppIcon(
+                            'assets/icons_svg/icons8-home-32.svg',
+                            size: 20,
+                          ),
                           label: const Text(
                             'Torna alla Home',
                             style: TextStyle(

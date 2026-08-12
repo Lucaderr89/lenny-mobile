@@ -65,7 +65,9 @@ class FcmService {
       sound: true,
       provisional: false,
     );
-    debugPrint('🔔 FCM permission (richiesta): ${settings.authorizationStatus}');
+    debugPrint(
+      '🔔 FCM permission (richiesta): ${settings.authorizationStatus}',
+    );
 
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
       return false;
@@ -98,7 +100,9 @@ class FcmService {
       _token = await _messaging.getToken();
       debugPrint('📱 FCM Token: $_token');
     } catch (e) {
-      debugPrint('⚠️ FCM Token non ottenibile (APNs non configurato o account free): $e');
+      debugPrint(
+        '⚠️ FCM Token non ottenibile (APNs non configurato o account free): $e',
+      );
       return;
     }
 

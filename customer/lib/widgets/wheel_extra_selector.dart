@@ -322,7 +322,10 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                       gradient: LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: [Colors.white, Colors.white.withValues(alpha: 0)],
+                        colors: [
+                          Colors.white,
+                          Colors.white.withValues(alpha: 0),
+                        ],
                       ),
                     ),
                   ),
@@ -339,7 +342,10 @@ class _WheelExtraSelectorState extends State<WheelExtraSelector> {
                       gradient: LinearGradient(
                         begin: Alignment.centerRight,
                         end: Alignment.centerLeft,
-                        colors: [Colors.white, Colors.white.withValues(alpha: 0)],
+                        colors: [
+                          Colors.white,
+                          Colors.white.withValues(alpha: 0),
+                        ],
                       ),
                     ),
                   ),

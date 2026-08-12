@@ -5,8 +5,12 @@ class AppColors {
   // Primary Colors - Blu del logo Lenny (il cappellino)
   static const Color primary = Color(0xFF0F4E8C); // blu profondo del marchio
   static const Color primaryLight = Color(0xFF5B93C9); // blu chiaro
-  static const Color primaryDark = Color(0xFF0B3A6B); // blu scuro (inizio gradiente)
-  static const Color primaryEnd = Color(0xFF1E6FB0); // blu medio (fine gradiente)
+  static const Color primaryDark = Color(
+    0xFF0B3A6B,
+  ); // blu scuro (inizio gradiente)
+  static const Color primaryEnd = Color(
+    0xFF1E6FB0,
+  ); // blu medio (fine gradiente)
 
   // Secondary Colors - dai colori del cappellino
   static const Color secondary = Color(0xFF2AAEDF); // ciano della calotta

@@ -126,7 +126,7 @@ class _WalletScreenState extends State<WalletScreen> {
         toolbarHeight: 56,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -147,7 +147,7 @@ class _WalletScreenState extends State<WalletScreen> {
         actions: [
           IconButton(
             icon: AppIcon(
-'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,
@@ -187,7 +187,7 @@ class _WalletScreenState extends State<WalletScreen> {
         Row(
           children: [
             AppIcon(
-'assets/icons/icons8-ottieni-denaro-32.png',
+              'assets/icons/icons8-ottieni-denaro-32.png',
               width: 20,
               height: 20,
             ),
@@ -504,7 +504,7 @@ class _WalletScreenState extends State<WalletScreen> {
         Row(
           children: [
             AppIcon(
-'assets/icons/icons8-portafoglio-32.png',
+              'assets/icons/icons8-portafoglio-32.png',
               width: 20,
               height: 20,
             ),
@@ -582,7 +582,7 @@ class _WalletScreenState extends State<WalletScreen> {
             Row(
               children: [
                 AppIcon(
-'assets/icons/icons8-card-32.png',
+                  'assets/icons/icons8-card-32.png',
                   width: 24,
                   height: 24,
                 ),
@@ -655,7 +655,10 @@ class _WalletScreenState extends State<WalletScreen> {
                 const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: () => _removeCard(card),
-                  icon: const Icon(Icons.delete_outline, size: 16),
+                  icon: const AppIcon(
+                    'assets/icons_svg/lenny-cestino.svg',
+                    size: 16,
+                  ),
                   label: const Text('Rimuovi'),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.red,

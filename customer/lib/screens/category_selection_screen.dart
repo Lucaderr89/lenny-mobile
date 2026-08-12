@@ -362,8 +362,8 @@ class _CategorySelectionScreenState extends State<CategorySelectionScreen>
                         // Con go lo stack verrebbe sostituito e resterebbe
                         // intrappolato nel login.
                         onPressed: () => context.push('/login'),
-                        icon: const Icon(
-                          Icons.person_outline,
+                        icon: const AppIcon(
+                          'assets/icons_svg/icons8-user-male-32.svg',
                           size: 26,
                           color: AppColors.primary,
                         ),

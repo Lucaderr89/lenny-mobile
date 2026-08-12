@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import 'package:go_router/go_router.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
@@ -173,7 +174,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.primary,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.restaurant, color: Colors.white, size: 28),
+          child: const AppIcon(
+            'assets/icons_svg/icons8-ristorante-32.svg',
+            color: Colors.white,
+            size: 28,
+          ),
         ),
         const SizedBox(width: 10),
         Text(
@@ -217,7 +222,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               hintText: 'Email',
-              prefixIcon: Icon(Icons.email_outlined),
+              prefixIcon: AppIcon('assets/icons_svg/icons8-email-32.svg'),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {

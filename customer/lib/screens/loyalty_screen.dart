@@ -110,12 +110,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
     });
   }
 
-
-
-
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -130,7 +124,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
         elevation: 0,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
           ),
@@ -164,7 +158,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       AppIcon(
-'assets/icons/icons8-stella-32.png',
+                        'assets/icons/icons8-stella-32.png',
                         width: 16,
                         height: 16,
                       ),
@@ -179,7 +173,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       AppIcon(
-'assets/icons/icons8-premi-32.png',
+                        'assets/icons/icons8-premi-32.png',
                         width: 16,
                         height: 16,
                       ),
@@ -202,7 +196,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
       ),
     );
   }
-
 
   // Header fisso con dati cliente
   Widget _buildFixedHeader() {
@@ -396,8 +389,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.stars,
+                    child: const AppIcon(
+                      'assets/icons_svg/icons8-stella-32.svg',
                       color: Colors.white,
                       size: 28,
                     ),
@@ -622,10 +615,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                 ),
               ),
               if (_getTierIconPath(nextTier.slug) != null)
-                AppIcon(
-                  _getTierIconPath(nextTier.slug)!,
-                  size: 24,
-                )
+                AppIcon(_getTierIconPath(nextTier.slug)!, size: 24)
               else if (nextTier.icon != null)
                 Icon(
                   _getIconData(nextTier.icon!),
@@ -805,10 +795,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
             child: Row(
               children: [
                 if (_getTierIconPath(tier.slug) != null)
-                  AppIcon(
-                    _getTierIconPath(tier.slug)!,
-                    size: 40,
-                  ),
+                  AppIcon(_getTierIconPath(tier.slug)!, size: 40),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -977,8 +964,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Icons.stars,
+                                const AppIcon(
+                                  'assets/icons_svg/icons8-stella-32.svg',
                                   color: Colors.white,
                                   size: 14,
                                 ),
@@ -1174,9 +1161,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const WalletScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const WalletScreen()),
                 );
               },
             ),
@@ -1187,13 +1172,14 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore: ${e.toString().replaceFirst('Exception: ', '')}'),
+            content: Text(
+              'Errore: ${e.toString().replaceFirst('Exception: ', '')}',
+            ),
             backgroundColor: AppColors.danger,
           ),
         );
       }
-    } finally {
-    }
+    } finally {}
   }
 
   String? _getTierIconPath(String? slug) {
@@ -1230,5 +1216,4 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
-
 }

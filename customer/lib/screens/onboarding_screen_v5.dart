@@ -146,7 +146,8 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
 
           // Contenuto sopra l'immagine
           SafeArea(
-            bottom: false, // La sezione colorata in basso copre l'home indicator
+            bottom:
+                false, // La sezione colorata in basso copre l'home indicator
             child: Column(
               children: [
                 // Top content area
@@ -335,7 +336,7 @@ class _OnboardingScreenV5State extends State<OnboardingScreenV5>
                               borderRadius: BorderRadius.circular(32),
                               child: Center(
                                 child: AppIcon(
-'assets/icons/icons8-arrow-WHITE-32.png',
+                                  'assets/icons/icons8-arrow-WHITE-32.png',
                                   width: 24,
                                   height: 24,
                                 ),

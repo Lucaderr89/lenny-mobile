@@ -315,7 +315,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   prefixIcon: Padding(
                     padding: const EdgeInsets.all(12),
                     child: AppIcon(
-'assets/icons/icons8-indirizzo-32.png',
+                      'assets/icons/icons8-indirizzo-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -323,7 +323,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   ),
                   suffixIcon: IconButton(
                     icon: AppIcon(
-'assets/icons/icons8-mirino-32.png',
+                      'assets/icons/icons8-mirino-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -346,7 +346,10 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             itemBuilder: (context, suggestion) {
               return ListTile(
                 dense: true,
-                leading: const Icon(Icons.place, size: 20),
+                leading: const AppIcon(
+                  'assets/icons_svg/icons8-location-32.svg',
+                  size: 20,
+                ),
                 title: Text(
                   suggestion.shortAddress,
                   style: const TextStyle(fontSize: 13),
@@ -402,7 +405,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12),
                 child: AppIcon(
-'assets/icons/icons8-città-32.png',
+                  'assets/icons/icons8-città-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.primary,
@@ -426,7 +429,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12),
                 child: AppIcon(
-'assets/icons/icons8-cap-32.png',
+                  'assets/icons/icons8-cap-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.primary,
@@ -458,7 +461,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 child: Row(
                   children: [
                     AppIcon(
-'assets/icons/icons8-casetta-32.png',
+                      'assets/icons/icons8-casetta-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -473,7 +476,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 child: Row(
                   children: [
                     AppIcon(
-'assets/icons/icons8-ufficio2-32.png',
+                      'assets/icons/icons8-ufficio2-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -488,7 +491,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 child: Row(
                   children: [
                     AppIcon(
-'assets/icons/icons8-mappa-32.png',
+                      'assets/icons/icons8-mappa-32.png',
                       width: 20,
                       height: 20,
                       color: AppColors.primary,
@@ -520,7 +523,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(12),
                 child: AppIcon(
-'assets/icons/icons8-carta-32.png',
+                  'assets/icons/icons8-carta-32.png',
                   width: 20,
                   height: 20,
                   color: AppColors.primary,

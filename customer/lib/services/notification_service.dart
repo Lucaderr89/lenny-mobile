@@ -55,10 +55,11 @@ class NotificationService {
 
   /// Restituisce la lista delle notifiche + unread_count
   Future<({List<CustomerNotification> notifications, int unreadCount})>
-      fetchNotifications({int limit = 20, int page = 1}) async {
+  fetchNotifications({int limit = 20, int page = 1}) async {
     try {
       final uri = Uri.parse(
-          '$_base/customer/notifications?limit=$limit&page=$page');
+        '$_base/customer/notifications?limit=$limit&page=$page',
+      );
       final res = await http
           .get(uri, headers: await _headers())
           .timeout(const Duration(seconds: 10));

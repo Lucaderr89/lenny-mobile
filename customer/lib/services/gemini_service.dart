@@ -82,9 +82,17 @@ class GeminiService {
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200) return AIResponse.fromJson(json);
-      return AIResponse(success: false, message: 'Errore stato coda', status: 'error');
+      return AIResponse(
+        success: false,
+        message: 'Errore stato coda',
+        status: 'error',
+      );
     } catch (e) {
-      return AIResponse(success: false, message: 'Errore connessione', status: 'error');
+      return AIResponse(
+        success: false,
+        message: 'Errore connessione',
+        status: 'error',
+      );
     }
   }
 
@@ -93,10 +101,7 @@ class GeminiService {
   Future<MenuItem?> getDishDetail(int dishId) async {
     try {
       final response = await http
-          .get(
-            Uri.parse('$baseUrl/ai/dish/$dishId'),
-            headers: await _headers,
-          )
+          .get(Uri.parse('$baseUrl/ai/dish/$dishId'), headers: await _headers)
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -160,22 +165,26 @@ class AIResponse {
 
   factory AIResponse.fromJson(Map<String, dynamic> json) {
     final rawDishes = json['dishes'];
-    final rawRest   = json['restaurants'];
+    final rawRest = json['restaurants'];
 
     return AIResponse(
-      success:       json['success'] as bool? ?? false,
-      message:       json['message'] as String? ?? '',
-      status:        json['status'] as String? ?? 'error',
-      action:        json['action'] as String? ?? 'none',
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String? ?? '',
+      status: json['status'] as String? ?? 'error',
+      action: json['action'] as String? ?? 'none',
       dishes: rawDishes is List
-          ? rawDishes.map((d) => AIDish.fromJson(d as Map<String, dynamic>)).toList()
+          ? rawDishes
+                .map((d) => AIDish.fromJson(d as Map<String, dynamic>))
+                .toList()
           : [],
       restaurants: rawRest is List
-          ? rawRest.map((r) => AIRestaurant.fromJson(r as Map<String, dynamic>)).toList()
+          ? rawRest
+                .map((r) => AIRestaurant.fromJson(r as Map<String, dynamic>))
+                .toList()
           : [],
-      position:      json['position'] as int?,
+      position: json['position'] as int?,
       estimatedWait: json['estimated_wait'] as int?,
-      requestId:     json['request_id'] as String?,
+      requestId: json['request_id'] as String?,
     );
   }
 }
@@ -209,16 +218,16 @@ class AIDish {
   });
 
   factory AIDish.fromJson(Map<String, dynamic> json) => AIDish(
-        id:                  json['id'] as int? ?? 0,
-        name:                json['name'] as String? ?? '',
-        price:               (json['price'] as num?)?.toDouble() ?? 0,
-        restaurantId:        json['restaurant_id'] as int? ?? 0,
-        restaurantName:      json['restaurant_name'] as String? ?? '',
-        hasRequiredExtras:   json['has_required_extras'] as bool? ?? false,
-        imageUrl:            json['image_url'] as String?,
-        description:         json['description'] as String?,
-        category:            json['category'] as String?,
-      );
+    id: json['id'] as int? ?? 0,
+    name: json['name'] as String? ?? '',
+    price: (json['price'] as num?)?.toDouble() ?? 0,
+    restaurantId: json['restaurant_id'] as int? ?? 0,
+    restaurantName: json['restaurant_name'] as String? ?? '',
+    hasRequiredExtras: json['has_required_extras'] as bool? ?? false,
+    imageUrl: json['image_url'] as String?,
+    description: json['description'] as String?,
+    category: json['category'] as String?,
+  );
 }
 
 /// Ristorante suggerito dall'AI
@@ -238,10 +247,10 @@ class AIRestaurant {
   });
 
   factory AIRestaurant.fromJson(Map<String, dynamic> json) => AIRestaurant(
-        id:          json['id'] as int? ?? 0,
-        name:        json['name'] as String? ?? '',
-        distanceKm:  (json['distance_km'] as num?)?.toDouble() ?? 0,
-        city:        json['city'] as String? ?? '',
-        isOpen:      json['is_open'] as bool? ?? true,
-      );
+    id: json['id'] as int? ?? 0,
+    name: json['name'] as String? ?? '',
+    distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0,
+    city: json['city'] as String? ?? '',
+    isOpen: json['is_open'] as bool? ?? true,
+  );
 }

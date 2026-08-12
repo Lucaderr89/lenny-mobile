@@ -315,7 +315,7 @@ class _ScopriTabState extends State<ScopriTab>
             child: Row(
               children: [
                 AppIcon(
-'assets/icons/icons8-piu_amati-32.png',
+                  'assets/icons/icons8-piu_amati-32.png',
                   width: 20,
                   height: 20,
                 ),
@@ -344,8 +344,8 @@ class _ScopriTabState extends State<ScopriTab>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.restaurant_outlined,
+                  AppIcon(
+                    'assets/icons_svg/icons8-ristorante-32.svg',
                     size: 40,
                     color: grayColor.withValues(alpha: 0.6),
                   ),
@@ -383,7 +383,7 @@ class _ScopriTabState extends State<ScopriTab>
           child: Row(
             children: [
               AppIcon(
-'assets/icons/icons8-piu_amati-32.png',
+                'assets/icons/icons8-piu_amati-32.png',
                 width: 20,
                 height: 20,
               ),
@@ -441,9 +441,7 @@ class _ScopriTabState extends State<ScopriTab>
 
     if (restaurant == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ristorante non disponibile al momento'),
-        ),
+        const SnackBar(content: Text('Ristorante non disponibile al momento')),
       );
       return;
     }
@@ -463,121 +461,123 @@ class _ScopriTabState extends State<ScopriTab>
     return GestureDetector(
       onTap: () => _openTrendingDish(dish),
       child: Container(
-      width: 170,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: lightColor,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
+        width: 170,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: lightColor,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                  child: dish.imageUrl != null
+                      ? FotoRete(
+                          dish.imageUrl!,
+                          width: double.infinity,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _buildImagePlaceholder(),
+                        )
+                      : _buildImagePlaceholder(),
                 ),
-                child: dish.imageUrl != null
-                    ? FotoRete(
-                        dish.imageUrl!,
-                        width: double.infinity,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _buildImagePlaceholder(),
-                      )
-                    : _buildImagePlaceholder(),
-              ),
-              Positioned(
-                top: 6,
-                left: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.danger,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Mostra 1, 2 o 3 icone in base alla popolarità
-                      ...List.generate(
-                        dish.orderCount >= 10 ? 3 : (dish.orderCount >= 5 ? 2 : 1),
-                        (index) => Padding(
-                          padding: EdgeInsets.only(left: index > 0 ? 2 : 0),
-                          child: AppIcon(
-'assets/icons/icons8-piu_amati-32.png',
-                            width: 12,
-                            height: 12,
-                            color: Colors.white,
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Mostra 1, 2 o 3 icone in base alla popolarità
+                        ...List.generate(
+                          dish.orderCount >= 10
+                              ? 3
+                              : (dish.orderCount >= 5 ? 2 : 1),
+                          (index) => Padding(
+                            padding: EdgeInsets.only(left: index > 0 ? 2 : 0),
+                            child: AppIcon(
+                              'assets/icons/icons8-piu_amati-32.png',
+                              width: 12,
+                              height: 12,
+                              color: Colors.white,
+                            ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dish.dishName,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: darkColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    dish.restaurantName,
+                    style: const TextStyle(fontSize: 11, color: grayColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        dish.timeAgo,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: grayColor,
+                        ),
+                      ),
+                      Text(
+                        '€${dish.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: darkColor,
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  dish.dishName,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: darkColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  dish.restaurantName,
-                  style: const TextStyle(fontSize: 11, color: grayColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      dish.timeAgo,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: grayColor,
-                      ),
-                    ),
-                    Text(
-                      '€${dish.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: darkColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -601,7 +601,7 @@ class _ScopriTabState extends State<ScopriTab>
           child: Row(
             children: [
               AppIcon(
-'assets/icons/icons8-cappello-dello-chef-32.png',
+                'assets/icons/icons8-cappello-dello-chef-32.png',
                 width: 20,
                 height: 20,
               ),
@@ -858,8 +858,7 @@ class _ScopriTabState extends State<ScopriTab>
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: () {
-                      final target =
-                          (event.suggestions?.isNotEmpty ?? false)
+                      final target = (event.suggestions?.isNotEmpty ?? false)
                           ? event.suggestions!.first
                           : event.title;
                       widget.onSearchSuggestion?.call(target);
@@ -903,7 +902,7 @@ class _ScopriTabState extends State<ScopriTab>
           child: Row(
             children: [
               AppIcon(
-'assets/icons/icons8-sala-giochi-di-mele-32.png',
+                'assets/icons/icons8-sala-giochi-di-mele-32.png',
                 width: 20,
                 height: 20,
               ),
@@ -1041,10 +1040,7 @@ class _ScopriTabState extends State<ScopriTab>
             if (badge != null) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.accent,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -1073,7 +1069,11 @@ class _ScopriTabState extends State<ScopriTab>
       width: double.infinity,
       height: height,
       color: lightGrayColor,
-      child: Icon(Icons.restaurant_menu, size: height * 0.4, color: grayColor),
+      child: AppIcon(
+        'assets/icons_svg/icons8-ristorante-32.svg',
+        size: height * 0.4,
+        color: grayColor,
+      ),
     );
   }
 

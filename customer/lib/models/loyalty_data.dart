@@ -18,18 +18,20 @@ class LoyaltyData {
   factory LoyaltyData.fromJson(Map<String, dynamic> json) {
     return LoyaltyData(
       customer: CustomerLoyaltyInfo.fromJson(json['customer']),
-      currentTier: json['current_tier'] != null 
-          ? LoyaltyTier.fromJson(json['current_tier']) 
+      currentTier: json['current_tier'] != null
+          ? LoyaltyTier.fromJson(json['current_tier'])
           : null,
-      nextTier: json['next_tier'] != null 
-          ? LoyaltyTier.fromJson(json['next_tier']) 
+      nextTier: json['next_tier'] != null
+          ? LoyaltyTier.fromJson(json['next_tier'])
           : null,
-      progressToNext: json['progress_to_next'] != null 
-          ? ProgressToNext.fromJson(json['progress_to_next']) 
+      progressToNext: json['progress_to_next'] != null
+          ? ProgressToNext.fromJson(json['progress_to_next'])
           : null,
-      allTiers: (json['all_tiers'] as List<dynamic>?)
-          ?.map((t) => LoyaltyTier.fromJson(t))
-          .toList() ?? [],
+      allTiers:
+          (json['all_tiers'] as List<dynamic>?)
+              ?.map((t) => LoyaltyTier.fromJson(t))
+              .toList() ??
+          [],
     );
   }
 }
@@ -62,7 +64,9 @@ class CustomerLoyaltyInfo {
       surname: json['surname'] ?? '',
       loyaltyPoints: int.parse(json['loyalty_points'].toString()),
       lifetimeSpending: double.parse(json['lifetime_spending'].toString()),
-      totalOrdersCompleted: int.parse(json['total_orders_completed'].toString()),
+      totalOrdersCompleted: int.parse(
+        json['total_orders_completed'].toString(),
+      ),
       spendingLast12m: double.parse(json['spending_last_12m'].toString()),
       ordersLast12m: int.parse(json['orders_last_12m'].toString()),
     );

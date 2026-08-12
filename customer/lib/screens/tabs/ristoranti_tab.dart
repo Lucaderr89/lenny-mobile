@@ -121,7 +121,6 @@ class _RistorantiTabState extends State<RistorantiTab>
     if (mounted) setState(() {});
   }
 
-
   /// Sincronizza dati consegna da masterAll → masterFeatured e masterNew.
   /// Necessario perché le 3 chiamate API creano oggetti Dart separati per lo stesso ID.
   void _syncDeliveryFromAll() {
@@ -428,7 +427,8 @@ class _RistorantiTabState extends State<RistorantiTab>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RestaurantMenuScreen(restaurant: restaurant),
+              builder: (context) =>
+                  RestaurantMenuScreen(restaurant: restaurant),
             ),
           );
         },
@@ -553,8 +553,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) => Container(
                                 color: lightGrayColor,
-                                child: const Icon(
-                                  Icons.restaurant,
+                                child: const AppIcon(
+                                  'assets/icons_svg/icons8-ristorante-32.svg',
                                   size: 40,
                                   color: grayColor,
                                 ),
@@ -562,8 +562,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                             )
                           : Container(
                               color: lightGrayColor,
-                              child: const Icon(
-                                Icons.restaurant,
+                              child: const AppIcon(
+                                'assets/icons_svg/icons8-ristorante-32.svg',
                                 size: 40,
                                 color: grayColor,
                               ),
@@ -685,7 +685,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                       if (restaurant.rating > 0) ...[
                         const SizedBox(width: 6),
                         AppIcon(
-'assets/icons/icons8-stella-32.png',
+                          'assets/icons/icons8-stella-32.png',
                           size: 12,
                           color: accentYellow,
                         ),
@@ -708,12 +708,13 @@ class _RistorantiTabState extends State<RistorantiTab>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (!locationProvider.isPickup && deliveryFeeText != null) ...[
+                  if (!locationProvider.isPickup &&
+                      deliveryFeeText != null) ...[
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.delivery_dining,
+                        const AppIcon(
+                          'assets/icons_svg/lenny-consegna.svg',
                           size: 13,
                           color: grayColor,
                         ),
@@ -1109,8 +1110,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                                   width: 200,
                                   height: 110,
                                   color: lightGrayColor,
-                                  child: const Icon(
-                                    Icons.restaurant,
+                                  child: const AppIcon(
+                                    'assets/icons_svg/icons8-ristorante-32.svg',
                                     size: 40,
                                     color: grayColor,
                                   ),
@@ -1120,8 +1121,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                             width: 200,
                             height: 110,
                             color: lightGrayColor,
-                            child: const Icon(
-                              Icons.restaurant,
+                            child: const AppIcon(
+                              'assets/icons_svg/icons8-ristorante-32.svg',
                               size: 40,
                               color: grayColor,
                             ),
@@ -1145,8 +1146,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.near_me,
+                          const AppIcon(
+                            'assets/icons_svg/icons8-mirino-32.svg',
                             size: 12,
                             color: Colors.white,
                           ),
@@ -1185,8 +1186,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.local_offer,
+                          const AppIcon(
+                            'assets/icons_svg/icons8-sconto-32.svg',
                             size: 12,
                             color: Colors.white,
                           ),
@@ -1235,7 +1236,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 AppIcon(
-'assets/icons/icons8-orologio-32.png',
+                                  'assets/icons/icons8-orologio-32.png',
                                   width: 12,
                                   height: 12,
                                   color: Colors.white,
@@ -1304,7 +1305,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             AppIcon(
-'assets/icons/icons8-cancella-32.png',
+                              'assets/icons/icons8-cancella-32.png',
                               width: 12,
                               height: 12,
                               color: Colors.white,
@@ -1373,7 +1374,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                       if (restaurant.rating > 0) ...[
                         const SizedBox(width: 4),
                         AppIcon(
-'assets/icons/icons8-stella-32.png',
+                          'assets/icons/icons8-stella-32.png',
                           size: 11,
                           color: accentYellow,
                         ),
@@ -1394,7 +1395,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                   Row(
                     children: [
                       AppIcon(
-'assets/icons/icons8-ristorante-32.png',
+                        'assets/icons/icons8-ristorante-32.png',
                         size: 10,
                         color: grayColor,
                       ),
@@ -1440,7 +1441,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                         : Row(
                             children: [
                               AppIcon(
-'assets/icons/icons8-in-transito-32.png',
+                                'assets/icons/icons8-in-transito-32.png',
                                 size: 10,
                                 color: grayColor,
                               ),
@@ -1458,8 +1459,8 @@ class _RistorantiTabState extends State<RistorantiTab>
                               if (restaurant.actualMinOrder != null &&
                                   restaurant.actualMinOrder! > 0) ...[
                                 const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.shopping_basket,
+                                const AppIcon(
+                                  'assets/icons_svg/icons8-basket-2-32.svg',
                                   size: 10,
                                   color: grayColor,
                                 ),
@@ -1502,7 +1503,7 @@ class _RistorantiTabState extends State<RistorantiTab>
                   shape: BoxShape.circle,
                 ),
                 child: AppIcon(
-'assets/icons/icons8-marcatore-spento-32.png',
+                  'assets/icons/icons8-marcatore-spento-32.png',
                   size: 48,
                   color: primaryDarkPink,
                 ),

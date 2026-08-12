@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_colors.dart';
 import '../../models/restaurant.dart';
@@ -143,8 +144,9 @@ class _PiattoSegretoScreenState extends State<PiattoSegretoScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
     );
 
     Restaurant? restaurant;
@@ -364,8 +366,8 @@ class _PiattoSegretoScreenState extends State<PiattoSegretoScreen> {
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
                             color: AppColors.lightGray,
-                            child: const Icon(
-                              Icons.restaurant,
+                            child: const AppIcon(
+                              'assets/icons_svg/icons8-ristorante-32.svg',
                               color: AppColors.gray,
                             ),
                           ),
@@ -479,7 +481,10 @@ class _PiattoSegretoScreenState extends State<PiattoSegretoScreen> {
             height: 52,
             child: ElevatedButton.icon(
               onPressed: _ordina,
-              icon: const Icon(Icons.restaurant_menu, size: 20),
+              icon: const AppIcon(
+                'assets/icons_svg/icons8-ristorante-32.svg',
+                size: 20,
+              ),
               label: const Text(
                 'Ordinalo ora',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

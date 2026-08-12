@@ -87,16 +87,18 @@ class NotificationProvider extends ChangeNotifier {
     final newCount = await _service.markRead();
     _unreadCount = newCount;
     _notifications = _notifications
-        .map((n) => CustomerNotification(
-              id: n.id,
-              title: n.title,
-              body: n.body,
-              triggerEvent: n.triggerEvent,
-              entityType: n.entityType,
-              entityId: n.entityId,
-              isRead: true,
-              createdAt: n.createdAt,
-            ))
+        .map(
+          (n) => CustomerNotification(
+            id: n.id,
+            title: n.title,
+            body: n.body,
+            triggerEvent: n.triggerEvent,
+            entityType: n.entityType,
+            entityId: n.entityId,
+            isRead: true,
+            createdAt: n.createdAt,
+          ),
+        )
         .toList();
     notifyListeners();
   }

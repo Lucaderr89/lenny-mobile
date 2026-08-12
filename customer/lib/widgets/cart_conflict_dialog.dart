@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/app_colors.dart';
 
@@ -30,8 +31,8 @@ Future<bool?> showCartConflictDialog({
                 ),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.shopping_cart_outlined,
+              child: const AppIcon(
+                'assets/icons_svg/icons8-cart-32.svg',
                 size: 56,
                 color: AppColors.primary,
               ),

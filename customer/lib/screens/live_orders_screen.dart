@@ -138,7 +138,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         toolbarHeight: 56,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -159,7 +159,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         actions: [
           IconButton(
             icon: AppIcon(
-'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,
@@ -213,8 +213,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.shopping_bag_outlined,
+            AppIcon(
+              'assets/icons_svg/icons8-borsa-della-spesa-32.svg',
               size: 80,
               color: AppColors.gray.withValues(alpha: 0.5),
             ),
@@ -314,7 +314,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                         Row(
                           children: [
                             AppIcon(
-'assets/icons/icons8-borsa-della-spesa-32.png',
+                              'assets/icons/icons8-borsa-della-spesa-32.png',
                               color: cardColor,
                               width: 16,
                               height: 16,
@@ -405,7 +405,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               width: 40,
                               height: 40,
                               color: AppColors.lightGray,
-                              child: const Icon(Icons.restaurant, size: 20),
+                              child: const AppIcon(
+                                'assets/icons_svg/icons8-ristorante-32.svg',
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -646,7 +649,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: () => _contattaSupporto(order),
-          icon: const Icon(Icons.support_agent, size: 16),
+          icon: const AppIcon(
+            'assets/icons_svg/icons8-supporto-32.svg',
+            size: 16,
+          ),
           label: const Text(
             'Serve aiuto? Scrivici su WhatsApp',
             style: TextStyle(fontSize: 12),
@@ -829,7 +835,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               width: 40,
                               height: 40,
                               color: AppColors.lightGray,
-                              child: const Icon(Icons.restaurant, size: 20),
+                              child: const AppIcon(
+                                'assets/icons_svg/icons8-ristorante-32.svg',
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -965,8 +974,8 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.location_on,
+                        AppIcon(
+                          'assets/icons_svg/icons8-location-32.svg',
                           size: 16,
                           color: AppColors.gray,
                         ),

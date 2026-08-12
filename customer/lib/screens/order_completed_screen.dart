@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_colors.dart';
 import '../services/fcm_service.dart';
@@ -113,8 +114,8 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.notifications_active_outlined,
+            const AppIcon(
+              'assets/icons_svg/icons8-allarme-32.svg',
               size: 42,
               color: AppColors.primary,
             ),
@@ -157,10 +158,7 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                 ),
                 child: const Text(
                   'Attiva le notifiche',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -245,87 +243,87 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       children: [
-                const SizedBox(height: 10),
+                        const SizedBox(height: 10),
 
-                // Logo "ordine confermato" con animazione
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Image.asset(
-                      'assets/images/ordine confermato.png',
-                      width: MediaQuery.of(context).size.width * 0.75,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Testo con fade animation in card glassmorphism
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          width: 1.5,
+                        // Logo "ordine confermato" con animazione
+                        ScaleTransition(
+                          scale: _scaleAnimation,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 30),
+                            child: Image.asset(
+                              'assets/images/ordine confermato.png',
+                              width: MediaQuery.of(context).size.width * 0.75,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 25,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Fantastico!',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
+
+                        const SizedBox(height: 20),
+
+                        // Testo con fade animation in card glassmorphism
+                        FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 30),
+                            child: Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    'Fantastico!',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Ordine #${widget.orderId}',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[800],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    widget.deliveryType == 'delivery'
+                                        ? 'Il tuo cibo sta arrivando!\nRelax, pensiamo a tutto noi.'
+                                        : widget.deliveryType == 'pickup'
+                                        ? 'Perfetto! Passa a ritirarlo.\nTi aspettiamo con il tuo ordine pronto!'
+                                        : 'Il tuo ordine è stato confermato.\nGrazie per aver ordinato con Lenny!',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[700],
+                                      height: 1.4,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _buildRiepilogo(),
+                                ],
+                              ),
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Ordine #${widget.orderId}',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[800],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            widget.deliveryType == 'delivery'
-                                ? 'Il tuo cibo sta arrivando!\nRelax, pensiamo a tutto noi.'
-                                : widget.deliveryType == 'pickup'
-                                ? 'Perfetto! Passa a ritirarlo.\nTi aspettiamo con il tuo ordine pronto!'
-                                : 'Il tuo ordine è stato confermato.\nGrazie per aver ordinato con Lenny!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                              height: 1.4,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 14),
-                          _buildRiepilogo(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                        ),
 
                         const SizedBox(height: 20),
                       ],
@@ -348,12 +346,15 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                             onPressed: () {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
-                                  builder: (context) => const LiveOrdersScreen(),
+                                  builder: (context) =>
+                                      const LiveOrdersScreen(),
                                 ),
                               );
                             },
-                            icon: const Icon(Icons.local_shipping_outlined,
-                                size: 20),
+                            icon: const AppIcon(
+                              'assets/icons_svg/lenny-consegna.svg',
+                              size: 20,
+                            ),
                             label: const Text(
                               'Segui il tuo ordine',
                               style: TextStyle(
@@ -415,9 +416,7 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
     if (widget.orarioConsegna != null && widget.orarioConsegna!.isNotEmpty) {
       righe.add(
         _rigaInfo(
-          widget.deliveryType == 'delivery'
-              ? Icons.schedule
-              : Icons.storefront,
+          widget.deliveryType == 'delivery' ? Icons.schedule : Icons.storefront,
           widget.deliveryType == 'delivery' ? 'Consegna' : 'Ritiro',
           widget.orarioConsegna!,
         ),
@@ -427,7 +426,9 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
     if (widget.deliveryType == 'delivery' &&
         widget.indirizzo != null &&
         widget.indirizzo!.isNotEmpty) {
-      righe.add(_rigaInfo(Icons.place_outlined, 'Indirizzo', widget.indirizzo!));
+      righe.add(
+        _rigaInfo(Icons.place_outlined, 'Indirizzo', widget.indirizzo!),
+      );
     }
 
     if (widget.totale != null) {
@@ -463,10 +464,7 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
           const SizedBox(width: 10),
           Text(
             '$label  ',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
           ),
           Expanded(
             child: Text(

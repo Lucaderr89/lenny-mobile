@@ -367,7 +367,11 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.schedule, size: 18, color: Color(0xFF9A6400)),
+          const AppIcon(
+            'assets/icons_svg/icons8-orologio-32.svg',
+            size: 18,
+            color: Color(0xFF9A6400),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -627,8 +631,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
                           color: lightGrayColor,
-                          child: const Icon(
-                            Icons.restaurant,
+                          child: const AppIcon(
+                            'assets/icons_svg/icons8-ristorante-32.svg',
                             size: 80,
                             color: grayColor,
                           ),
@@ -849,10 +853,10 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             iconSize: 18,
-                            icon: Icon(
+                            icon: AppIcon(
                               isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
+                                  ? 'assets/icons_svg/icons8-mi-piace-32.svg'
+                                  : 'assets/icons_svg/icons8-mi-piace-32.svg',
                               color: isFavorite ? primaryColor : darkColor,
                             ),
                             onPressed: () {
@@ -1033,8 +1037,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                           widget.restaurant.logoUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.restaurant,
+                              const AppIcon(
+                                'assets/icons_svg/icons8-ristorante-32.svg',
                                 color: grayColor,
                                 size: 28,
                               ),
@@ -1196,7 +1200,11 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.place_outlined, size: 14, color: grayColor),
+              const AppIcon(
+                'assets/icons_svg/icons8-location-32.svg',
+                size: 14,
+                color: grayColor,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -1369,8 +1377,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                     errorBuilder: (context, error, stackTrace) => Container(
                       height: 100,
                       color: lightGrayColor,
-                      child: const Icon(
-                        Icons.restaurant,
+                      child: const AppIcon(
+                        'assets/icons_svg/icons8-ristorante-32.svg',
                         color: grayColor,
                         size: 40,
                       ),

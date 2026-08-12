@@ -32,10 +32,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   /// Con [dishId] apre direttamente la scheda di quel piatto.
   /// Se il dettaglio non e' raggiungibile si ripiega sui dati minimi
   /// dei preferiti, cosi' la navigazione non si blocca mai.
-  Future<void> _openRestaurant(
-    RestaurantBasic basic, {
-    int? dishId,
-  }) async {
+  Future<void> _openRestaurant(RestaurantBasic basic, {int? dishId}) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -68,10 +65,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RestaurantMenuScreen(
-          restaurant: restaurant!,
-          openDishId: dishId,
-        ),
+        builder: (context) =>
+            RestaurantMenuScreen(restaurant: restaurant!, openDishId: dishId),
       ),
     );
   }
@@ -93,7 +88,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         toolbarHeight: 56,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
             color: AppColors.dark,
@@ -114,7 +109,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         actions: [
           IconButton(
             icon: AppIcon(
-'assets/icons/icons8-aggiornamenti-disponibili-32.png',
+              'assets/icons/icons8-aggiornamenti-disponibili-32.png',
               width: 22,
               height: 22,
               color: AppColors.dark,
@@ -192,8 +187,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.favorite_border,
+            child: const AppIcon(
+              'assets/icons_svg/icons8-mi-piace-32.svg',
               size: 60,
               color: primaryColor,
             ),
@@ -294,8 +289,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(
-                                  Icons.restaurant,
+                                child: const AppIcon(
+                                  'assets/icons_svg/icons8-ristorante-32.svg',
                                   color: primaryColor,
                                   size: 36,
                                 ),
@@ -319,8 +314,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.favorite,
+                            child: const AppIcon(
+                              'assets/icons_svg/icons8-mi-piace-32.svg',
                               size: 14,
                               color: Colors.white,
                             ),
@@ -358,8 +353,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
-                                      Icons.restaurant_menu,
+                                    const AppIcon(
+                                      'assets/icons_svg/icons8-ristorante-32.svg',
                                       size: 14,
                                       color: primaryColor,
                                     ),
@@ -460,12 +455,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                         gradient: LinearGradient(
                                           colors: [
                                             primaryColor.withValues(alpha: 0.2),
-                                            primaryColor.withValues(alpha: 0.05),
+                                            primaryColor.withValues(
+                                              alpha: 0.05,
+                                            ),
                                           ],
                                         ),
                                       ),
-                                      child: const Icon(
-                                        Icons.restaurant_menu,
+                                      child: const AppIcon(
+                                        'assets/icons_svg/icons8-ristorante-32.svg',
                                         color: primaryColor,
                                         size: 28,
                                       ),
@@ -482,8 +479,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                     ],
                                   ),
                                 ),
-                                child: const Icon(
-                                  Icons.restaurant_menu,
+                                child: const AppIcon(
+                                  'assets/icons_svg/icons8-ristorante-32.svg',
                                   color: primaryColor,
                                   size: 28,
                                 ),
@@ -520,8 +517,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 color: primaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Icon(
-                                Icons.favorite,
+                              child: const AppIcon(
+                                'assets/icons_svg/icons8-mi-piace-32.svg',
                                 color: primaryColor,
                                 size: 16,
                               ),
