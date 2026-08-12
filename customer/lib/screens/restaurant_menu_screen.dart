@@ -328,7 +328,9 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
-            Image.asset(iconPath, width: 24, height: 24),
+            // Come nel profilo: AppIcon usa la SVG del set, Image.asset
+            // caricherebbe il PNG raster sfocato.
+            AppIcon(iconPath, size: 24, color: primaryColor),
             const SizedBox(width: 16),
             Expanded(
               child: Text(

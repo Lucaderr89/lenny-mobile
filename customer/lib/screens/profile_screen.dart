@@ -125,7 +125,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _surnameController.text = _customerSurname;
     _phoneController.text = _customerPhone;
 
-    InputDecoration decorazione(String label, IconData icona) {
+    // Prende il percorso di un'icona del set invece di un IconData Material:
+    // i campi di questo dialog erano gli ultimi a usare glifi di sistema.
+    InputDecoration decorazione(String label, String icona) {
       return InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
@@ -140,16 +142,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(AppRadius.card),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
-        prefixIcon: Icon(icona),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: AppIcon(icona, size: 20, color: AppColors.gray),
+        ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 44),
       );
     }
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Modifica profilo',
           style: TextStyle(
@@ -164,17 +168,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               TextField(
                 controller: _nameController,
-                decoration: decorazione('Nome', Icons.person),
+                decoration: decorazione(
+                  'Nome',
+                  'assets/icons_svg/icons8-user-male-32.svg',
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _surnameController,
-                decoration: decorazione('Cognome', Icons.person_outline),
+                decoration: decorazione(
+                  'Cognome',
+                  'assets/icons_svg/icons8-user-male-32.svg',
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _phoneController,
-                decoration: decorazione('Telefono', Icons.phone),
+                decoration: decorazione(
+                  'Telefono',
+                  'assets/icons_svg/icons8-telephone-32.svg',
+                ),
                 keyboardType: TextInputType.phone,
               ),
             ],
@@ -299,8 +312,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(response.message),
-        backgroundColor:
-            response.success ? AppColors.success : AppColors.danger,
+        backgroundColor: response.success
+            ? AppColors.success
+            : AppColors.danger,
       ),
     );
 
@@ -319,16 +333,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _diagnosticaCrash() async {
     final esiti = <String>[];
 
-    esiti.add('Firebase inizializzato: ${Firebase.apps.length} app'
-        '${Firebase.apps.isNotEmpty ? ' (${Firebase.apps.first.name})' : ''}');
+    esiti.add(
+      'Firebase inizializzato: ${Firebase.apps.length} app'
+      '${Firebase.apps.isNotEmpty ? ' (${Firebase.apps.first.name})' : ''}',
+    );
 
     try {
       final attiva =
           FirebaseCrashlytics.instance.isCrashlyticsCollectionEnabled;
       esiti.add('Raccolta attiva: $attiva');
       if (!attiva) {
-        await FirebaseCrashlytics.instance
-            .setCrashlyticsCollectionEnabled(true);
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+          true,
+        );
         esiti.add('  -> riattivata ora');
       }
     } catch (e) {
@@ -464,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         leading: IconButton(
           icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+            'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
             width: 24,
             height: 24,
           ),
@@ -510,7 +527,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       IconButton(
                         icon: AppIcon(
-'assets/icons/icons8-modifica-32.png',
+                          'assets/icons/icons8-modifica-32.png',
                           width: 20,
                           height: 20,
                           color: Colors.white,
@@ -603,8 +620,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderRadius: BorderRadius.circular(AppRadius.card),
                   ),
                   child: ListTile(
-                    leading: const Icon(
-                      Icons.delete_forever_outlined,
+                    leading: const AppIcon(
+                      'assets/icons_svg/lenny-cestino.svg',
                       color: AppColors.danger,
                       size: 22,
                     ),
@@ -665,12 +682,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : null,
       ),
       child: ListTile(
-        leading: Image.asset(
-          icon,
-          width: 24,
-          height: 24,
-          color: AppColors.primary,
-        ),
+        // AppIcon e non Image.asset: il secondo carica il PNG raster da 32px,
+        // sfocato sui display moderni, scavalcando il ponte verso le SVG del
+        // set. Tutte le righe di questo menu erano rimaste indietro.
+        leading: AppIcon(icon, size: 24, color: AppColors.primary),
         title: Text(
           title,
           style: const TextStyle(
@@ -682,10 +697,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         subtitle: subtitle != null
             ? Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.grayDark,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.grayDark),
               )
             : null,
         trailing: const Icon(
