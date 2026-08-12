@@ -36,7 +36,6 @@ class DefaultFirebaseOptions {
     projectId: 'lennyv2-7d4c4',
     storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
   );
-
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyAPwGh6c-aq3J7oVCNEeFcbM2fim35k5Dg',
     appId: '1:215648872015:web:b66d02abe5108cd23a6c3a',
@@ -48,14 +47,13 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE',
-    appId: '1:215648872015:ios:f91ae2f559bce8b33a6c3a',
+    apiKey: 'AIzaSyDsKWXEv7ezWykDS0ZcuAfAmmrEU9-VZL4',
+    appId: '1:215648872015:ios:8397d156e50ff81b3a6c3a',
     messagingSenderId: '215648872015',
     projectId: 'lennyv2-7d4c4',
     storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
     iosBundleId: 'com.lenny.customer',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE',
     appId: '1:215648872015:ios:f91ae2f559bce8b33a6c3a',
