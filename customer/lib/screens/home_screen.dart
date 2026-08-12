@@ -4,7 +4,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../widgets/guest_gate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +67,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   StreamSubscription? _fcmSubscription;
 
   // Colori dal prototipo 6-HOME DEFINITIVA.html
-  static const Color primaryBlue = AppColors.primary; // era un SECONDO blu (#0F4BCA)
+  static const Color primaryBlue =
+      AppColors.primary; // era un SECONDO blu (#0F4BCA)
   static const Color primaryDarkPink = AppColors.primary;
   static const Color accentYellow = AppColors.accent;
   // Colori badge tipo ordine (uguali al dialog)
@@ -487,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             // Pulsante indietro per tornare alle categorie
                             IconButton(
                               icon: AppIcon(
-'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
+                                'assets/icons/icons8-freccia-lunga-a-sinistra-32.png',
                                 width: 22,
                                 height: 22,
                                 color: darkColor,
@@ -658,7 +658,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 children: [
                                   IconButton(
                                     icon: AppIcon(
-'assets/icons/icons8-allarme-32.png',
+                                      'assets/icons/icons8-allarme-32.png',
                                       width: 22,
                                       height: 22,
                                       color: darkColor,
@@ -726,7 +726,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         ),
                                         child: IconButton(
                                           icon: AppIcon(
-'assets/icons/icons8-cart-32.png',
+                                            'assets/icons/icons8-cart-32.png',
                                             width: 22,
                                             height: 22,
                                             color: darkColor,
@@ -1135,16 +1135,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Container(
         width: 46,
         height: 46,
-        // FaIcon, a differenza di Icon, non avvolge il glifo in SizedBox+Center:
-        // senza allineamento esplicito riceve vincoli stretti e si appoggia in
-        // alto a sinistra invece di stare al centro del cerchio.
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.primary,
           shape: BoxShape.circle,
           boxShadow: [AppColors.cardShadow],
         ),
-        child: const FaIcon(FontAwesomeIcons.robot, color: lightColor, size: 20),
+        // Icona del set "Lenny Icons": il glifo Font Awesome usato prima era
+        // pieno e apparteneva a un'altra famiglia grafica, unico caso nella
+        // barra. Questa e' disegnata con la stessa grammatica delle altre
+        // (tratto 2px, estremita' tonde, macchia morbida sul fondo).
+        child: const AppIcon(
+          'assets/icons_svg/lenny-robot.svg',
+          size: 24,
+          color: lightColor,
+          semanticLabel: 'Assistente Lenny',
+        ),
       ),
     );
   }
