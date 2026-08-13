@@ -145,6 +145,30 @@ flutter:
     - assets/icons/
     - assets/icons_svg/
 
+  # Poppins incluso nell'app invece di scaricato a runtime da google_fonts.
+  # Con il download i primi fotogrammi (o l'intera schermata, se non si
+  # ricostruisce) uscivano nel font di sistema: San Francisco su iOS. In piu'
+  # ogni avvio contattava i server Google trasmettendo l'IP dell'utente.
+  # Il nome famiglia deve restare "Poppins": google_fonts riconosce i font
+  # dichiarati qui e smette di scaricarli.
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Poppins-Black.ttf
+          weight: 900
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

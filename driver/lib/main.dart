@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -44,11 +45,21 @@ void main() async {
 @pragma("vm:entry-point")
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Poppins e' incluso nell'app (vedi la sezione fonts del pubspec): questo
+  // impedisce a google_fonts di scaricarlo comunque dalla rete. Senza, in
+  // assenza di connessione o prima che il download finisse, le schermate
+  // uscivano nel font di sistema invece che in Poppins.
+  GoogleFonts.config.allowRuntimeFetching = false;
   runApp(const BollaOverlay());
 }
 
 Future<void> _avvia() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Come in overlayMain: la bolla gira su un engine separato, quindi la
+  // configurazione va impostata in entrambi gli entry point.
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Inizializza Firebase (necessario prima di usare FCM; veloce, no rete)
   try {

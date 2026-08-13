@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'config/app_constants.dart';
@@ -48,6 +49,12 @@ void main() async {
 
 Future<void> _avvia() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Poppins e' incluso nell'app (vedi la sezione fonts del pubspec): questo
+  // impedisce a google_fonts di scaricarlo comunque dalla rete. Senza, in
+  // assenza di connessione o prima che il download finisse, le schermate
+  // uscivano nel font di sistema invece che in Poppins.
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Inizializza Firebase
   try {
