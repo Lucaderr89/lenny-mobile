@@ -5,7 +5,6 @@ import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
-import 'registration_screen.dart';
 import '../widgets/app_icon.dart';
 
 /// Login Screen basato sul prototipo 1-loginpage.html
@@ -456,15 +455,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              // Apri modale registrazione
-              Navigator.of(context).push(
-                PageRouteBuilder(
-                  opaque: false,
-                  pageBuilder: (context, _, _) => const RegistrationScreen(),
-                ),
-              );
-            },
+            // Stessa rotta usata dal profilo e dal gate ospite: la
+            // registrazione si apre da piu' punti e deve comportarsi
+            // sempre allo stesso modo.
+            onPressed: () => context.push('/register'),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               minimumSize: const Size(0, 30),

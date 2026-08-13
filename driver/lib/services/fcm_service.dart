@@ -45,14 +45,21 @@ class FcmService {
   /// device token alla SDK Firebase: chiamare getToken() subito dopo aver
   /// ottenuto il permesso fallisce con [firebase_messaging/apns-token-not-set].
   /// Su Android il token e' disponibile subito e l'attesa non serve.
-  Future<void> _attendiApnsToken() async {
-    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+  /// Attesa lunga di proposito: la primissima registrazione di un bundle id su
+  /// un dispositivo puo' richiedere parecchi secondi, e arrendersi troppo
+  /// presto lascia il driver senza push per tutta la sessione.
+  Future<bool> _attendiApnsToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return true;
 
-    for (var tentativo = 0; tentativo < 20; tentativo++) {
-      if (await _messaging.getAPNSToken() != null) return;
+    for (var tentativo = 0; tentativo < 60; tentativo++) {
+      if (await _messaging.getAPNSToken() != null) {
+        debugPrint('📮 APNs token ricevuto dopo ${tentativo * 500}ms');
+        return true;
+      }
       await Future.delayed(const Duration(milliseconds: 500));
     }
-    debugPrint('⚠️ APNs non ha consegnato il token entro 10s');
+    debugPrint('⚠️ APNs non ha consegnato il token entro 30s');
+    return false;
   }
 
   /// Il prompt di sistema al bootstrap e' il momento con il massimo tasso di
@@ -96,7 +103,11 @@ class FcmService {
 
   /// Token, handler e canale notifiche: eseguito solo a permesso concesso.
   Future<void> _setupMessaging() async {
-    await _attendiApnsToken();
+    if (!await _attendiApnsToken()) {
+      // Senza device token APNs, getToken() puo' solo fallire.
+      debugPrint('⚠️ Push non attive: nessun device token da APNs');
+      return;
+    }
 
     try {
       _token = await _messaging.getToken();

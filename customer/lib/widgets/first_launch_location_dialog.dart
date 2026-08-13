@@ -3,7 +3,14 @@ import 'app_icon.dart';
 import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 
-/// Dialog mostrato al primo avvio per richiedere permesso geolocalizzazione
+/// Dialog mostrato al primo avvio per richiedere permesso geolocalizzazione.
+///
+/// Qui si chiede SOLO la posizione. Le notifiche NO: l'app e' guest-first e
+/// questo dialog lo vede anche chi sta solo sbirciando. iOS mostra il prompt
+/// delle notifiche una volta sola per installazione: un "Non ora" dato da
+/// guest resterebbe definitivo anche dopo la registrazione, e quell'utente
+/// non riceverebbe mai gli aggiornamenti sull'ordine. Il permesso si chiede
+/// quindi dopo il login/registrazione (vedi FcmService.onUserLoggedIn).
 class FirstLaunchLocationDialog extends StatelessWidget {
   const FirstLaunchLocationDialog({super.key});
 
@@ -36,15 +43,18 @@ class FirstLaunchLocationDialog extends StatelessWidget {
             style: TextStyle(fontSize: 15),
           ),
           const SizedBox(height: 16),
-          _buildBenefit(Icons.restaurant, 'Trovare i ristoranti più vicini'),
+          _buildBenefit(
+            'icons8-ristorante-32',
+            'Trovare i ristoranti più vicini',
+          ),
           const SizedBox(height: 12),
           _buildBenefit(
-            Icons.delivery_dining,
+            'lenny-consegna',
             'Calcolare i costi di consegna precisi',
           ),
           const SizedBox(height: 12),
           _buildBenefit(
-            Icons.access_time,
+            'icons8-orologio-32',
             'Stimare i tempi di consegna accurati',
           ),
           const SizedBox(height: 16),
@@ -113,10 +123,14 @@ class FirstLaunchLocationDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildBenefit(IconData icon, String text) {
+  Widget _buildBenefit(String icona, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.green[700]),
+        AppIcon(
+          'assets/icons_svg/$icona.svg',
+          size: 20,
+          color: Colors.green[700],
+        ),
         const SizedBox(width: 12),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
       ],

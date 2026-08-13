@@ -85,13 +85,6 @@ Future<void> _avvia() async {
   } catch (e) {
     // Già inizializzato (hot-restart / debug) — ignorato
   }
-  // Inizializza FCM push notifications
-  try {
-    await FcmService().initialize();
-  } catch (e) {
-    debugPrint('⚠️ FCM non disponibile su questo dispositivo: $e');
-  }
-
   // Configurazione globale per gestire correttamente le barre di sistema
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -106,6 +99,22 @@ Future<void> _avvia() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   runApp(const LennyCustomerApp());
+
+  // FCM DOPO il primo fotogramma e senza await.
+  //
+  // A permesso concesso initialize() si mette ad aspettare il device token di
+  // APNs, che puo' arrivare dopo decine di secondi o non arrivare affatto.
+  // Farlo prima di runApp() significava tenere l'utente davanti a uno schermo
+  // bianco per tutto quel tempo, a ogni singolo avvio: nemmeno lo splash
+  // partiva. Qui invece l'app e' gia' a video e il token si registra da solo
+  // quando arriva.
+  //
+  // catchError e non try/catch: senza await, un errore diventerebbe un errore
+  // asincrono non gestito, che runZonedGuarded segnalerebbe a Crashlytics
+  // come crash fatale a ogni avvio.
+  FcmService().initialize().catchError((Object e) {
+    debugPrint('⚠️ FCM non disponibile su questo dispositivo: $e');
+  });
 }
 
 class LennyCustomerApp extends StatelessWidget {

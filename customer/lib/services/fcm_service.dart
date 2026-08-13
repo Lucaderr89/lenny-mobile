@@ -81,28 +81,39 @@ class FcmService {
   /// device token alla SDK Firebase: chiamare getToken() subito dopo aver
   /// ottenuto il permesso fallisce con [firebase_messaging/apns-token-not-set].
   /// Su Android il token e' disponibile subito e l'attesa non serve.
-  Future<void> _attendiApnsToken() async {
-    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+  ///
+  /// L'attesa e' lunga di proposito: la primissima registrazione di un bundle
+  /// id su un dispositivo puo' richiedere parecchi secondi, e arrendersi
+  /// troppo presto lascia l'utente senza push per tutta la sessione.
+  Future<bool> _attendiApnsToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return true;
 
-    for (var tentativo = 0; tentativo < 20; tentativo++) {
-      if (await _messaging.getAPNSToken() != null) return;
+    for (var tentativo = 0; tentativo < 60; tentativo++) {
+      if (await _messaging.getAPNSToken() != null) {
+        debugPrint('📮 APNs token ricevuto dopo ${tentativo * 500}ms');
+        return true;
+      }
       await Future.delayed(const Duration(milliseconds: 500));
     }
-    debugPrint('⚠️ APNs non ha consegnato il token entro 10s');
+    debugPrint('⚠️ APNs non ha consegnato il token entro 30s');
+    return false;
   }
 
   /// Token, handlers e canale notifiche: eseguito solo a permesso concesso
   Future<void> _setupMessaging() async {
-    await _attendiApnsToken();
+    if (!await _attendiApnsToken()) {
+      // Senza device token APNs, getToken() puo' solo fallire: inutile
+      // chiamarlo e sporcare il log con un errore che non aggiunge nulla.
+      debugPrint('⚠️ Push non attive: nessun device token da APNs');
+      return;
+    }
 
     // 2. Ottieni token FCM
     try {
       _token = await _messaging.getToken();
       debugPrint('📱 FCM Token: $_token');
     } catch (e) {
-      debugPrint(
-        '⚠️ FCM Token non ottenibile (APNs non configurato o account free): $e',
-      );
+      debugPrint('⚠️ FCM Token non ottenibile: $e');
       return;
     }
 
@@ -190,9 +201,36 @@ class FcmService {
     }
   }
 
-  /// Chiamato quando l'utente esegue il login — re-registra il token
+  /// Da chiamare subito dopo un login o una registrazione andati a buon fine.
+  ///
+  /// E' l'unico punto in cui si chiede il permesso notifiche. L'app e'
+  /// guest-first e iOS mostra il prompt di sistema una volta sola per
+  /// installazione: chiederlo prima, mentre l'utente sta ancora solo
+  /// guardando, significa raccogliere rifiuti definitivi da persone che poi
+  /// si registrano e non ricevono piu' nessun aggiornamento sull'ordine.
+  /// Qui invece l'utente si e' appena iscritto ed e' il momento in cui le
+  /// push iniziano davvero a servirgli.
   Future<void> onUserLoggedIn() async {
-    await _registerTokenOnBackend();
+    final settings = await _messaging.getNotificationSettings();
+
+    switch (settings.authorizationStatus) {
+      case AuthorizationStatus.notDetermined:
+        // Primo login: mostra il prompt di sistema. Se accetta,
+        // requestPermissionWithContext registra gia' il token sul backend.
+        await requestPermissionWithContext();
+      case AuthorizationStatus.denied:
+        // Rifiutato in passato: iOS non ripropone il prompt, inutile insistere.
+        return;
+      default:
+        // Gia' concesso. Se il token non e' ancora stato preso in questa
+        // sessione (es. permesso concesso dalle Impostazioni di sistema ad
+        // app aperta) si completa qui il setup, che registra da solo.
+        if (_token == null) {
+          await _setupMessaging();
+        } else {
+          await _registerTokenOnBackend();
+        }
+    }
   }
 
   /// Chiamato quando l'utente fa logout — rimuove token dal backend

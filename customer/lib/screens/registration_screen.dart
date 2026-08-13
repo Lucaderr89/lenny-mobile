@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
+import '../services/fcm_service.dart';
 import '../widgets/app_icon.dart';
 
 /// Registration Screen - Modale all'80%
@@ -77,6 +78,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         if (!mounted) return;
 
         if (loginResponse.success) {
+          // Permesso notifiche + registrazione del token FCM: senza questa
+          // chiamata chi arriva dalla registrazione (e non dal login) non
+          // veniva mai agganciato alle push.
+          FcmService().onUserLoggedIn();
           _showToast('Benvenuto su Lenny!', isError: false);
           await Future.delayed(const Duration(milliseconds: 800));
           if (mounted) {
@@ -141,54 +146,67 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Spazio da lasciare in fondo al form: la tastiera quando e' aperta,
+    // altrimenti la barra home dell'iPhone. Non si sommano, si sovrappongono.
+    final double insetTastiera = MediaQuery.viewInsetsOf(context).bottom;
+    final double insetHome = MediaQuery.paddingOf(context).bottom;
+    final double spazioInFondo =
+        (insetTastiera > insetHome ? insetTastiera : insetHome) + 24;
+
     return Scaffold(
       backgroundColor: Colors.black.withValues(alpha: 0.5),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Sfondo trasparente cliccabile per chiudere
-            GestureDetector(
-              onTap: () => context.pop(),
-              child: Container(color: Colors.transparent),
-            ),
+      // Il pannello ha altezza fissa: se lo Scaffold si rimpicciolisse con la
+      // tastiera traboccherebbe. Lo spazio per la tastiera lo aggiunge il
+      // form scrollabile qui sotto.
+      resizeToAvoidBottomInset: false,
+      // Niente SafeArea attorno allo Stack: riservava anche il bordo
+      // inferiore e sollevava il pannello dal fondo, lasciando vedere una
+      // striscia di velo scuro sotto. Il pannello deve appoggiare al bordo;
+      // la barra home la scavalca il padding del form.
+      body: Stack(
+        children: [
+          // Sfondo trasparente cliccabile per chiudere
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(color: Colors.transparent),
+          ),
 
-            // Modale all'80% in basso
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.80,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(32),
-                    topRight: Radius.circular(32),
+          // Modale all'80% in basso
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.80,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Header con titolo e bottone chiudi
-                    _buildHeader(context),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Header con titolo e bottone chiudi
+                  _buildHeader(context),
 
-                    // Form scrollabile
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
-                        child: _buildRegistrationForm(),
-                      ),
+                  // Form scrollabile
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(28, 0, 28, spazioInFondo),
+                      child: _buildRegistrationForm(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

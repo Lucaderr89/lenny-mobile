@@ -35,9 +35,30 @@ class AppRouter {
         ),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      // RegistrationScreen si disegna come un velo scuro con il pannello
+      // bianco appoggiato in basso: sotto deve restare visibile la schermata
+      // di partenza. Con una pagina opaca (il default) sotto non viene
+      // disegnato piu' nulla e al posto della schermata precedente si vedeva
+      // nero pieno. Da qui passano tutti gli ingressi: profilo, gate ospite
+      // e il link "Registrati" del login.
       GoRoute(
         path: '/register',
-        builder: (context, state) => const RegistrationScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          opaque: false,
+          barrierColor: Colors.transparent, // il velo lo disegna la schermata
+          transitionsBuilder: (context, animation, _, child) => SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                ),
+            child: child,
+          ),
+          child: const RegistrationScreen(),
+        ),
       ),
       GoRoute(
         path: '/forgot-password',

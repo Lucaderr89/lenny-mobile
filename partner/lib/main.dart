@@ -54,9 +54,6 @@ Future<void> _avvia() async {
   FirebaseCrashlytics.instance.setCustomKey('ambiente', AppConstants.baseUrl);
   FirebaseCrashlytics.instance.setCustomKey('app', 'partner');
 
-  // Inizializza FCM push notifications
-  await FcmService().initialize();
-
   // Configurazione globale per gestire correttamente le barre di sistema
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -75,6 +72,15 @@ Future<void> _avvia() async {
   // reale la da' SunmiConfig.getStatus() (vedi PrinterService).
 
   runApp(const LennyPartnerApp());
+
+  // FCM DOPO il primo fotogramma e senza await: a permesso concesso
+  // initialize() aspetta il device token, che puo' tardare decine di secondi.
+  // Prima di runApp() teneva il tablet su uno schermo bianco per tutto quel
+  // tempo, a ogni avvio. catchError e non try/catch perche' senza await un
+  // errore diventerebbe un crash fatale segnalato da runZonedGuarded.
+  FcmService().initialize().catchError((Object e) {
+    debugPrint('⚠️ FCM non disponibile: $e');
+  });
 }
 
 class LennyPartnerApp extends StatelessWidget {

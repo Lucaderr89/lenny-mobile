@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_icon.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_colors.dart';
-import '../services/fcm_service.dart';
 import 'dart:math' as math;
 import 'live_orders_screen.dart';
 
@@ -87,97 +85,10 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
       _bounceController.forward();
     });
 
-    // Il momento giusto per chiedere le notifiche: l'ordine e' appena stato
-    // confermato e il beneficio ("ti avvisiamo quando arriva") e' concreto.
-    // Pre-prompt nostro UNA VOLTA sola; il prompt di sistema parte solo se
-    // l'utente accetta.
-    Future.delayed(const Duration(milliseconds: 2200), () {
-      if (mounted) _maybeAskNotifications();
-    });
-  }
-
-  Future<void> _maybeAskNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('notif_prompt_done') ?? false) return;
-    await prefs.setBool('notif_prompt_done', true);
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const AppIcon(
-              'assets/icons_svg/icons8-allarme-32.svg',
-              size: 42,
-              color: AppColors.primary,
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Vuoi sapere quando arriva?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w700,
-                color: AppColors.dark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Ti avvisiamo quando il tuo ordine viene confermato, '
-              'preparato e consegnato.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  FcmService().requestPermissionWithContext();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Attiva le notifiche',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.pop(sheetContext),
-              child: Text(
-                'Non ora',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // NB: qui non si chiedono piu' le notifiche. Il permesso viene chiesto
+    // una volta sola al primo avvio, insieme al GPS, dal dialog che spiega
+    // entrambi (FirstLaunchLocationDialog): un secondo pre-prompt a ordine
+    // concluso sarebbe un modale in piu' senza aggiungere nulla.
   }
 
   @override
