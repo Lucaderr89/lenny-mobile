@@ -148,8 +148,20 @@ class FcmService {
     // e verrebbe resa come un quadrato bianco.
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@drawable/ic_notification');
+    // Le impostazioni iOS sono obbligatorie anche se qui non chiediamo nulla:
+    // senza, initialize() solleva "iOS settings must be set when targeting iOS
+    // platform" e tutto il resto del setup non viene eseguito. I permessi sono
+    // gia' stati chiesti da firebase_messaging, quindi qui si disattivano per
+    // non far comparire un secondo prompt di sistema.
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        );
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
+      iOS: iosSettings,
     );
     await _localNotifications.initialize(initSettings);
 
@@ -160,12 +172,16 @@ class FcmService {
         >()
         ?.createNotificationChannel(_channel);
 
-    // 10. Su Android: FCM non mostra notifiche foreground nativamente,
-    //     le mostriamo manualmente tramite flutter_local_notifications
+    // 10. Notifiche ad app aperta.
+    //     Su Android FCM non le mostra da solo e le disegniamo noi con
+    //     flutter_local_notifications, per avere il suono custom del canale.
+    //     Su iOS il suono custom non passa da li' e replicare la notifica a
+    //     mano la farebbe comparire due volte: si lascia fare al sistema.
+    final bool suIos = defaultTargetPlatform == TargetPlatform.iOS;
     await _messaging.setForegroundNotificationPresentationOptions(
-      alert: false, // disabilita il banner FCM nativo in foreground
+      alert: suIos,
       badge: true,
-      sound: false, // gestiamo noi il suono tramite local notifications
+      sound: suIos,
     );
   }
 
@@ -245,6 +261,11 @@ class FcmService {
     debugPrint('🔔 [FCM Foreground] ${message.notification?.title}');
     final notification = message.notification;
     if (notification == null) return;
+
+    // Su iOS la mostra il sistema (vedi
+    // setForegroundNotificationPresentationOptions): disegnarla anche qui la
+    // farebbe comparire due volte. I dettagli sotto sono solo Android.
+    if (defaultTargetPlatform == TargetPlatform.iOS) return;
 
     // Mostra notifica locale con il canale lenny_orders (suono custom)
     _localNotifications.show(

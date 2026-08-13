@@ -42,6 +42,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   static const Color primaryLight = AppColors.primaryLight;
   static const Color successColor = AppColors.success;
   static const Color dangerColor = AppColors.danger;
+  static const Color warningColor = AppColors.warning;
   static const Color darkColor = AppColors.dark;
   static const Color grayColor = AppColors.gray;
   static const Color lightGrayColor = AppColors.lightGray;
@@ -166,31 +167,72 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
     return label != null && label.toLowerCase().startsWith('non disponibile');
   }
 
+  /// Scelte che contano verso i limiti complessivi del piatto.
+  ///
+  /// Il pannello lo definisce come "elementi selezionati sommando tutti i
+  /// gruppi": conta quindi sia le scelte multiple sia quelle singole. Restano
+  /// fuori solo i gruppi con "Escludi dal limite totale", pensati per le
+  /// opzioni che non sono gusti (il formato della vaschetta, il tipo di cono).
+  int _scelteContate() {
+    var totale = 0;
+    for (final group in widget.menuItem.customizations) {
+      if (group.excludedFromTotal) continue;
+      if (group.isMultiSelect) {
+        totale += _selectedExtras
+            .where((extraId) => group.options.any((o) => o.id == extraId))
+            .length;
+      } else if (_selectedOptions.containsKey(group.id)) {
+        totale += 1;
+      }
+    }
+    return totale;
+  }
+
+  /// Quante scelte mancano al minimo complessivo, 0 se e' gia' soddisfatto.
+  int _scelteMancanti() {
+    final minimo = widget.menuItem.minTotalExtras;
+    if (minimo == null) return 0;
+    final mancanti = minimo - _scelteContate();
+    return mancanti > 0 ? mancanti : 0;
+  }
+
   bool _canAddToCart() {
     // Piatto non disponibile: mai aggiungibile, qualunque cosa sia selezionata
     if (_isUnavailable) return false;
 
-    // Check if all required groups have a selection
     for (var group in widget.menuItem.customizations) {
+      final selectedCount = group.isMultiSelect
+          ? _selectedExtras
+                .where((extraId) => group.options.any((o) => o.id == extraId))
+                .length
+          : (_selectedOptions.containsKey(group.id) ? 1 : 0);
+
       if (group.isRequired) {
         if (group.isMultiSelect) {
-          // Conta quanti extra sono selezionati per questo gruppo
-          final selectedCount = _selectedExtras
-              .where((extraId) => group.options.any((o) => o.id == extraId))
-              .length;
-
-          // Verifica minimo
-          if (selectedCount < group.minSelected) {
-            return false;
-          }
+          if (selectedCount < group.minSelected) return false;
         } else {
-          // Single select: verifica se c'è una selezione
-          if (!_selectedOptions.containsKey(group.id)) {
-            return false;
-          }
+          if (selectedCount == 0) return false;
         }
+      } else if (selectedCount > 0 && selectedCount < group.minSelected) {
+        // Gruppo facoltativo con un minimo: si puo' lasciarlo intatto, ma se
+        // si comincia a scegliere bisogna arrivare al minimo. Prima non veniva
+        // controllato affatto e il minimo dei gruppi non obbligatori era
+        // semplicemente ignorato.
+        return false;
+      }
+
+      if (group.maxSelected != null && selectedCount > group.maxSelected!) {
+        return false;
       }
     }
+
+    // Limiti complessivi del piatto, che valgono sopra i singoli gruppi.
+    final totale = _scelteContate();
+    final minimo = widget.menuItem.minTotalExtras;
+    final massimo = widget.menuItem.maxTotalExtras;
+    if (minimo != null && totale < minimo) return false;
+    if (massimo != null && totale > massimo) return false;
+
     return true;
   }
 
@@ -203,6 +245,14 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
 
     if (group.isRequired && selectedCount < group.minSelected) {
       return 'Seleziona almeno ${group.minSelected}';
+    }
+
+    // Anche su un gruppo facoltativo il minimo va rispettato, una volta che si
+    // e' cominciato a scegliere.
+    if (!group.isRequired &&
+        selectedCount > 0 &&
+        selectedCount < group.minSelected) {
+      return 'Seleziona almeno ${group.minSelected} o nessuno';
     }
 
     if (group.maxSelected != null && selectedCount > group.maxSelected!) {
@@ -221,8 +271,24 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
 
   bool _canSelectMore(CustomizationGroup group) {
     if (!group.isMultiSelect) return true;
-    if (group.maxSelected == null) return true;
-    return _getSelectedCount(group) < group.maxSelected!;
+
+    if (group.maxSelected != null &&
+        _getSelectedCount(group) >= group.maxSelected!) {
+      return false;
+    }
+
+    // Tetto complessivo del piatto: si applica solo ai gruppi a scelta
+    // multipla, dove le scelte si sommano. Su un gruppo a scelta singola
+    // sceglierne un'altra sostituisce la precedente e il totale non cresce,
+    // quindi bloccarlo lascerebbe l'utente incastrato senza motivo.
+    final massimo = widget.menuItem.maxTotalExtras;
+    if (massimo != null &&
+        !group.excludedFromTotal &&
+        _scelteContate() >= massimo) {
+      return false;
+    }
+
+    return true;
   }
 
   double _calculateModalHeight(BuildContext context) {
@@ -337,6 +403,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                                   .menuItem
                                   .customizations
                                   .isNotEmpty) ...[
+                                _buildRiepilogoLimiti(),
                                 ...widget.menuItem.customizations.map(
                                   (group) => _buildCustomizationGroup(group),
                                 ),
@@ -739,6 +806,70 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
     );
   }
 
+  /// Striscia in cima alle variazioni con i limiti complessivi del piatto.
+  ///
+  /// Serve perche' quei limiti valgono sopra i singoli gruppi: senza, l'utente
+  /// scopre di aver sforato solo quando le opzioni smettono di rispondere, o
+  /// quando il bottone "Aggiungi" resta spento senza spiegazione.
+  Widget _buildRiepilogoLimiti() {
+    final minimo = widget.menuItem.minTotalExtras;
+    final massimo = widget.menuItem.maxTotalExtras;
+    if (minimo == null && massimo == null) return const SizedBox.shrink();
+
+    final totale = _scelteContate();
+    final mancanti = _scelteMancanti();
+    final pieno = massimo != null && totale >= massimo;
+
+    final String testo;
+    if (mancanti > 0) {
+      testo = massimo != null
+          ? 'Scegli da $minimo a $massimo elementi: ne manca${mancanti == 1 ? '' : 'no'} $mancanti'
+          : 'Scegli almeno $minimo element${minimo == 1 ? 'o' : 'i'}: ne manca${mancanti == 1 ? '' : 'no'} $mancanti';
+    } else if (massimo != null) {
+      testo = pieno
+          ? 'Hai scelto tutti i $massimo elementi disponibili'
+          : 'Hai scelto $totale element${totale == 1 ? 'o' : 'i'} su $massimo';
+    } else {
+      testo = 'Hai scelto $totale element${totale == 1 ? 'o' : 'i'}';
+    }
+
+    // Ambra finche' manca qualcosa, verde quando la scelta e' valida: il
+    // colore da' la risposta prima che l'utente legga la frase.
+    final Color colore = mancanti > 0 ? warningColor : successColor;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colore.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colore.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          AppIcon(
+            mancanti > 0
+                ? 'assets/icons_svg/icons8-informazioni-32.svg'
+                : 'assets/icons_svg/icons8-mi-piace-32.svg',
+            size: 18,
+            color: colore,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              testo,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: colore,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCustomizationGroup(CustomizationGroup group) {
     final selectedCount = _getSelectedCount(group);
     final error = _getGroupError(group);
@@ -1128,23 +1259,45 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   }
 
   String _getMissingRequirements() {
+    // Il minimo complessivo del piatto viene prima dei singoli gruppi: e'
+    // trasversale, e dire "completa Gusti" quando il vincolo e' "almeno 3
+    // elementi in tutto" manderebbe l'utente a cercare la cosa sbagliata.
+    final mancanti = _scelteMancanti();
+    if (mancanti > 0) {
+      return mancanti == 1
+          ? 'Scegli ancora 1 elemento'
+          : 'Scegli ancora $mancanti elementi';
+    }
+
+    final massimo = widget.menuItem.maxTotalExtras;
+    if (massimo != null && _scelteContate() > massimo) {
+      return 'Hai superato il limite di $massimo elementi';
+    }
+
     final missing = <String>[];
 
     for (var group in widget.menuItem.customizations) {
+      final selectedCount = group.isMultiSelect
+          ? _selectedExtras
+                .where((extraId) => group.options.any((o) => o.id == extraId))
+                .length
+          : (_selectedOptions.containsKey(group.id) ? 1 : 0);
+
       if (group.isRequired) {
         if (group.isMultiSelect) {
-          final selectedCount = _selectedExtras
-              .where((extraId) => group.options.any((o) => o.id == extraId))
-              .length;
-
           if (selectedCount < group.minSelected) {
             missing.add('${group.title} (min ${group.minSelected})');
           }
-        } else {
-          if (!_selectedOptions.containsKey(group.id)) {
-            missing.add(group.title);
-          }
+        } else if (selectedCount == 0) {
+          missing.add(group.title);
         }
+      } else if (selectedCount > 0 && selectedCount < group.minSelected) {
+        // Gruppo facoltativo lasciato a meta': o si completa, o si svuota.
+        missing.add('${group.title} (min ${group.minSelected} o nessuno)');
+      }
+
+      if (group.maxSelected != null && selectedCount > group.maxSelected!) {
+        missing.add('${group.title} (max ${group.maxSelected})');
       }
     }
 

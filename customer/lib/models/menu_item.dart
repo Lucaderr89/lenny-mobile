@@ -20,6 +20,15 @@ class MenuItem {
   /// Null = ordinabile in qualunque fascia di apertura.
   final String? availabilityLabel;
 
+  /// Limiti complessivi di extra sul piatto, sommando tutti i gruppi tranne
+  /// quelli con [CustomizationGroup.excludedFromTotal]. Null = nessun vincolo.
+  ///
+  /// Sono diversi dai limiti del singolo gruppo: servono a dire "scegli da 1 a
+  /// 3 gusti in tutto", indipendentemente da come i gusti sono ripartiti fra
+  /// i gruppi.
+  final int? minTotalExtras;
+  final int? maxTotalExtras;
+
   MenuItem({
     required this.id,
     required this.name,
@@ -35,6 +44,8 @@ class MenuItem {
     this.allergens = const [],
     this.dietaryOptions = const [],
     this.availabilityLabel,
+    this.minTotalExtras,
+    this.maxTotalExtras,
   });
 
   bool get hasDiscount => originalPrice != null && originalPrice! > price;
@@ -54,6 +65,11 @@ class MenuItem {
       'customizations': customizations.map((c) => c.toJson()).toList(),
       'allergens': allergens.map((a) => a.toJson()).toList(),
       'dietary_options': dietaryOptions.map((d) => d.toJson()).toList(),
+      // Servono anche qui: il carrello viene salvato in locale con toJson e
+      // riletto all'avvio, e senza questi campi i limiti si perderebbero
+      // riaprendo l'app.
+      'min_total_extras': minTotalExtras,
+      'max_total_extras': maxTotalExtras,
     };
   }
 
@@ -96,6 +112,8 @@ class MenuItem {
       availabilityLabel: json['availability'] is Map
           ? (json['availability'] as Map)['label'] as String?
           : null,
+      minTotalExtras: (json['min_total_extras'] as num?)?.toInt(),
+      maxTotalExtras: (json['max_total_extras'] as num?)?.toInt(),
       customizations:
           (json['customizations'] as List<dynamic>?)
               ?.map(
@@ -157,6 +175,12 @@ class CustomizationGroup {
   final bool isMultiSelect;
   final int minSelected;
   final int? maxSelected;
+
+  /// Se true, le scelte di questo gruppo non entrano nel conteggio dei limiti
+  /// complessivi del piatto ([MenuItem.minTotalExtras] e [maxTotalExtras]).
+  /// Serve per i gruppi che non sono "gusti" ma opzioni a parte, tipo il
+  /// tipo di cono o la vaschetta.
+  final bool excludedFromTotal;
   final List<CustomizationOption> options;
 
   CustomizationGroup({
@@ -168,6 +192,7 @@ class CustomizationGroup {
     required this.isMultiSelect,
     this.minSelected = 0,
     this.maxSelected,
+    this.excludedFromTotal = false,
     required this.options,
   });
 
@@ -181,6 +206,7 @@ class CustomizationGroup {
       isMultiSelect: json['is_multi_select'] as bool? ?? false,
       minSelected: json['min_selected'] as int? ?? 0,
       maxSelected: json['max_selected'] as int?,
+      excludedFromTotal: json['excluded_from_total'] as bool? ?? false,
       options: (json['options'] as List<dynamic>)
           .map((e) => CustomizationOption.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -197,6 +223,7 @@ class CustomizationGroup {
       'is_multi_select': isMultiSelect,
       'min_selected': minSelected,
       'max_selected': maxSelected,
+      'excluded_from_total': excludedFromTotal,
       'options': options.map((o) => o.toJson()).toList(),
     };
   }

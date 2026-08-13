@@ -70,8 +70,19 @@ class FcmService {
     // e verrebbe resa come un quadrato bianco.
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@drawable/ic_notification');
+    // L'app gira solo su tablet Sunmi, ma le impostazioni iOS restano
+    // obbligatorie per il plugin: senza, initialize() solleverebbe "iOS
+    // settings must be set when targeting iOS platform" appena qualcuno
+    // provasse a compilarla per iOS, saltando tutto il resto del setup.
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        );
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
+      iOS: iosSettings,
     );
     await _localNotifications.initialize(initSettings);
     await _localNotifications
