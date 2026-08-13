@@ -233,25 +233,12 @@ class FcmService {
     }
   }
 
-  /// Chiamato quando l'utente fa logout — rimuove token dal backend
-  Future<void> onUserLoggedOut() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final authToken = prefs.getString(AppConstants.keyApiToken);
-      if (authToken == null) return;
-
-      await http.post(
-        Uri.parse('${AppConstants.baseUrl}/api/customer/fcm-token'),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: {'fcm_token': ''},
-      );
-    } catch (e) {
-      debugPrint('❌ Errore rimozione FCM token: $e');
-    }
-  }
+  // NB: qui non esiste piu' un onUserLoggedOut(). Quello che c'era mandava
+  // fcm_token vuoto a /customer/fcm-token, che lo rifiuta con 400 perche' il
+  // campo e' obbligatorio: non avrebbe funzionato nemmeno se qualcuno lo
+  // avesse chiamato, e nessuno lo chiamava. La cancellazione del token ora
+  // avviene lato server dentro /customer/logout, che AuthService.logout()
+  // invoca a ogni uscita.
 
   /// Gestisce notifiche ricevute con app in foreground
   void _handleForegroundMessage(RemoteMessage message) {

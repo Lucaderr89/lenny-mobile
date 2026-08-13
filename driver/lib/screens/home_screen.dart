@@ -27,6 +27,7 @@ import 'panel_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 import '../logic/regole_home.dart';
+import '../services/auth_service.dart';
 import 'dart:async';
 
 /// Home Screen per driver - Interfaccia principale turno
@@ -501,8 +502,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     if (confirm != true) return;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      // AuthService.logout() e non prefs.clear(): avvisa il server, che
+      // cancella il token FCM di questo telefono. Svuotare solo le
+      // preferenze lasciava il dispositivo agganciato all'account, e chi lo
+      // usava dopo riceveva le proposte di consegna del driver precedente.
+      await AuthService().logout();
       if (mounted) context.go('/login');
     } catch (e) {
       if (mounted) {

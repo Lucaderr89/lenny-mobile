@@ -14,7 +14,11 @@ class AppConstants {
   static const String loginEndpoint = '$apiUrl/customer/login';
   static const String registerEndpoint = '$apiUrl/customer/register';
   static const String updateProfileEndpoint = '$apiUrl/customer/profile/update';
-  static const String logoutEndpoint = '$apiUrl/auth/logout';
+  // Il logout passa dall'endpoint del cliente e non da quello condiviso:
+  // /auth/logout identifica l'utente dalla sessione PHP, che per l'app non
+  // esiste (si autentica col token API), quindi non sapeva nemmeno chi stesse
+  // uscendo. /customer/logout riconosce il token e cancella quello FCM.
+  static const String logoutEndpoint = '$apiUrl/customer/logout';
   static const String meEndpoint = '$apiUrl/auth/me';
   static const String firebaseTokenEndpoint = '$apiUrl/auth/firebase-token';
   static const String forgotPasswordEndpoint = '$apiUrl/auth/forgot-password';

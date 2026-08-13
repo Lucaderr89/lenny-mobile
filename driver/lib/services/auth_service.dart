@@ -161,14 +161,24 @@ class AuthService {
   }
 
   /// Logout
+  ///
+  /// La chiamata al server non e' una formalita': cancella il token FCM di
+  /// questo dispositivo. Senza, il telefono resta agganciato all'account anche
+  /// dopo l'uscita, e chi lo usa dopo - turno coperto da un altro, telefono
+  /// aziendale che passa di mano - riceve le proposte di consegna e i dati
+  /// degli ordini del driver precedente. Va fatta PRIMA di _clearAuthData(),
+  /// che cancella il token con cui ci si autentica.
   Future<bool> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final sessionId = prefs.getString(AppConstants.keyApiToken);
+      final apiToken = prefs.getString(AppConstants.keyApiToken);
 
-      if (sessionId != null) {
+      if (apiToken != null) {
         await http
-            .post(Uri.parse(AppConstants.logoutEndpoint), headers: _headers)
+            .post(
+              Uri.parse(AppConstants.logoutEndpoint),
+              headers: {..._headers, 'Authorization': 'Bearer $apiToken'},
+            )
             .timeout(Duration(seconds: AppConstants.apiTimeout));
       }
 

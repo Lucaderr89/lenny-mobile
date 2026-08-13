@@ -191,23 +191,12 @@ class FcmService {
 
   Future<void> onUserLoggedIn() async => _registerTokenOnBackend();
 
-  Future<void> onUserLoggedOut() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final authToken = prefs.getString(AppConstants.keyApiToken);
-      if (authToken == null) return;
-      await http.post(
-        Uri.parse('${AppConstants.baseUrl}/api/driver/fcm-token'),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: {'fcm_token': ''},
-      );
-    } catch (e) {
-      debugPrint('❌ Errore rimozione FCM driver: $e');
-    }
-  }
+  // NB: qui non esiste piu' un onUserLoggedOut(). Quello che c'era mandava
+  // fcm_token vuoto a /driver/fcm-token, che lo rifiuta con 400 perche' il
+  // campo e' obbligatorio: non avrebbe funzionato nemmeno se qualcuno lo
+  // avesse chiamato, e nessuno lo chiamava. La cancellazione del token ora
+  // avviene lato server dentro /driver/logout, che AuthService.logout()
+  // invoca a ogni uscita.
 
   void _handleForegroundMessage(RemoteMessage message) {
     debugPrint('🔔 [FCM Foreground Driver] ${message.notification?.title}');

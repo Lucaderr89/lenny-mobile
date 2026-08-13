@@ -13,6 +13,7 @@ import 'shifts_screen.dart';
 import 'delivery_history_screen.dart';
 import 'settings_screen.dart';
 import 'support_screen.dart';
+import '../services/auth_service.dart';
 
 /// ProfileScreen per Driver
 /// Visualizza dati registrazione (read-only) + modifica IBAN + upload documenti
@@ -1089,8 +1090,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (confirm != true) return;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      // Come nel menu della home: si passa da AuthService.logout(), che
+      // avvisa il server e fa cancellare il token FCM di questo telefono.
+      await AuthService().logout();
 
       if (mounted) {
         context.go('/login');
