@@ -20,6 +20,7 @@ import '../widgets/foto_rete.dart';
 import '../widgets/gate_account_sheet.dart';
 import '../services/auth_service.dart';
 import '../widgets/scheletro.dart';
+import '../widgets/rotta_modale.dart';
 
 /// Restaurant Menu Screen - Basato sul prototipo 7-menu.html
 class RestaurantMenuScreen extends StatefulWidget {
@@ -427,23 +428,25 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   void _showProductDetail(MenuItem item) {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ProductDetailModal(
-        menuItem: item,
-        restaurantId: widget.restaurant.id,
-        restaurantName: widget.restaurant.name,
-        onAddToCart: (menuItem, quantity, customizations, priceModifier) {
-          _addToCart(
-            menuItem,
-            quantity,
-            customizations,
-            priceModifier,
-            cartProvider,
-          );
-        },
+    // RottaPannelloDalBasso e non showModalBottomSheet: quello spinge una
+    // PopupRoute, e fra due rotte di cui una non e' PageRoute l'Hero della
+    // foto non parte proprio. Vedi il commento nella rotta.
+    Navigator.of(context).push(
+      RottaPannelloDalBasso<void>(
+        costruttore: (context) => ProductDetailModal(
+          menuItem: item,
+          restaurantId: widget.restaurant.id,
+          restaurantName: widget.restaurant.name,
+          onAddToCart: (menuItem, quantity, customizations, priceModifier) {
+            _addToCart(
+              menuItem,
+              quantity,
+              customizations,
+              priceModifier,
+              cartProvider,
+            );
+          },
+        ),
       ),
     );
   }
@@ -451,23 +454,22 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   void _showProductDetailWithCustomizationWarning(MenuItem item) {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ProductDetailModal(
-        menuItem: item,
-        restaurantId: widget.restaurant.id,
-        restaurantName: widget.restaurant.name,
-        onAddToCart: (menuItem, quantity, customizations, priceModifier) {
-          _addToCart(
-            menuItem,
-            quantity,
-            customizations,
-            priceModifier,
-            cartProvider,
-          );
-        },
+    Navigator.of(context).push(
+      RottaPannelloDalBasso<void>(
+        costruttore: (context) => ProductDetailModal(
+          menuItem: item,
+          restaurantId: widget.restaurant.id,
+          restaurantName: widget.restaurant.name,
+          onAddToCart: (menuItem, quantity, customizations, priceModifier) {
+            _addToCart(
+              menuItem,
+              quantity,
+              customizations,
+              priceModifier,
+              cartProvider,
+            );
+          },
+        ),
       ),
     );
 
@@ -1799,15 +1801,29 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 // Il tag e' l'id del piatto, unico nella pagina.
                 child: Hero(
                   tag: 'piatto-${item.id}',
-                  // Durante il volo l'immagine cambia forma e proporzioni:
-                  // senza questo Material di appoggio i bordi arrotondati
-                  // sfarfallano contro lo sfondo.
-                  flightShuttleBuilder: (_, animazione, _, _, _) => Material(
-                    color: Colors.transparent,
-                    child: _MenuItemImage(
-                      imageUrl: item.thumbnailUrl ?? item.imageUrl!,
-                    ),
-                  ),
+                  // Il widget in volo non puo' essere _MenuItemImage: quello e'
+                  // un Container fisso 75x75, e dentro il rettangolo animato
+                  // resterebbe piccolo in un angolo invece di ingrandirsi.
+                  // Qui la foto non ha misure sue e riempie il volo.
+                  // Il Material trasparente evita che i bordi arrotondati
+                  // sfarfallino, e il raggio si apre da 10 a 0 lungo il
+                  // tragitto perche' a destinazione la copertina e' squadrata.
+                  flightShuttleBuilder: (_, animazione, _, _, _) =>
+                      AnimatedBuilder(
+                        animation: animazione,
+                        builder: (_, _) => Material(
+                          color: Colors.transparent,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              10 * (1 - animazione.value),
+                            ),
+                            child: FotoRete(
+                              item.thumbnailUrl ?? item.imageUrl!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
                   // Nella riga basta la thumbnail 150px (13KB): l'originale
                   // da centinaia di KB rendeva il menu lentissimo.
                   child: _MenuItemImage(

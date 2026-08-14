@@ -49,30 +49,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
   String? _currentRequestId;
 
   @override
-  void initState() {
-    super.initState();
-    _addWelcomeMessage();
-  }
-
-  @override
   void dispose() {
     _queueCheckTimer?.cancel();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _addWelcomeMessage() {
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          text:
-              'Ciao, sono Lenny.\n\nConosco i menu di tutti i locali qui intorno: dimmi che fame hai, quanto vuoi spendere o quanto tempo hai, e ti trovo qualcosa di buono.\n\nPosso anche dirti chi è aperto, quanto dista un locale e quando ti arriverebbe l\'ordine.',
-          isUser: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
   }
 
   void _scrollToBottom() {
@@ -563,11 +544,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
       ),
       body: Column(
         children: [
-          // Quick actions chips (nascosto quando tastiera aperta per evitare overflow)
-          if (_messages.length == 1 &&
-              MediaQuery.of(context).viewInsets.bottom == 0)
-            _buildQuickActions(),
-
           // Queue message (se presente)
           if (_queueMessage != null) _buildQueueMessage(),
 
@@ -582,20 +558,28 @@ class _AIChatScreenState extends State<AIChatScreen> {
               behavior: HitTestBehavior.translucent,
               onTap: () => FocusScope.of(context).unfocus(),
               onPanDown: (_) => FocusScope.of(context).unfocus(),
-              child: ListView.builder(
-                controller: _scrollController,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
-                reverse: false,
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return _buildMessageBubble(message);
-                },
-              ),
+              child: _messages.isEmpty
+                  ? _buildApertura()
+                  : ListView.builder(
+                      controller: _scrollController,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
+                      reverse: false,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        return _buildMessageBubble(message);
+                      },
+                    ),
             ),
           ),
+
+          // Le proposte stanno appiccicate all'input, non in cima: sono la
+          // continuazione naturale del "cosa scrivo qui", e scorrendo in
+          // orizzontale occupano una riga sola invece di mezzo schermo.
+          if (_messages.isEmpty && MediaQuery.of(context).viewInsets.bottom == 0)
+            _buildProposte(),
 
           // Typing indicator
           if (_isTyping)
@@ -1211,16 +1195,83 @@ class _AIChatScreenState extends State<AIChatScreen> {
     );
   }
 
-  /// Schermata d'apertura: saluto e proposte concrete.
+  /// Schermata d'apertura: il saluto sta nello spazio libero, da solo.
   ///
-  /// Le vecchie scorciatoie erano tre etichette da due parole ("Ispirami",
-  /// "Va forte"): dicevano cosa succedeva DOPO averle toccate, non cosa
-  /// l'assistente sapesse fare. Chi apre la chat per la prima volta non ha
-  /// idea di cosa chiedere, e resta a guardare il campo vuoto.
-  /// Qui invece ogni proposta e' una frase intera, cioe' un esempio di
-  /// domanda: mostra il livello di confidenza che si puo' usare e allo stesso
-  /// tempo insegna che si puo' ordinare parlando.
-  Widget _buildQuickActions() {
+  /// Prima ce n'erano due, uno sopra l'altro: un titolo qui e un messaggio di
+  /// benvenuto identico nella lista sotto. E le quattro proposte, impilate a
+  /// tutta larghezza, spingevano tutto nell'ultimo quinto di schermo. Ora il
+  /// saluto e' uno, respira al centro, e le proposte scorrono in orizzontale
+  /// attaccate all'input.
+  Widget _buildApertura() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 0, 28, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // L'alone dietro l'icona e' l'unico elemento puramente decorativo
+            // della schermata: serve a dare un centro allo sguardo in una
+            // pagina altrimenti vuota.
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: _sfumaturaLenny,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF5B8FD6).withValues(alpha: 0.32),
+                    blurRadius: 28,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: AppIcon(
+                  'assets/icons_svg/lenny-robot.svg',
+                  size: 34,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ShaderMask(
+              shaderCallback: (r) => _sfumaturaLenny.createShader(r),
+              child: const Text(
+                'Ciao, sono Lenny',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
+                  letterSpacing: -0.4,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Conosco i menu di tutti i locali qui intorno.\nChiedimi un consiglio, o dimmi cosa vuoi\ne te lo metto nel carrello.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: AppColors.gray.withValues(alpha: 0.95),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Le proposte d'apertura, una riga sola che scorre.
+  ///
+  /// Ognuna e' una domanda vera, non un'etichetta da due parole: chi apre la
+  /// chat per la prima volta non sa cosa si puo' chiedere, e leggendo la frase
+  /// impara il tono con cui parlargli. In orizzontale ne stanno quattro senza
+  /// rubare altezza al saluto.
+  Widget _buildProposte() {
     final proposte = <Map<String, String>>[
       {
         'icona': 'icons8-cappello-dello-chef-32',
@@ -1228,14 +1279,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
         'frase': 'Ho fame ma non so cosa voglio, consigliami tu',
       },
       {
-        'icona': 'icons8-orologio-32',
-        'titolo': 'Chi è aperto adesso',
-        'frase': 'Quali locali sono aperti adesso qui vicino?',
-      },
-      {
         'icona': 'icons8-cart-32',
         'titolo': 'Ordina parlando',
         'frase': 'Mettimi nel carrello una pizza margherita senza mozzarella',
+      },
+      {
+        'icona': 'icons8-orologio-32',
+        'titolo': 'Chi e\' aperto',
+        'frase': 'Quali locali sono aperti adesso qui vicino?',
       },
       {
         'icona': 'icons8-piu_amati-32',
@@ -1244,40 +1295,17 @@ class _AIChatScreenState extends State<AIChatScreen> {
       },
     ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ShaderMask(
-            shaderCallback: (r) => _sfumaturaLenny.createShader(r),
-            child: const Text(
-              'Ciao, sono Lenny',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Conosco i menu di tutti i locali. Chiedimi un consiglio, oppure dimmi cosa vuoi e te lo metto nel carrello.',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: AppColors.gray.withValues(alpha: 0.95),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...proposte.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _propostaApertura(p['icona']!, p['titolo']!, p['frase']!),
-            ),
-          ),
-        ],
+    return SizedBox(
+      height: 104,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        itemCount: proposte.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final p = proposte[i];
+          return _propostaApertura(p['icona']!, p['titolo']!, p['frase']!);
+        },
       ),
     );
   }
@@ -1289,60 +1317,71 @@ class _AIChatScreenState extends State<AIChatScreen> {
         _onSendMessage(frase);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        width: 186,
+        padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.14)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.12),
-                    const Color(0xFF9B6BD6).withValues(alpha: 0.12),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Center(
-                child: AppIcon(
-                  'assets/icons_svg/$icona.svg',
-                  size: 18,
-                  color: AppColors.primary,
-                ),
-              ),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.16)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: 0.14),
+                        const Color(0xFF9B6BD6).withValues(alpha: 0.14),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Center(
+                    child: AppIcon(
+                      'assets/icons_svg/$icona.svg',
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
                     titolo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.dark,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '"$frase"',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.3,
-                      color: AppColors.gray,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Text(
+                frase,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.32,
+                  color: AppColors.gray,
+                ),
               ),
             ),
           ],
