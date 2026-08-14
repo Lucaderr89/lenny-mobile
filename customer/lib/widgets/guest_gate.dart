@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import 'package:go_router/go_router.dart';
 import '../config/app_colors.dart';
 import '../services/auth_service.dart';
@@ -13,7 +14,11 @@ class SoloUtenti extends StatelessWidget {
   final Widget schermata;
   final String titolo;
   final String messaggio;
-  final IconData icona;
+
+  /// Percorso dell'icona nel set dell'app (assets/icons_svg/...).
+  /// Era un IconData Material: le sezioni personali sono vetrine, e la
+  /// vetrina usa le icone di Lenny, non quelle di sistema.
+  final String icona;
 
   const SoloUtenti({
     super.key,
@@ -55,7 +60,8 @@ class GuestGate extends StatelessWidget {
   /// Frase che spiega cosa si otterrebbe con un account.
   final String messaggio;
 
-  final IconData icona;
+  /// Percorso dell'icona nel set dell'app (assets/icons_svg/...).
+  final String icona;
 
   /// Se true mostra una AppBar con il tasto indietro (schermate aperte da push).
   final bool conAppBar;
@@ -83,7 +89,9 @@ class GuestGate extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icona, size: 42, color: AppColors.primary),
+              child: Center(
+                child: AppIcon(icona, size: 42, color: AppColors.primary),
+              ),
             ),
             const SizedBox(height: 22),
             Text(

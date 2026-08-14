@@ -784,7 +784,7 @@ class _CartScreenState extends State<CartScreen> {
     if (distanceKm != null) {
       if (segments.isNotEmpty) segments.add(dot);
       segments.addAll([
-        const FaIcon(FontAwesomeIcons.locationDot, size: 11, color: grayColor),
+        const AppIcon('assets/icons_svg/icons8-location-32.svg', size: 11, color: grayColor),
         Text('${distanceKm.toStringAsFixed(1)} km', style: infoStyle),
       ]);
     }
@@ -830,7 +830,7 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 30),
             ElevatedButton.icon(
               onPressed: () => Navigator.pop(context, _cartItems),
-              icon: const FaIcon(FontAwesomeIcons.utensils, size: 16),
+              icon: const AppIcon('assets/icons_svg/icons8-ristorante-32.svg', size: 16),
               label: const Text('Sfoglia il menu'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
@@ -1088,8 +1088,7 @@ class _CartScreenState extends State<CartScreen> {
                   children: [
                     TextButton.icon(
                       onPressed: () => _editItem(item),
-                      icon: const FaIcon(
-                        FontAwesomeIcons.penToSquare,
+                      icon: const AppIcon('assets/icons_svg/icons8-modifica-32.svg',
                         size: 11,
                       ),
                       label: const Text('Modifica'),
@@ -1104,7 +1103,7 @@ class _CartScreenState extends State<CartScreen> {
                     const SizedBox(width: 10),
                     TextButton.icon(
                       onPressed: () => _removeItem(item),
-                      icon: const FaIcon(FontAwesomeIcons.trashCan, size: 11),
+                      icon: const AppIcon('assets/icons_svg/lenny-cestino.svg', size: 11),
                       label: const Text('Rimuovi'),
                       style: TextButton.styleFrom(
                         foregroundColor: dangerColor,
@@ -1205,8 +1204,7 @@ class _CartScreenState extends State<CartScreen> {
             children: [
               const Row(
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.thumbsUp,
+                  AppIcon('assets/icons_svg/icons8-mi-piace-32.svg',
                     size: 16,
                     color: primaryColor,
                   ),

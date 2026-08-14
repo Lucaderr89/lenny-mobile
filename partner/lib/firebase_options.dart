@@ -15,7 +15,13 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        return macos;
+        // Niente app macOS registrata su Firebase: il blocco "macos" che
+        // stava qui era una copia dell'appId Android spacciata per iOS, e
+        // avrebbe fallito a runtime in modo incomprensibile. Meglio un
+        // errore che dice la verita'.
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos.',
+        );
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
@@ -56,14 +62,6 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.lenny.partner',
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDAVd_RXhjLsx1hoZLB7ZYvqjsGynS0tBE',
-    appId: '1:215648872015:android:6f0e9ea3d8d5c6963a6c3a',
-    messagingSenderId: '215648872015',
-    projectId: 'lennyv2-7d4c4',
-    storageBucket: 'lennyv2-7d4c4.firebasestorage.app',
-    iosBundleId: 'com.lenny.partner',
-  );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyAPwGh6c-aq3J7oVCNEeFcbM2fim35k5Dg',

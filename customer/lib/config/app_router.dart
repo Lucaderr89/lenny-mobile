@@ -126,7 +126,7 @@ class AppRouter {
           titolo: 'Il tuo profilo',
           messaggio:
               'Crea un account per salvare i tuoi indirizzi, vedere lo storico degli ordini e usare il portafoglio.',
-          icona: Icons.person_outline,
+          icona: 'assets/icons_svg/icons8-user-male-32.svg',
         ),
       ),
       GoRoute(
@@ -136,7 +136,7 @@ class AppRouter {
           titolo: 'Le tue notifiche',
           messaggio:
               'Con un account ti avvisiamo a ogni passo del tuo ordine, dalla conferma alla consegna.',
-          icona: Icons.notifications_none,
+          icona: 'assets/icons_svg/icons8-allarme-32.svg',
         ),
       ),
     ],

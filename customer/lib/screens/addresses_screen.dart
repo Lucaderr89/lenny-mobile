@@ -154,7 +154,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.location_off, size: 80, color: Colors.grey[300]),
+          AppIcon('assets/icons_svg/icons8-marcatore-spento-32.svg', size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
             'Nessun indirizzo salvato',

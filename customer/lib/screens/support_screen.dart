@@ -232,7 +232,7 @@ class SupportScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _openWhatsApp,
-                  icon: const Icon(Icons.chat, size: 20),
+                  icon: const AppIcon('assets/icons_svg/icons8-supporto-32.svg', size: 20),
                   label: const Text(
                     'WhatsApp',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

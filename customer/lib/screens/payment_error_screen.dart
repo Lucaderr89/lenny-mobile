@@ -208,19 +208,19 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
       {
         'id': 1,
         'name': 'Contanti alla consegna',
-        'icon': Icons.money,
+        'icon': 'assets/icons_svg/icons8-soldi-32.svg',
         'color': Colors.green,
       },
       {
         'id': 2,
         'name': 'POS/Bancomat alla consegna',
-        'icon': Icons.credit_card,
+        'icon': 'assets/icons_svg/icons8-carta-32.svg',
         'color': Colors.blue,
       },
       {
         'id': 3,
         'name': 'SMAC',
-        'icon': Icons.payment,
+        'icon': 'assets/icons_svg/icons8-card-32.svg',
         'color': AppColors.primary,
       },
     ];
@@ -234,8 +234,9 @@ class _PaymentErrorScreenState extends State<PaymentErrorScreen>
             mainAxisSize: MainAxisSize.min,
             children: availableMethods.map((method) {
               return ListTile(
-                leading: Icon(
-                  method['icon'] as IconData,
+                leading: AppIcon(
+                  method['icon'] as String,
+                  size: 24,
                   color: method['color'] as Color,
                 ),
                 title: Text(method['name'] as String),

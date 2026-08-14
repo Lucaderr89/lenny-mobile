@@ -220,19 +220,19 @@ class _PerTeTabState extends State<PerTeTab>
           _buildChallengeExample(
             'Ordina da 3 ristoranti diversi',
             '+500 punti',
-            Icons.restaurant,
+            'assets/icons_svg/icons8-ristorante-32.svg',
           ),
           const SizedBox(height: 10),
           _buildChallengeExample(
             'Raggiungi una spesa di €50',
             'Badge esclusivo',
-            Icons.star,
+            'assets/icons_svg/icons8-stella-32.svg',
           ),
           const SizedBox(height: 10),
           _buildChallengeExample(
             'Prova una nuova categoria',
             '+300 punti',
-            Icons.explore,
+            'assets/icons_svg/icons8-mappa-32.svg',
           ),
 
           const SizedBox(height: 20),
@@ -266,7 +266,7 @@ class _PerTeTabState extends State<PerTeTab>
     );
   }
 
-  Widget _buildChallengeExample(String title, String reward, IconData icon) {
+  Widget _buildChallengeExample(String title, String reward, String icon) {
     return Row(
       children: [
         Container(
@@ -275,7 +275,7 @@ class _PerTeTabState extends State<PerTeTab>
             color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: lightColor, size: 16),
+          child: AppIcon(icon, color: lightColor, size: 16),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -370,16 +370,16 @@ class _PerTeTabState extends State<PerTeTab>
           const SizedBox(height: 18),
 
           // Features
-          _buildGiftCardFeature('Tagli da €10, €25, €50 e €100', Icons.euro),
+          _buildGiftCardFeature('Tagli da €10, €25, €50 e €100', 'assets/icons_svg/icons8-euro-32.svg'),
           const SizedBox(height: 10),
           _buildGiftCardFeature(
             'Valide su tutti i ristoranti',
-            Icons.restaurant_menu,
+            'assets/icons_svg/icons8-ristorante-32.svg',
           ),
           const SizedBox(height: 10),
-          _buildGiftCardFeature('Invio immediato via email o SMS', Icons.send),
+          _buildGiftCardFeature('Invio immediato via email o SMS', 'assets/icons_svg/icons8-email-32.svg'),
           const SizedBox(height: 10),
-          _buildGiftCardFeature('Nessuna scadenza', Icons.calendar_today),
+          _buildGiftCardFeature('Nessuna scadenza', 'assets/icons_svg/icons8-orologio-32.svg'),
 
           const SizedBox(height: 20),
 
@@ -412,7 +412,7 @@ class _PerTeTabState extends State<PerTeTab>
     );
   }
 
-  Widget _buildGiftCardFeature(String text, IconData icon) {
+  Widget _buildGiftCardFeature(String text, String icon) {
     return Row(
       children: [
         Container(
@@ -421,7 +421,7 @@ class _PerTeTabState extends State<PerTeTab>
             color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: lightColor, size: 16),
+          child: AppIcon(icon, color: lightColor, size: 16),
         ),
         const SizedBox(width: 12),
         Expanded(

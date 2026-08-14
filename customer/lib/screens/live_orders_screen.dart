@@ -181,7 +181,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         titolo: 'I tuoi ordini',
         messaggio:
             'Con un account segui i tuoi ordini in tempo reale e ritrovi tutto lo storico.',
-        icona: Icons.receipt_long_outlined,
+        icona: 'assets/icons_svg/icons8-fattura-32.svg',
         conAppBar: false,
       );
     }
@@ -1192,11 +1192,13 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   /// Da' al cliente il colpo d'occhio su dove si trova l'ordine e, con
   /// l'auto-refresh, avanza da sola. Niente mappa ne' posizione del driver.
   Widget _buildTimeline(LiveOrder order) {
+    // Le prime tre tappe sono contenuto (fattura, negozio, consegna) e usano
+    // il set di casa; la spunta finale e' segnaletica e resta un glifo.
     const tappe = [
-      (icona: Icons.receipt_long, label: 'Confermato'),
-      (icona: Icons.storefront, label: 'In ritiro'),
-      (icona: Icons.local_shipping, label: 'In consegna'),
-      (icona: Icons.check_circle, label: 'Consegnato'),
+      (icona: 'assets/icons_svg/icons8-fattura-32.svg', label: 'Confermato'),
+      (icona: 'assets/icons_svg/icons8-negozio-32.svg', label: 'In ritiro'),
+      (icona: 'assets/icons_svg/lenny-consegna.svg', label: 'In consegna'),
+      (icona: '', label: 'Consegnato'),
     ];
 
     // Indice della tappa corrente in base allo stato dell'ordine.
@@ -1237,10 +1239,18 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: colore, width: 2),
               ),
-              child: Icon(
-                tappe[i].icona,
-                size: 17,
-                color: raggiunta ? Colors.white : Colors.grey[400],
+              child: Center(
+                child: tappe[i].icona.isEmpty
+                    ? Icon(
+                        Icons.check_circle,
+                        size: 17,
+                        color: raggiunta ? Colors.white : Colors.grey[400],
+                      )
+                    : AppIcon(
+                        tappe[i].icona,
+                        size: 17,
+                        color: raggiunta ? Colors.white : Colors.grey[400],
+                      ),
               ),
             ),
             const SizedBox(height: 4),

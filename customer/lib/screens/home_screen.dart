@@ -672,7 +672,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                             titolo: 'Le tue notifiche',
                                             messaggio:
                                                 'Con un account ti avvisiamo a ogni passo del tuo ordine, dalla conferma alla consegna.',
-                                            icona: Icons.notifications_none,
+                                            icona: 'assets/icons_svg/icons8-allarme-32.svg',
                                           ),
                                         ),
                                       ).then((_) {
@@ -1224,7 +1224,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 titolo: 'I tuoi preferiti',
                 messaggio:
                     'Crea un account per salvare i ristoranti che ami e ritrovarli al volo.',
-                icona: Icons.favorite_border,
+                icona: 'assets/icons_svg/lenny-cuore.svg',
               ),
             ),
           );

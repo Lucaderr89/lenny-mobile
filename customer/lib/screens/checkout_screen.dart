@@ -440,8 +440,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   color: primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.location_off,
+                child: const AppIcon('assets/icons_svg/icons8-marcatore-spento-32.svg',
                   size: 48,
                   color: primaryColor,
                 ),
@@ -948,8 +947,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   color: Colors.orange.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.location_off_rounded,
+                child: const AppIcon('assets/icons_svg/icons8-marcatore-spento-32.svg',
                   size: 56,
                   color: Colors.orange,
                 ),

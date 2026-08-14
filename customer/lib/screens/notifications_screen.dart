@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/notification_provider.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_icon.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -42,22 +43,44 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return DateFormat('d MMM', 'it_IT').format(dt);
   }
 
-  IconData _iconForEvent(String? event) {
+  /// L'icona dell'evento, dal set dell'app dove un simbolo esiste.
+  ///
+  /// Spunte e annullamenti restano glifi Material di proposito: sono
+  /// segnaletica di stato, non contenuto, e il set di Lenny non ha (ne' deve
+  /// avere) una spunta doppia. Il ristorante, la consegna e la spesa invece
+  /// sono contenuto, e usano le icone di casa.
+  Widget _iconForEvent(String? event, Color color) {
     switch (event) {
       case 'order_confirmed':
-        return Icons.check_circle_outline;
+        return Icon(Icons.check_circle_outline, color: color, size: 22);
       case 'order_ready':
-        return Icons.restaurant;
+        return AppIcon(
+          'assets/icons_svg/icons8-ristorante-32.svg',
+          color: color,
+          size: 22,
+        );
       case 'order_out_for_delivery':
-        return Icons.delivery_dining;
+        return AppIcon(
+          'assets/icons_svg/lenny-consegna.svg',
+          color: color,
+          size: 22,
+        );
       case 'order_delivered':
-        return Icons.done_all;
+        return Icon(Icons.done_all, color: color, size: 22);
       case 'order_cancelled':
-        return Icons.cancel_outlined;
+        return Icon(Icons.cancel_outlined, color: color, size: 22);
       case 'new_order':
-        return Icons.shopping_bag_outlined;
+        return AppIcon(
+          'assets/icons_svg/icons8-borsa-della-spesa-32.svg',
+          color: color,
+          size: 22,
+        );
       default:
-        return Icons.notifications_outlined;
+        return AppIcon(
+          'assets/icons_svg/icons8-allarme-32.svg',
+          color: color,
+          size: 22,
+        );
     }
   }
 
@@ -160,7 +183,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildItem(CustomerNotification notif, NotificationProvider provider) {
     final color = _colorForEvent(notif.triggerEvent);
-    final icon = _iconForEvent(notif.triggerEvent);
+    final icon = _iconForEvent(notif.triggerEvent, color);
 
     return GestureDetector(
       onTap: () {
@@ -197,7 +220,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   color: color.withAlpha(25),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Center(child: icon),
               ),
               const SizedBox(width: 12),
               // Testo

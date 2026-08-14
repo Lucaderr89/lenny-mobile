@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
@@ -272,6 +273,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool(AppConstants.keyIsLoggedIn, true);
+    _statoLogin = true;
 
     // La password NON viene piu' salvata sul dispositivo: SharedPreferences e' un
     // file XML in chiaro, incluso nell'Auto Backup di Google. La sessione la tiene
@@ -338,6 +340,7 @@ class AuthService {
   Future<void> _clearAuthData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConstants.keyIsLoggedIn);
+    _statoLogin = false;
     await prefs.remove(AppConstants.keySessionId);
     await prefs.remove(AppConstants.keyAccessToken);
     await prefs.remove(AppConstants.keyUserId);
@@ -348,9 +351,21 @@ class AuthService {
     await prefs.remove(AppConstants.keySpesaMagicHash);
   }
 
+  /// Esito dell'ultimo controllo di login, condiviso fra tutte le istanze.
+  ///
+  /// Il controllo viene chiamato da mezza app a ogni cambio schermata: senza
+  /// cache erano otto letture identiche (e otto righe di log) in pochi
+  /// secondi. Lo stato cambia solo passando da _saveAuthData o logout, che
+  /// lo azzerano: fra un login e un logout la risposta e' per definizione
+  /// sempre la stessa.
+  static bool? _statoLogin;
+
   /// Verifica se l'utente è loggato
   /// Controlla la presenza dei dati di sessione salvati localmente
   Future<bool> isLoggedIn() async {
+    final noto = _statoLogin;
+    if (noto != null) return noto;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool(AppConstants.keyIsLoggedIn) ?? false;
@@ -359,14 +374,17 @@ class AuthService {
 
       // Verifica che esistano tutti i dati essenziali
       if (isLoggedIn && sessionId != null && userId != null) {
-        print('✅ [AUTH] Utente già loggato - ID: $userId');
+        debugPrint('✅ [AUTH] Utente già loggato - ID: $userId');
+        _statoLogin = true;
         return true;
       }
 
-      print('⚠️ [AUTH] Nessuna sessione valida trovata');
+      debugPrint('ℹ️ [AUTH] Nessuna sessione valida trovata');
+      _statoLogin = false;
       return false;
     } catch (e) {
-      print('💥 [AUTH] Errore verifica login: $e');
+      // L'errore non si mette in cache: al prossimo giro si riprova.
+      debugPrint('💥 [AUTH] Errore verifica login: $e');
       return false;
     }
   }

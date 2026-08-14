@@ -1131,25 +1131,25 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
             spacing: 8,
             children: [
               _buildGlovoChip(
-                icon: Icons.directions_bike,
+                icon: 'assets/icons_svg/lenny-consegna.svg',
                 text: deliveryCostText,
                 backgroundColor: const Color(0xFFF5F5F5),
               ),
               if (widget.restaurant.deliveryTime.isNotEmpty)
                 _buildGlovoChip(
-                  icon: Icons.schedule,
+                  icon: 'assets/icons_svg/icons8-orologio-32.svg',
                   text: widget.restaurant.deliveryTime,
                   backgroundColor: const Color(0xFFF5F5F5),
                 ),
               if (minOrderText != null)
                 _buildGlovoChip(
-                  icon: Icons.shopping_bag,
+                  icon: 'assets/icons_svg/icons8-borsa-della-spesa-32.svg',
                   text: 'Min $minOrderText',
                   backgroundColor: const Color(0xFFF5F5F5),
                 ),
               if (distanceText != null)
                 _buildGlovoChip(
-                  icon: Icons.location_on,
+                  icon: 'assets/icons_svg/icons8-location-32.svg',
                   text: distanceText,
                   backgroundColor: const Color(0xFFF5F5F5),
                 ),
@@ -1157,7 +1157,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               // si accendera' da sola quando esisteranno)
               if (widget.restaurant.rating > 0)
                 _buildGlovoChip(
-                  icon: Icons.star,
+                  icon: 'assets/icons_svg/icons8-stella-32.svg',
                   text: widget.restaurant.rating.toStringAsFixed(1),
                   backgroundColor: const Color(0xFFF5F5F5),
                 ),
@@ -1245,7 +1245,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   }
 
   Widget _buildGlovoChip({
-    required IconData icon,
+    required String icon,
     required String text,
     required Color backgroundColor,
   }) {
@@ -1258,7 +1258,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: darkColor),
+          AppIcon(icon, size: 14, color: darkColor),
           const SizedBox(width: 4),
           Text(
             text,

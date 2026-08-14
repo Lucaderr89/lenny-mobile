@@ -273,7 +273,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 15),
         _buildHelpOption(
-          icon: Icons.email_outlined,
+          icon: 'assets/icons_svg/icons8-email-32.svg',
           title: 'Contattaci via email',
           onTap: () {
             _showToast('Apri client email', isError: false);
@@ -281,7 +281,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 10),
         _buildHelpOption(
-          icon: Icons.phone_outlined,
+          icon: 'assets/icons_svg/icons8-telephone-32.svg',
           title: 'Chiamaci',
           onTap: () {
             _showToast('Apri dialer', isError: false);
@@ -292,7 +292,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Widget _buildHelpOption({
-    required IconData icon,
+    required String icon,
     required String title,
     required VoidCallback onTap,
   }) {
@@ -315,7 +315,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 color: AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.primary, size: 18),
+              child: Center(
+                child: AppIcon(icon, color: AppColors.primary, size: 18),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

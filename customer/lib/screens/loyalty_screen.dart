@@ -1054,13 +1054,15 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                         : AppColors.gray.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    redemption.isActive ? Icons.card_giftcard : Icons.check,
-                    color: redemption.isActive
-                        ? AppColors.success
-                        : AppColors.gray,
-                    size: 20,
-                  ),
+                  // Il premio attivo porta l'icona regalo del set di casa;
+                  // quello gia' usato resta una spunta, che e' segnaletica.
+                  child: redemption.isActive
+                      ? const AppIcon(
+                          'assets/icons_svg/icons8-regalo-32.svg',
+                          color: AppColors.success,
+                          size: 20,
+                        )
+                      : const Icon(Icons.check, color: AppColors.gray, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

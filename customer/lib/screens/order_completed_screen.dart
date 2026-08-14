@@ -327,7 +327,9 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
     if (widget.orarioConsegna != null && widget.orarioConsegna!.isNotEmpty) {
       righe.add(
         _rigaInfo(
-          widget.deliveryType == 'delivery' ? Icons.schedule : Icons.storefront,
+          widget.deliveryType == 'delivery'
+              ? 'assets/icons_svg/icons8-orologio-32.svg'
+              : 'assets/icons_svg/icons8-negozio-32.svg',
           widget.deliveryType == 'delivery' ? 'Consegna' : 'Ritiro',
           widget.orarioConsegna!,
         ),
@@ -338,14 +340,18 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
         widget.indirizzo != null &&
         widget.indirizzo!.isNotEmpty) {
       righe.add(
-        _rigaInfo(Icons.place_outlined, 'Indirizzo', widget.indirizzo!),
+        _rigaInfo(
+          'assets/icons_svg/icons8-location-32.svg',
+          'Indirizzo',
+          widget.indirizzo!,
+        ),
       );
     }
 
     if (widget.totale != null) {
       righe.add(
         _rigaInfo(
-          Icons.receipt_long_outlined,
+          'assets/icons_svg/icons8-fattura-32.svg',
           'Totale',
           '€${widget.totale!.toStringAsFixed(2)}',
         ),
@@ -365,13 +371,13 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
     );
   }
 
-  Widget _rigaInfo(IconData icon, String label, String value) {
+  Widget _rigaInfo(String icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.grey[500]),
+          AppIcon(icon, size: 18, color: Colors.grey[500]),
           const SizedBox(width: 10),
           Text(
             '$label  ',
