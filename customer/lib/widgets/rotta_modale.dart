@@ -17,7 +17,15 @@ import 'package:flutter/material.dart';
 class RottaPannelloDalBasso<T> extends PageRouteBuilder<T> {
   RottaPannelloDalBasso({required WidgetBuilder costruttore})
     : super(
-        pageBuilder: (context, _, _) => costruttore(context),
+        // Il Material e' obbligatorio, non decorativo: showModalBottomSheet ne
+        // metteva uno e questa rotta all'inizio no. Senza, ogni Text dentro il
+        // pannello viene disegnato con la doppia sottolineatura gialla con cui
+        // Flutter segnala "manca il Material sopra di me". Transparency perche'
+        // lo sfondo se lo dipinge gia' il pannello.
+        pageBuilder: (context, _, _) => Material(
+          type: MaterialType.transparency,
+          child: costruttore(context),
+        ),
         // Sotto resta visibile il menu: senza questo lo sfondo diventa nero e
         // il pannello sembra staccato da dove si e' toccato.
         opaque: false,

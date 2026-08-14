@@ -263,7 +263,29 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
     for (final azione in azioni) {
       final piatto = await _geminiService.getDishDetail(azione.dishId);
-      if (piatto == null || !mounted) continue;
+      if (!mounted) return;
+
+      // Se la rilettura fallisce non si puo' aggiungere, ma soprattutto non si
+      // puo' tacere: l'assistente ha appena scritto "fatto", e saltare in
+      // silenzio lascia l'utente convinto di avere il piatto nel carrello.
+      // E' esattamente come si e' presentato il bug dell'endpoint che
+      // rispondeva sempre 400.
+      if (piatto == null) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text:
+                  'Non sono riuscito a mettere ${azione.name} nel carrello: '
+                  'non riesco a rileggere il piatto. Riprova, oppure aprilo '
+                  'dal menu del locale.',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+        });
+        _scrollToBottom();
+        continue;
+      }
 
       try {
         cart.addItem(
