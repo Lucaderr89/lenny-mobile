@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cart_item.dart';
 import '../models/menu_item.dart';
@@ -224,6 +225,12 @@ class CartProvider with ChangeNotifier {
         ),
       );
     }
+
+    // Il colpetto sta qui e non nelle otto schermate che chiamano addItem:
+    // un punto solo, impossibile da dimenticare quando se ne aggiunge una
+    // nona. E' il segnale che l'app ha registrato il gesto, e su un bottone
+    // "+" premuto di fretta e' l'unica conferma immediata che arriva.
+    HapticFeedback.lightImpact();
 
     _saveCart();
     notifyListeners();

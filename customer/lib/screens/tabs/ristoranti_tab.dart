@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/foto_rete.dart';
+import '../../widgets/scheletro.dart';
 
 /// Tab "Ristoranti" - ESATTAMENTE come HTML: Ristoranti in evidenza + Tutti i ristoranti
 class RistorantiTab extends StatefulWidget {
@@ -984,7 +985,17 @@ class _RistorantiTabState extends State<RistorantiTab>
         SizedBox(
           height: 200, // Card compatte
           child: isLoading
-              ? const Center(child: CircularProgressIndicator())
+              // Segnaposto con la forma delle schede al posto della rotella:
+              // la fila si vede subito e non c'e' salto quando arrivano i dati.
+              ? ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+                  itemCount: 3,
+                  itemBuilder: (context, index) => const Padding(
+                    padding: EdgeInsets.only(right: 12),
+                    child: ScheletroScheda(width: 160, altezzaFoto: 110),
+                  ),
+                )
               : ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),

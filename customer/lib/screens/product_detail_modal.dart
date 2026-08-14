@@ -347,12 +347,16 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
               top: 0,
               left: 0,
               right: 0,
-              child: SizedBox(
-                height: 200,
-                child: widget.menuItem.imageUrl != null
-                    ? FotoRete(
-                        widget.menuItem.imageUrl!,
-                        fit: BoxFit.cover,
+              // Stesso tag della miniatura nella riga del menu: la foto vola
+              // da li' fin qui, ingrandendosi, invece di sparire e ricomparire.
+              child: Hero(
+                tag: 'piatto-${widget.menuItem.id}',
+                child: SizedBox(
+                  height: 200,
+                  child: widget.menuItem.imageUrl != null
+                      ? FotoRete(
+                          widget.menuItem.imageUrl!,
+                          fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: double.infinity,
                           height: 200,
@@ -363,17 +367,18 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                             size: 60,
                           ),
                         ),
-                      )
-                    : Container(
-                        width: double.infinity,
-                        height: 200,
-                        color: lightGrayColor,
-                        child: const AppIcon(
-                          'assets/icons_svg/icons8-ristorante-32.svg',
-                          color: grayColor,
-                          size: 60,
+                        )
+                      : Container(
+                          width: double.infinity,
+                          height: 200,
+                          color: lightGrayColor,
+                          child: const AppIcon(
+                            'assets/icons_svg/icons8-ristorante-32.svg',
+                            color: grayColor,
+                            size: 60,
+                          ),
                         ),
-                      ),
+                ),
               ),
             ),
             // Contenitore principale con onda

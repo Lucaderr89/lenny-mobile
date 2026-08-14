@@ -14,6 +14,7 @@ import '../games/piatto_segreto_screen.dart';
 import '../games/prezzo_giusto_screen.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/foto_rete.dart';
+import '../../widgets/scheletro.dart';
 
 /// Tab "Scopri" - Discovery con contenuti esterni e gamification
 class ScopriTab extends StatefulWidget {
@@ -1099,13 +1100,13 @@ class _ScopriTabState extends State<ScopriTab>
             padding: const EdgeInsets.fromLTRB(20, 0, 15, 10),
             itemCount: 3,
             itemBuilder: (context, index) {
-              return Container(
-                width: 170,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  color: lightGrayColor.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                ),
+              // Prima era un rettangolo grigio fermo, alto quanto tutta la
+              // sezione: leggeva come un buco nella pagina. Ora ha la forma
+              // della scheda che sta per comparire, e il riflesso che scorre
+              // dice che sta arrivando.
+              return const Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: ScheletroScheda(),
               );
             },
           ),

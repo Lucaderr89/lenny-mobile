@@ -151,6 +151,13 @@ class AIResponse {
   final int? estimatedWait;
   final String? requestId;
 
+  /// Piatti che l'assistente ha deciso di mettere nel carrello.
+  ///
+  /// Il carrello vive qui sul telefono, quindi il server non puo' scriverci:
+  /// manda delle istruzioni gia' validate (piatto esistente, stesso locale,
+  /// scelte obbligatorie soddisfatte) e le applichiamo noi.
+  final List<AICartAction> cartActions;
+
   AIResponse({
     required this.success,
     required this.message,
@@ -161,6 +168,7 @@ class AIResponse {
     this.position,
     this.estimatedWait,
     this.requestId,
+    this.cartActions = const [],
   });
 
   factory AIResponse.fromJson(Map<String, dynamic> json) {
@@ -185,8 +193,84 @@ class AIResponse {
       position: json['position'] as int?,
       estimatedWait: json['estimated_wait'] as int?,
       requestId: json['request_id'] as String?,
+      cartActions: json['cart_actions'] is List
+          ? (json['cart_actions'] as List)
+                .map((a) => AICartAction.fromJson(a as Map<String, dynamic>))
+                .toList()
+          : const [],
     );
   }
+}
+
+/// Un piatto che l'assistente ha aggiunto al carrello per conto del cliente.
+///
+/// Arriva gia' validato dal server: piatto attivo, stesso ristorante del
+/// carrello, gruppi obbligatori soddisfatti, limiti rispettati. Qui si
+/// esegue e basta.
+class AICartAction {
+  final int dishId;
+  final String name;
+  final int restaurantId;
+  final String restaurantName;
+  final int quantity;
+  final List<AICartOption> options;
+  final String? notes;
+
+  const AICartAction({
+    required this.dishId,
+    required this.name,
+    required this.restaurantId,
+    required this.restaurantName,
+    required this.quantity,
+    this.options = const [],
+    this.notes,
+  });
+
+  factory AICartAction.fromJson(Map<String, dynamic> json) {
+    return AICartAction(
+      dishId: (json['piatto_id'] as num?)?.toInt() ?? 0,
+      name: json['nome'] as String? ?? '',
+      restaurantId: (json['ristorante_id'] as num?)?.toInt() ?? 0,
+      restaurantName: json['ristorante'] as String? ?? '',
+      quantity: (json['quantita'] as num?)?.toInt() ?? 1,
+      options: json['opzioni'] is List
+          ? (json['opzioni'] as List)
+                .map((o) => AICartOption.fromJson(o as Map<String, dynamic>))
+                .toList()
+          : const [],
+      notes: json['note'] as String?,
+    );
+  }
+}
+
+/// Una scelta dentro un'aggiunta: un extra aggiunto o un ingrediente tolto.
+class AICartOption {
+  final int id;
+  final String label;
+  final double price;
+
+  /// 'aggiungi' oppure 'togli': serve a scrivere "senza mozzarella" invece
+  /// di un'etichetta nuda che sembrerebbe una giunta.
+  final String type;
+
+  const AICartOption({
+    required this.id,
+    required this.label,
+    required this.price,
+    required this.type,
+  });
+
+  factory AICartOption.fromJson(Map<String, dynamic> json) {
+    return AICartOption(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      label: json['etichetta'] as String? ?? '',
+      price: (json['prezzo'] as num?)?.toDouble() ?? 0,
+      type: json['tipo'] as String? ?? 'aggiungi',
+    );
+  }
+
+  /// Come appare nel carrello e nel riepilogo dell'ordine.
+  String get descrizione => type == 'togli' ? 'Senza $label' : label;
 }
 
 /// Piatto suggerito dall'AI

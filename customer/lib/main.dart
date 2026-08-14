@@ -18,6 +18,7 @@ import 'providers/location_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/notification_provider.dart';
 import 'services/fcm_service.dart';
+import 'widgets/gesto_indietro.dart';
 
 /// Entry point dell'app Lenny Customer
 void main() async {
@@ -151,6 +152,14 @@ class LennyCustomerApp extends StatelessWidget {
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+
+        // Il gesto per tornare indietro, su tutte le schermate, da un punto
+        // solo: builder avvolge il Navigator, quindi vale ovunque senza dover
+        // toccare le quarantuno chiamate a Navigator.push sparse nell'app.
+        builder: (context, child) => GestoIndietroGlobale(
+          chiaveNavigatore: AppRouter.router.routerDelegate.navigatorKey,
+          child: child ?? const SizedBox.shrink(),
+        ),
 
         // 🇮🇹 Localizzazione italiana
         locale: const Locale('it', 'IT'),

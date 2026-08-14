@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/app_icon.dart';
 import 'package:provider/provider.dart';
 import '../services/gemini_service.dart';
@@ -23,6 +24,17 @@ class AIChatScreen extends StatefulWidget {
 
 class _AIChatScreenState extends State<AIChatScreen> {
   final GeminiService _geminiService = GeminiService();
+
+  /// Sfumatura che identifica la voce dell'assistente.
+  ///
+  /// Un solo accento, usato ovunque parli l'IA: firma, cursore, bordo del
+  /// campo di scrittura. E' quello che distingue una schermata "intelligente"
+  /// da una chat qualunque, senza aggiungere un solo elemento in piu'.
+  static const LinearGradient _sfumaturaLenny = LinearGradient(
+    colors: [Color(0xFF0F4E8C), Color(0xFF5B8FD6), Color(0xFF9B6BD6)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
   final RestaurantService _restaurantService = RestaurantService();
   final List<ChatMessage> _messages = [];
   final TextEditingController _textController = TextEditingController();
@@ -244,6 +256,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
     });
     _scrollToBottom();
 
+    if (response.cartActions.isNotEmpty) {
+      _eseguiAggiunteAlCarrello(response.cartActions);
+    }
+
     if (response.message.isNotEmpty) {
       _conversationHistory.add({'role': 'model', 'text': response.message});
       // Rimuovi in coppia se si supera il limite (il trim principale è in _onSendMessage)
@@ -252,6 +268,72 @@ class _AIChatScreenState extends State<AIChatScreen> {
         if (_conversationHistory.isNotEmpty) _conversationHistory.removeAt(0);
       }
     }
+  }
+
+  /// Applica al carrello le aggiunte decise dall'assistente.
+  ///
+  /// Il server ha gia' verificato che il piatto esista, che sia dello stesso
+  /// locale e che le scelte obbligatorie siano complete: qui si esegue. Il
+  /// piatto lo si rilegge comunque dal server, cosi' prezzo base e struttura
+  /// sono quelli veri e non una ricostruzione dai campi dell'azione.
+  Future<void> _eseguiAggiunteAlCarrello(List<AICartAction> azioni) async {
+    final cart = context.read<CartProvider>();
+    final aggiunti = <String>[];
+
+    for (final azione in azioni) {
+      final piatto = await _geminiService.getDishDetail(azione.dishId);
+      if (piatto == null || !mounted) continue;
+
+      try {
+        cart.addItem(
+          menuItem: piatto,
+          restaurantId: azione.restaurantId,
+          restaurantName: azione.restaurantName,
+          quantity: azione.quantity,
+          selectedExtras: azione.options
+              .map(
+                (o) => <String, dynamic>{
+                  'id': o.id,
+                  'name': o.descrizione,
+                  'price': o.price,
+                },
+              )
+              .toList(),
+          notes: azione.notes,
+        );
+        aggiunti.add(
+          azione.quantity > 1
+              ? '${azione.quantity}x ${azione.name}'
+              : azione.name,
+        );
+      } catch (e) {
+        // Praticamente solo il caso "ristorante diverso", che il server
+        // dovrebbe aver gia' intercettato: se arriva fin qui il carrello e'
+        // cambiato mentre l'assistente rispondeva.
+        if (!mounted) return;
+        _messages.add(
+          ChatMessage(
+            text:
+                'Non sono riuscito ad aggiungere ${azione.name}: nel carrello '
+                'ci sono piatti di un altro locale.',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        setState(() {});
+      }
+    }
+
+    if (aggiunti.isEmpty || !mounted) return;
+
+    // Un colpetto: l'aggiunta e' successa altrove, fuori dalla vista, e senza
+    // un segnale fisico l'utente non se ne accorge finche' non apre il carrello.
+    HapticFeedback.mediumImpact();
+
+    setState(() {
+      _messages.add(ChatMessage.carrello(aggiunti));
+    });
+    _scrollToBottom();
   }
 
   /// Mostra l'errore in chat.
@@ -275,22 +357,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
     _scrollToBottom();
   }
 
-  void _onQuickActionTap(String label) {
-    switch (label) {
-      case 'Ispirami':
-        _onSendMessage('Cosa mi consigli da mangiare adesso?');
-        break;
-      case 'Aperti ora':
-        _onSendMessage('Quali locali sono aperti adesso qui vicino?');
-        break;
-      // "Novità" chiedeva dei ristoranti nuovi in zona, un dato che non
-      // esiste da nessuna parte: la risposta era per forza vaga. La
-      // popolarità recente invece è un dato vero e serve davvero a scegliere.
-      case 'Va forte':
-        _onSendMessage('Cosa stanno ordinando tutti in questi giorni?');
-        break;
-    }
-  }
+  // NB: le vecchie scorciatoie a etichetta ("Ispirami", "Va forte") sono
+  // diventate proposte scritte per esteso in _buildQuickActions: la frase
+  // inviata e' la stessa che il cliente legge, cosi' impara come si parla
+  // all'assistente invece di premere un bottone e sperare.
 
   // ─── Carrello ────────────────────────────────────────────────────────────────
 
@@ -503,15 +573,27 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
           // Chat messages
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
-              reverse: false,
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
+            // Toccare la conversazione chiude la tastiera. Senza, una volta
+            // aperta restava li' e mangiava meta' schermo: non c'era nessun
+            // modo di richiuderla se non inviando un messaggio.
+            // onPanDown e non onTap: cosi' si chiude anche appena si comincia
+            // a scorrere, che e' il gesto istintivo per tornare a leggere.
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => FocusScope.of(context).unfocus(),
+              onPanDown: (_) => FocusScope.of(context).unfocus(),
+              child: ListView.builder(
+                controller: _scrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 2),
+                reverse: false,
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  return _buildMessageBubble(message);
+                },
+              ),
             ),
           ),
 
@@ -568,62 +650,147 @@ class _AIChatScreenState extends State<AIChatScreen> {
     );
   }
 
+  /// Conferma di cio' che e' finito nel carrello.
+  ///
+  /// Sta fuori dalla bolla di testo di proposito: quello che l'assistente
+  /// dice e' generato, questo e' il resoconto di un fatto. Tenerli distinti
+  /// evita che una frase sbagliata faccia credere a un'aggiunta mai avvenuta,
+  /// o il contrario.
+  Widget _buildConfermaCarrello(List<String> piatti) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, right: 40),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppIcon(
+              'assets/icons_svg/icons8-cart-32.svg',
+              size: 20,
+              color: AppColors.success,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    piatti.length == 1
+                        ? 'Aggiunto al carrello'
+                        : 'Aggiunti al carrello',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.success,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    piatti.join(' · '),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.dark,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(ChatMessage message) {
     // Dispatching per tipo
     if (message.dishes != null) return _buildDishesBlock(message.dishes!);
     if (message.restaurants != null) {
       return _buildRestaurantsBlock(message.restaurants!);
     }
+    if (message.aggiuntiAlCarrello != null) {
+      return _buildConfermaCarrello(message.aggiuntiAlCarrello!);
+    }
 
-    // Bolla testo standard
-    final isUser = message.isUser;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-              child: const AppIcon(
-                'assets/icons_svg/lenny-robot.svg',
-                size: 16,
-                color: AppColors.primary,
+    // Le due voci si distinguono per POSIZIONE e RITMO, non per due bolle
+    // contrapposte. La risposta dell'assistente e' il contenuto della pagina:
+    // scorre a tutta larghezza, senza cornice e senza avatar che la rimpicciolisca.
+    // La domanda del cliente e' un inciso: breve, rientrata, in un guscio tenue.
+    // E' l'impostazione di Gemini, e serve a far leggere: incolonnare risposte
+    // lunghe dentro una bolla stretta le rende faticose.
+    if (message.isUser) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 18, left: 48),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.09),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(6),
               ),
             ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-              decoration: BoxDecoration(
-                color: isUser ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isUser ? 16 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 16),
+            child: Text(
+              message.text ?? '',
+              style: const TextStyle(
+                color: AppColors.dark,
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 22, right: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Firma discreta: dice di chi e' la voce senza rubare spazio al testo.
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: (r) => _sfumaturaLenny.createShader(r),
+                child: const AppIcon(
+                  'assets/icons_svg/lenny-robot.svg',
+                  size: 15,
+                  color: Colors.white,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+              ),
+              const SizedBox(width: 6),
+              ShaderMask(
+                shaderCallback: (r) => _sfumaturaLenny.createShader(r),
+                child: const Text(
+                  'Lenny',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                    color: Colors.white,
                   ),
-                ],
-              ),
-              child: Text(
-                message.text ?? '',
-                style: TextStyle(
-                  color: isUser ? AppColors.surface : AppColors.dark,
-                  fontSize: 13,
-                  height: 1.38,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          SelectableText(
+            message.text ?? '',
+            style: const TextStyle(
+              color: AppColors.dark,
+              fontSize: 15.5,
+              height: 1.52,
             ),
           ),
         ],
@@ -966,45 +1133,74 @@ class _AIChatScreenState extends State<AIChatScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // Il campo e' racchiuso da un filo sfumato: e' lo stesso accento
+            // della firma di Lenny, e dice "qui parli con l'assistente" senza
+            // bisogno di scriverlo. Il bordo si ottiene con un contenitore
+            // sfumato e uno bianco dentro, perche' Border non accetta gradienti.
             Expanded(
               child: Container(
-                constraints: const BoxConstraints(maxHeight: 96),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                constraints: const BoxConstraints(maxHeight: 110),
+                padding: const EdgeInsets.all(1.4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
-                  borderRadius: BorderRadius.circular(20),
+                  gradient: _sfumaturaLenny,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: TextField(
-                  controller: _textController,
-                  decoration: const InputDecoration(
-                    hintText: 'Scrivi un messaggio...',
-                    hintStyle: TextStyle(fontSize: 13),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 9),
-                    isDense: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(23),
                   ),
-                  style: const TextStyle(fontSize: 13),
-                  maxLines: 4,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  onSubmitted: _sendMessage,
+                  child: TextField(
+                    controller: _textController,
+                    cursorColor: AppColors.primary,
+                    decoration: InputDecoration(
+                      hintText: 'Chiedi a Lenny…',
+                      hintStyle: TextStyle(
+                        fontSize: 14.5,
+                        color: AppColors.gray.withValues(alpha: 0.75),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                      isDense: true,
+                    ),
+                    style: const TextStyle(fontSize: 14.5, height: 1.35),
+                    maxLines: 4,
+                    minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                    onSubmitted: _sendMessage,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 38,
-              height: 38,
+            const SizedBox(width: 9),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: _sfumaturaLenny,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Material(
-                color: AppColors.primary,
+                color: Colors.transparent,
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: () => _sendMessage(_textController.text),
-                  child: const Icon(
-                    Icons.send_rounded,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _sendMessage(_textController.text);
+                  },
+                  child: const AppIcon(
+                    'assets/icons_svg/icons8-arrow-WHITE-32.svg',
                     color: Colors.white,
-                    size: 17,
+                    size: 19,
                   ),
                 ),
               ),
@@ -1015,58 +1211,142 @@ class _AIChatScreenState extends State<AIChatScreen> {
     );
   }
 
+  /// Schermata d'apertura: saluto e proposte concrete.
+  ///
+  /// Le vecchie scorciatoie erano tre etichette da due parole ("Ispirami",
+  /// "Va forte"): dicevano cosa succedeva DOPO averle toccate, non cosa
+  /// l'assistente sapesse fare. Chi apre la chat per la prima volta non ha
+  /// idea di cosa chiedere, e resta a guardare il campo vuoto.
+  /// Qui invece ogni proposta e' una frase intera, cioe' un esempio di
+  /// domanda: mostra il livello di confidenza che si puo' usare e allo stesso
+  /// tempo insegna che si puo' ordinare parlando.
   Widget _buildQuickActions() {
-    final actions = [
-      {'icon': Icons.auto_awesome_outlined, 'label': 'Ispirami'},
-      {'icon': Icons.schedule_outlined, 'label': 'Aperti ora'},
-      {'icon': Icons.local_fire_department_outlined, 'label': 'Va forte'},
+    final proposte = <Map<String, String>>[
+      {
+        'icona': 'icons8-cappello-dello-chef-32',
+        'titolo': 'Consigliami tu',
+        'frase': 'Ho fame ma non so cosa voglio, consigliami tu',
+      },
+      {
+        'icona': 'icons8-orologio-32',
+        'titolo': 'Chi è aperto adesso',
+        'frase': 'Quali locali sono aperti adesso qui vicino?',
+      },
+      {
+        'icona': 'icons8-cart-32',
+        'titolo': 'Ordina parlando',
+        'frase': 'Mettimi nel carrello una pizza margherita senza mozzarella',
+      },
+      {
+        'icona': 'icons8-piu_amati-32',
+        'titolo': 'Cosa va forte',
+        'frase': 'Cosa stanno ordinando tutti in questi giorni?',
+      },
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
-      child: Row(
-        children: actions.map((action) {
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => _onQuickActionTap(action['label']! as String),
-              child: Container(
-                margin: EdgeInsets.only(right: action == actions.last ? 0 : 6),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Icon(
-                      action['icon']! as IconData,
-                      size: 14,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        action['label']! as String,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShaderMask(
+            shaderCallback: (r) => _sfumaturaLenny.createShader(r),
+            child: const Text(
+              'Ciao, sono Lenny',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Conosco i menu di tutti i locali. Chiedimi un consiglio, oppure dimmi cosa vuoi e te lo metto nel carrello.',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: AppColors.gray.withValues(alpha: 0.95),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...proposte.map(
+            (p) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _propostaApertura(p['icona']!, p['titolo']!, p['frase']!),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _propostaApertura(String icona, String titolo, String frase) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        _onSendMessage(frase);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.14)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.12),
+                    const Color(0xFF9B6BD6).withValues(alpha: 0.12),
                   ],
+                ),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Center(
+                child: AppIcon(
+                  'assets/icons_svg/$icona.svg',
+                  size: 18,
+                  color: AppColors.primary,
                 ),
               ),
             ),
-          );
-        }).toList(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titolo,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.dark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '"$frase"',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.3,
+                      color: AppColors.gray,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1111,17 +1391,31 @@ class ChatMessage {
   final List<AIDish>? dishes;
   final List<AIRestaurant>? restaurants;
 
+  /// Conferma visiva di cio' che l'assistente ha messo nel carrello.
+  /// Non e' una frase del modello: e' il resoconto di quello che e'
+  /// realmente successo, quindi si disegna a parte e non si puo' sbagliare.
+  final List<String>? aggiuntiAlCarrello;
+
   ChatMessage({
     required String text,
     required this.isUser,
     required this.timestamp,
   }) : text = text,
        dishes = null,
-       restaurants = null;
+       restaurants = null,
+       aggiuntiAlCarrello = null;
 
   ChatMessage.withDishes(this.dishes)
     : text = null,
       isUser = false,
+      restaurants = null,
+      aggiuntiAlCarrello = null,
+      timestamp = DateTime.now();
+
+  ChatMessage.carrello(this.aggiuntiAlCarrello)
+    : text = null,
+      isUser = false,
+      dishes = null,
       restaurants = null,
       timestamp = DateTime.now();
 
@@ -1129,5 +1423,6 @@ class ChatMessage {
     : text = null,
       isUser = false,
       dishes = null,
+      aggiuntiAlCarrello = null,
       timestamp = DateTime.now();
 }

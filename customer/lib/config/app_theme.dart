@@ -17,6 +17,7 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.background,
 
+
       // TUTTO Poppins, anche gli slot non ridefiniti sotto: senza questa
       // famiglia di default gli slot mancanti (labelMedium, titleSmall...)
       // ricadevano sul Roboto di sistema e alcune schermate (es. notifiche)

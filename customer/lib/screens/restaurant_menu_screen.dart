@@ -19,6 +19,7 @@ import '../widgets/app_icon.dart';
 import '../widgets/foto_rete.dart';
 import '../widgets/gate_account_sheet.dart';
 import '../services/auth_service.dart';
+import '../widgets/scheletro.dart';
 
 /// Restaurant Menu Screen - Basato sul prototipo 7-menu.html
 class RestaurantMenuScreen extends StatefulWidget {
@@ -37,6 +38,10 @@ class RestaurantMenuScreen extends StatefulWidget {
 
 class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   final ScrollController _scrollController = ScrollController();
+
+  /// Scorrimento orizzontale della barra delle categorie, tenuto qui perche'
+  /// il delegate che la disegna viene ricostruito a ogni fotogramma.
+  final ScrollController _controllerCategorie = ScrollController();
   final RestaurantService _restaurantService = RestaurantService();
   final TextEditingController _searchController = TextEditingController();
 
@@ -187,6 +192,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _controllerCategorie.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -1272,6 +1278,10 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         categories: _categories,
         categoryLabels: _categoryLabels,
         selectedCategory: _selectedCategory,
+        // Il controller nasce nello stato della schermata e non nel delegate:
+        // il delegate viene ricostruito a ogni fotogramma di scorrimento, e
+        // uno creato li' dentro perderebbe la posizione della barra a ogni giro.
+        controller: _controllerCategorie,
         // Le tab sono ANCORE: portano alla sezione, non filtrano il menu
         onCategorySelected: _scrollToCategory,
       ),
@@ -1280,11 +1290,18 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
 
   Widget _buildFeaturedItems() {
     if (_isLoadingMenu) {
+      // Righe segnaposto invece della rotella: il menu appare gia' impaginato
+      // e al momento del cambio nulla si sposta.
       return const SliverToBoxAdapter(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(40),
-            child: CircularProgressIndicator(),
+        child: Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Column(
+            children: [
+              ScheletroRiga(),
+              ScheletroRiga(),
+              ScheletroRiga(),
+              ScheletroRiga(),
+            ],
           ),
         ),
       );
@@ -1776,10 +1793,26 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
             if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
               GestureDetector(
                 onTap: () => _showProductDetail(item),
-                // Nella riga basta la thumbnail 150px (13KB): l'originale
-                // da centinaia di KB rendeva il menu lentissimo.
-                child: _MenuItemImage(
-                  imageUrl: item.thumbnailUrl ?? item.imageUrl!,
+                // La foto vola dalla riga alla testata del modale invece di
+                // sparire e ricomparire altrove: e' quello che lega i due
+                // schermi e fa capire che si sta aprendo QUEL piatto.
+                // Il tag e' l'id del piatto, unico nella pagina.
+                child: Hero(
+                  tag: 'piatto-${item.id}',
+                  // Durante il volo l'immagine cambia forma e proporzioni:
+                  // senza questo Material di appoggio i bordi arrotondati
+                  // sfarfallano contro lo sfondo.
+                  flightShuttleBuilder: (_, animazione, _, _, _) => Material(
+                    color: Colors.transparent,
+                    child: _MenuItemImage(
+                      imageUrl: item.thumbnailUrl ?? item.imageUrl!,
+                    ),
+                  ),
+                  // Nella riga basta la thumbnail 150px (13KB): l'originale
+                  // da centinaia di KB rendeva il menu lentissimo.
+                  child: _MenuItemImage(
+                    imageUrl: item.thumbnailUrl ?? item.imageUrl!,
+                  ),
                 ),
               ),
 
@@ -2137,12 +2170,15 @@ class _CategoryTabsDelegate extends SliverPersistentHeaderDelegate {
   static const Color primaryColor = AppColors.primary;
   static const double _altezzaTab = 48;
 
+  final ScrollController _controller;
+
   _CategoryTabsDelegate({
+    required ScrollController controller,
     required this.categories,
     required this.categoryLabels,
     required this.selectedCategory,
     required this.onCategorySelected,
-  });
+  }) : _controller = controller;
 
   @override
   double get minExtent => _altezzaTab;
@@ -2156,9 +2192,34 @@ class _CategoryTabsDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    // La barra si porta da sola in vista la categoria attiva: scorrendo il
+    // menu l'evidenziazione avanzava, ma se finiva oltre il bordo destro non
+    // la si vedeva piu' e restava l'impressione di essere ancora all'inizio.
+    // Il calcolo e' a stima (larghezza media di una voce) perche' le voci
+    // hanno testi di lunghezza diversa e non sono ancora misurate quando serve.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_controller.hasClients) return;
+      final indice = categories.indexOf(selectedCategory);
+      if (indice < 0) return;
+
+      const larghezzaVoce = 108.0;
+      final larghezzaVista = _controller.position.viewportDimension;
+      final centro =
+          (indice * larghezzaVoce) + (larghezzaVoce / 2) - (larghezzaVista / 2);
+      final meta = centro.clamp(0.0, _controller.position.maxScrollExtent);
+
+      if ((meta - _controller.offset).abs() < 12) return;
+      _controller.animateTo(
+        meta,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    });
+
     return Container(
       color: Colors.white,
       child: ListView.builder(
+        controller: _controller,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: categories.length,
