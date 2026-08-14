@@ -1310,10 +1310,15 @@ class _AIChatScreenState extends State<AIChatScreen> {
         'titolo': 'Chi e\' aperto',
         'frase': 'Quali locali sono aperti adesso qui vicino?',
       },
+      // Qui prima c'era "Cosa va forte" ("cosa stanno ordinando tutti"): sulla
+      // carta e' un'altra domanda, in pratica e' la stessa del primo pulsante
+      // e riceve la stessa risposta, cioe' dei consigli. Il budget e' un asse
+      // diverso davvero, ed e' la cosa che la gente non si aspetta di poter
+      // chiedere a un assistente.
       {
-        'icona': 'icons8-piu_amati-32',
-        'titolo': 'Cosa va forte',
-        'frase': 'Cosa stanno ordinando tutti in questi giorni?',
+        'icona': 'icons8-euro-32',
+        'titolo': 'Ho dieci euro',
+        'frase': 'Ho dieci euro in tutto, cosa riesco a prendere?',
       },
     ];
 
