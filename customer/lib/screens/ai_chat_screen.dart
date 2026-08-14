@@ -13,6 +13,7 @@ import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
 import 'restaurant_menu_screen.dart';
 import '../widgets/foto_rete.dart';
+import '../widgets/rotta_modale.dart';
 
 /// Schermata chat con assistente AI (Google Gemini)
 class AIChatScreen extends StatefulWidget {
@@ -367,6 +368,54 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   // ─── Carrello ────────────────────────────────────────────────────────────────
 
+  /// Apre la scheda completa del piatto proposto in chat.
+  ///
+  /// Le schede in conversazione sono strette: nome, locale, prezzo. Tutto il
+  /// resto - descrizione, allergeni, opzioni, quantita' - vive nel pannello del
+  /// piatto, ed e' li' che si va toccando la scheda. Senza questo l'unica
+  /// strada per vedere cosa si stava per comprare era uscire dalla chat e
+  /// ritrovare il piatto nel menu del locale.
+  Future<void> _apriSchedaPiatto(AIDish aiDish) async {
+    setState(() => _isTyping = true);
+    final menuItem = await _geminiService.getDishDetail(aiDish.id);
+    if (!mounted) return;
+    setState(() => _isTyping = false);
+
+    if (menuItem == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Non riesco ad aprire questo piatto')),
+      );
+      return;
+    }
+
+    final cartProvider = context.read<CartProvider>();
+    if (!mounted) return;
+
+    await Navigator.of(context).push(
+      RottaPannelloDalBasso<void>(
+        costruttore: (_) => ProductDetailModal(
+          menuItem: menuItem,
+          restaurantId: aiDish.restaurantId,
+          restaurantName: aiDish.restaurantName,
+          onAddToCart: (item, qty, customizations, priceModifier) {
+            try {
+              cartProvider.addItem(
+                menuItem: item,
+                restaurantId: aiDish.restaurantId,
+                restaurantName: aiDish.restaurantName,
+                quantity: qty,
+                selectedExtras: _extractExtras(customizations),
+              );
+              _addFallbackText('${item.name} aggiunto al carrello.');
+            } catch (e) {
+              _showCartConflictDialog(aiDish);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleAddDish(AIDish aiDish) async {
     if (aiDish.hasRequiredExtras) {
       setState(() => _isTyping = true);
@@ -600,7 +649,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
           // Le proposte stanno appiccicate all'input, non in cima: sono la
           // continuazione naturale del "cosa scrivo qui", e scorrendo in
           // orizzontale occupano una riga sola invece di mezzo schermo.
-          if (_messages.isEmpty && MediaQuery.of(context).viewInsets.bottom == 0)
+          if (_messages.isEmpty &&
+              MediaQuery.of(context).viewInsets.bottom == 0)
             _buildProposte(),
 
           // Typing indicator
@@ -869,103 +919,113 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   Widget _buildDishCard(AIDish dish) {
-    return Container(
-      width: 165,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Foto vera se il piatto ce l'ha, altrimenti un segnaposto sobrio.
-          // Le immagini si stanno caricando a mano un po' alla volta: la scheda
-          // migliora da sola man mano che arrivano, senza toccare il codice.
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            child: SizedBox(
-              height: 64,
-              width: double.infinity,
-              child: (dish.imageUrl != null && dish.imageUrl!.isNotEmpty)
-                  ? FotoRete(
-                      dish.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _segnapostoPiatto(),
-                      loadingBuilder: (context, child, progress) =>
-                          progress == null ? child : _segnapostoPiatto(),
-                    )
-                  : _segnapostoPiatto(),
+    return GestureDetector(
+      // Toccare la scheda apre il piatto. Prima si poteva solo aggiungere o
+      // personalizzare: per leggere descrizione, allergeni e opzioni bisognava
+      // uscire dalla chat e ritrovarselo nel menu del locale.
+      onTap: () => _apriSchedaPiatto(dish),
+      child: Container(
+        width: 165,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  dish.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  dish.restaurantName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: AppColors.gray),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '€${dish.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Foto vera se il piatto ce l'ha, altrimenti un segnaposto sobrio.
+            // Le immagini si stanno caricando a mano un po' alla volta: la scheda
+            // migliora da sola man mano che arrivano, senza toccare il codice.
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
+              child: SizedBox(
+                height: 64,
+                width: double.infinity,
+                child: (dish.imageUrl != null && dish.imageUrl!.isNotEmpty)
+                    ? FotoRete(
+                        dish.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _segnapostoPiatto(),
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null ? child : _segnapostoPiatto(),
+                      )
+                    : _segnapostoPiatto(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dish.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
-                    GestureDetector(
-                      onTap: () => _handleAddDish(dish),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    dish.restaurantName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: AppColors.gray),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '€${dish.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
                         ),
-                        decoration: BoxDecoration(
-                          color: dish.hasRequiredExtras
-                              ? Colors.amber.shade700
-                              : AppColors.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          dish.hasRequiredExtras ? 'Personalizza' : 'Aggiungi',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                      ),
+                      GestureDetector(
+                        onTap: () => _handleAddDish(dish),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: dish.hasRequiredExtras
+                                ? Colors.amber.shade700
+                                : AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            dish.hasRequiredExtras
+                                ? 'Personalizza'
+                                : 'Aggiungi',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1024,6 +1084,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
         ],
       ),
       child: ListTile(
+        // Tutta la riga porta al menu, non solo il pulsante: il bersaglio
+        // grande e' quello che si tocca per istinto.
+        onTap: () => _handleOpenRestaurant(rest),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         leading: Container(
           width: 38,
@@ -1300,10 +1363,16 @@ class _AIChatScreenState extends State<AIChatScreen> {
         'titolo': 'Consigliami tu',
         'frase': 'Ho fame ma non so cosa voglio, consigliami tu',
       },
+      // Qui prima c'era "mettimi nel carrello una margherita senza mozzarella".
+      // Mostrava la capacita' giusta ma faceva la cosa sbagliata: un pulsante
+      // in prima pagina che compra un prodotto preciso, deciso da noi. Chi lo
+      // tocca per curiosita' si ritrova la spesa fatta. Comporre una cena
+      // esercita lo stesso strumento, ma resta una conversazione: lui propone
+      // e chiede, e il carrello lo si riempie insieme.
       {
         'icona': 'icons8-cart-32',
-        'titolo': 'Ordina parlando',
-        'frase': 'Mettimi nel carrello una pizza margherita senza mozzarella',
+        'titolo': 'Componi tu la cena',
+        'frase': 'Aiutami a mettere insieme una cena per due',
       },
       {
         'icona': 'icons8-orologio-32',
@@ -1317,8 +1386,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
       // chiedere a un assistente.
       {
         'icona': 'icons8-euro-32',
-        'titolo': 'Ho dieci euro',
-        'frase': 'Ho dieci euro in tutto, cosa riesco a prendere?',
+        'titolo': 'Ho venti euro',
+        'frase': 'Ho venti euro in tutto, cosa riesco a prendere?',
       },
     ];
 
