@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,6 +8,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+}
+
+// Firma di rilascio: le credenziali stanno in android/key.properties, che e'
+// fuori da git (il repo e' pubblico). Ogni postazione ha la sua copia del
+// file, con il percorso del keystore adattato alla macchina.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -32,11 +44,29 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        // Creata solo se key.properties esiste: senza, le build debug e
+        // profile continuano a funzionare su una macchina non configurata,
+        // e una build release fallisce con un errore chiaro invece di
+        // uscire firmata debug e farsi rifiutare dal Play Store.
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("key.properties assente: release firmata DEBUG, buona solo per prove locali")
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
