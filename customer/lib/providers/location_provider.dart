@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_service.dart';
 import '../services/nominatim_service.dart';
@@ -130,6 +132,28 @@ class LocationProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+
+    // La posizione salvata e' solo il punto di partenza: e' dove l'utente ERA
+    // l'ultima volta che il GPS ha parlato, non dove si trova adesso. Chi apre
+    // l'app in ufficio dopo averla usata a casa si vedeva "ti trovi qui: casa"
+    // per sempre, e distanze, filtri e assistente ragionavano sull'indirizzo
+    // vecchio. Qui parte un fix silenzioso in sottofondo: la schermata mostra
+    // subito il dato salvato e si aggiorna da sola quando il GPS risponde.
+    //
+    // Due guardie, entrambe deliberate:
+    //  - solo a permesso GIA' concesso: il permesso si chiede nel dialogo del
+    //    primo avvio, mai a sorpresa aprendo l'app;
+    //  - solo se l'utente sta usando la posizione corrente: un indirizzo
+    //    scelto a mano ("consegna a casa") e' una scelta, e il GPS non la
+    //    scavalca.
+    if (!_isFirstLaunch && _isUsingCurrentPosition) {
+      final permesso = await _locationService.checkPermission();
+      if (permesso == LocationPermission.always ||
+          permesso == LocationPermission.whileInUse) {
+        debugPrint('🔄 [LOCATION PROVIDER] Aggiorno la posizione in sottofondo');
+        unawaited(requestCurrentPosition(showLoading: false));
+      }
+    }
   }
 
   /// Carica ultima posizione salvata da SharedPreferences
