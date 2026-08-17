@@ -1245,13 +1245,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
 
-                // Chips dei giorni (7 giorni da oggi)
+                // Si ordina solo per OGGI. C'erano 7 giorni di chips, ma il
+                // preordine su giorni futuri era incoerente col resto
+                // dell'app: un locale chiuso oggi non offre nessun preordine,
+                // mentre uno aperto stasera avrebbe accettato ordini per
+                // venerdi' prossimo. Meglio nessun domani per tutti che un
+                // domani per alcuni. Il selettore resta com'e', pronto a
+                // riaprirsi alzando itemCount quando i preordini multi-giorno
+                // diventeranno una scelta di prodotto vera.
                 SizedBox(
                   height: 44,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: 7,
+                    itemCount: 1,
                     itemBuilder: (context, index) {
                       final giorno = oggi.add(Duration(days: index));
                       final selezionato = DateUtils.isSameDay(
