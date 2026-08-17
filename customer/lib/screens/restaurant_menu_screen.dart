@@ -419,9 +419,14 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         'Costo di consegna: $deliveryCost\n\n'
         'Ordina ora tramite la nostra app!';
 
-    Share.share(
-      shareText,
-      subject: 'Guarda questo ristorante: ${widget.restaurant.name}',
+    // API nuova di share_plus 13: la vecchia Share.share e' deprecata.
+    // L'aggiornamento non e' un vezzo: la 7.x era senza manifesto privacy e
+    // Apple respingeva la build in elaborazione (ITMS-91061).
+    SharePlus.instance.share(
+      ShareParams(
+        text: shareText,
+        subject: 'Guarda questo ristorante: ${widget.restaurant.name}',
+      ),
     );
   }
 
