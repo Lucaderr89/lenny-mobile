@@ -140,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 28),
                     Text(
-                      'Lenny Ristoranti',
+                      'Lenny Partner',
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
