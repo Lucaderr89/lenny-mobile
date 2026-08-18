@@ -126,6 +126,27 @@ class PrinterService {
   }
 
   /// Stampa un ordine completo
+  /// Logo gia' ridimensionato per la comanda, preparato una volta sola.
+  static Uint8List? _logoComanda;
+
+  /// Prepara il logo mentre lo schermo e' acceso. Va chiamato all'avvio:
+  /// `_resizeImageForPrinter` usa `Picture.toImage()`, che a schermo spento
+  /// non viene mai completato perche' il rasterizzatore e' in pausa.
+  Future<void> precaricaLogo() async {
+    if (_logoComanda != null) return;
+    try {
+      final ByteData data = await rootBundle.load(
+        'assets/images/logo_lenny.png',
+      );
+      _logoComanda = await _resizeImageForPrinter(
+        data.buffer.asUint8List(),
+        200,
+      ).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('Logo comanda non precaricato: $e');
+    }
+  }
+
   Future<EsitoStampa> printOrder(Order order, String restaurantName) async {
     try {
       // Verifica disponibilità stampante
@@ -144,25 +165,18 @@ class PrinterService {
       }
 
       // --- LOGO ---
-      try {
-        // Carica il logo dagli assets
-        final ByteData data = await rootBundle.load(
-          'assets/images/logo_lenny.png',
-        );
-        final Uint8List originalBytes = data.buffer.asUint8List();
-
-        // Ridimensiona per stampante 55mm (200px larghezza)
-        final Uint8List? resizedBytes = await _resizeImageForPrinter(
-          originalBytes,
-          200,
-        );
-
-        if (resizedBytes != null) {
-          await SunmiPrinter.printImage(resizedBytes);
+      // Si stampa SOLO dalla cache preparata da precaricaLogo(): il
+      // ridimensionamento passa dal rasterizzatore di Flutter, fermo a schermo
+      // spento, e calcolarlo qui terrebbe la comanda appesa fino alla
+      // riaccensione. Senza cache si stampa comunque, solo senza logo.
+      final Uint8List? logo = _logoComanda;
+      if (logo != null) {
+        try {
+          await SunmiPrinter.printImage(logo);
           await SunmiPrinter.lineWrap(1);
+        } catch (e) {
+          debugPrint('Impossibile stampare logo: $e');
         }
-      } catch (e) {
-        debugPrint('Impossibile stampare logo: $e');
       }
 
       // --- HEADER ---

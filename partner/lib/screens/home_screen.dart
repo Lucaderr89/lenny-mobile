@@ -95,6 +95,10 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
     )..repeat(reverse: true);
     WidgetsBinding.instance.addObserver(this);
+    // Il logo della comanda si prepara ora, con lo schermo acceso: dopo, a
+    // schermo spento, il ridimensionamento non potrebbe piu' girare.
+    _printerService.precaricaLogo();
+    _chiediPermessiAffidabilita();
     _loadData();
     _startOrdersRefresh();
     // Ascolta push FCM in foreground per aggiornare ordini in tempo reale
@@ -107,6 +111,17 @@ class _HomeScreenState extends State<HomeScreen>
         await _loadOrders();
       }
     });
+  }
+
+  /// Permessi di affidabilita' (esenzione batteria e "Mostra sopra altre
+  /// app"): si chiedono qui, cioe' solo a sessione aperta. A chi non ha fatto
+  /// il login non servono, e l'app li presenta uno di seguito all'altro.
+  Future<void> _chiediPermessiAffidabilita() async {
+    try {
+      await const MethodChannel('lenny.partner/permessi').invokeMethod('avvia');
+    } catch (_) {
+      // iOS o ROM senza le schermate dedicate: non e' bloccante.
+    }
   }
 
   @override
