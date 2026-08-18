@@ -89,7 +89,7 @@ class KeepAliveService : Service() {
             Notification.Builder(this)
         }
         return builder
-            .setContentTitle("Lenny Ristoranti attivo")
+            .setContentTitle("Lenny Partner attivo")
             .setContentText("Ricezione ordini in corso")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(apri)

@@ -8,7 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/fcm_service.dart';
 
-/// Splash dell'app Ristoranti: stesso schema dell'app driver, schermo blu
+/// Splash dell'app Partner: stesso schema dell'app driver, schermo blu
 /// con l'icona dell'app. Corto: copre solo il check della sessione.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
