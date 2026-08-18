@@ -93,9 +93,15 @@ class FcmService {
 
     // Su Android in foreground FCM non mostra nulla nativamente:
     // disabilitiamo il banner nativo e lo gestiremo noi con local notifications
+    // badge: false apposta. Il server manda aps.badge = 1 in ogni push, e con
+    // l'app gia' aperta iOS lo applicherebbe comunque - ma applicationDidBecomeActive,
+    // che e' cio' che azzera il badge, e' gia' scattato all'apertura e non riscatta.
+    // Il "1" resterebbe quindi appiccicato all'icona fino alla riapertura successiva.
+    // Un contatore sull'icona mentre sei dentro l'app non serve comunque a nulla:
+    // il segnale in foreground e' la notifica stessa, non il badge.
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: false,
-      badge: true,
+      badge: false,
       sound: false,
     );
   }

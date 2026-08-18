@@ -165,9 +165,15 @@ class FcmService {
     // custom del canale. Su iOS quel suono non passa da li' e replicare la
     // notifica a mano la farebbe comparire due volte: la lasciamo al sistema.
     final bool suIos = defaultTargetPlatform == TargetPlatform.iOS;
+    // badge: false apposta. Il server manda aps.badge = 1 in ogni push, e con
+    // l'app gia' aperta iOS lo applicherebbe comunque - ma applicationDidBecomeActive,
+    // che e' cio' che azzera il badge, e' gia' scattato all'apertura e non riscatta.
+    // Il "1" resterebbe quindi appiccicato all'icona fino alla riapertura successiva.
+    // Un contatore sull'icona mentre sei dentro l'app non serve comunque a nulla:
+    // il segnale in foreground e' la notifica stessa, non il badge.
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: suIos,
-      badge: true,
+      badge: false,
       sound: suIos,
     );
   }
