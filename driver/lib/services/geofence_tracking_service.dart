@@ -162,6 +162,9 @@ class GeofenceTrackingService {
               'longitude': location.longitude,
               'accuracy': location.accuracy,
               'speed': location.speed,
+              // Direzione di marcia in gradi (null da fermo): il modale live del
+              // pannello orienta il marker del driver. Server vecchi la ignorano.
+              'heading': location.heading,
             }),
           )
           .timeout(const Duration(seconds: 10));
