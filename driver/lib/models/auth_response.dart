@@ -15,13 +15,22 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    // Gestisce sia error come stringa che come oggetto {"message","code"}
+    String? errorMsg;
+    if (json['error'] != null) {
+      if (json['error'] is String) {
+        errorMsg = json['error'] as String;
+      } else if (json['error'] is Map) {
+        errorMsg = (json['error'] as Map)['message']?.toString();
+      }
+    }
     return AuthResponse(
       success: json['success'] as bool? ?? false,
-      message: json['message'] as String? ?? '',
+      message: json['message'] as String? ?? errorMsg ?? '',
       data: json['data'] != null
           ? AuthData.fromJson(json['data'] as Map<String, dynamic>)
           : null,
-      error: json['error'] as String?,
+      error: errorMsg,
     );
   }
 

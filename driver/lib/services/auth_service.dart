@@ -60,18 +60,29 @@ class AuthService {
         return authResponse;
       } else {
         print('❌ [DRIVER LOGIN] Status code diverso da 200');
+        // Il backend incapsula l'errore in un oggetto: {"error": {"message",
+        // "code"}}. Il vecchio cast diretto a String? lanciava un'eccezione e
+        // all'utente arrivava il testo grezzo del cast invece del messaggio.
+        final errField = jsonResponse['error'];
+        final errMsg = errField is String
+            ? errField
+            : (errField is Map ? errField['message']?.toString() : null);
         return AuthResponse(
           success: false,
           message:
-              jsonResponse['message'] as String? ?? 'Errore durante il login',
-          error: jsonResponse['error'] as String?,
+              errMsg ??
+              jsonResponse['message'] as String? ??
+              'Errore durante il login',
+          error: errMsg,
         );
       }
     } catch (e) {
       print('💥 [DRIVER LOGIN] ERRORE CATCH: $e');
+      // Il dettaglio tecnico resta nei log e nel campo error; all'utente
+      // arriva un messaggio leggibile.
       return AuthResponse(
         success: false,
-        message: 'Errore di connessione: ${e.toString()}',
+        message: 'Impossibile contattare il server. Controlla la connessione e riprova.',
         error: e.toString(),
       );
     }
@@ -142,19 +153,24 @@ class AuthService {
         );
       } else {
         print('❌ [DRIVER REGISTRATION] Registrazione fallita');
+        final errField = jsonResponse['error'];
+        final errMsg = errField is String
+            ? errField
+            : (errField is Map ? errField['message']?.toString() : null);
         return AuthResponse(
           success: false,
           message:
+              errMsg ??
               jsonResponse['message'] as String? ??
               'Errore durante la registrazione',
-          error: jsonResponse['error']?.toString(),
+          error: errMsg,
         );
       }
     } catch (e) {
       print('💥 [DRIVER REGISTRATION] ERRORE CATCH: $e');
       return AuthResponse(
         success: false,
-        message: 'Errore di connessione: ${e.toString()}',
+        message: 'Impossibile contattare il server. Controlla la connessione e riprova.',
         error: e.toString(),
       );
     }
