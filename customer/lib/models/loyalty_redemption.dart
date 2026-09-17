@@ -6,8 +6,10 @@ class LoyaltyRedemption {
   final String status;
   final DateTime redeemedAt;
   final DateTime? usedAt;
+  final DateTime? couponUsedAt;
   final DateTime? expiresAt;
   final int? orderId;
+  final String? couponCode;
   final String? notes;
 
   // Dati del premio (se inclusi nella risposta)
@@ -23,8 +25,10 @@ class LoyaltyRedemption {
     required this.status,
     required this.redeemedAt,
     this.usedAt,
+    this.couponUsedAt,
     this.expiresAt,
     this.orderId,
+    this.couponCode,
     this.notes,
     this.rewardName,
     this.rewardDescription,
@@ -37,25 +41,37 @@ class LoyaltyRedemption {
       customerId: int.parse(json['customer_id'].toString()),
       rewardId: int.parse(json['reward_id'].toString()),
       pointsSpent: int.parse(json['points_spent'].toString()),
-      status: json['status'] ?? 'active',
-      redeemedAt: DateTime.parse(json['redeemed_at']),
-      usedAt: json['used_at'] != null ? DateTime.parse(json['used_at']) : null,
-      expiresAt: json['expires_at'] != null
-          ? DateTime.parse(json['expires_at'])
-          : null,
+      status: json['status'] ?? 'approved',
+      redeemedAt:
+          DateTime.tryParse(json['redeemed_at']?.toString() ?? '') ??
+          DateTime.now(),
+      usedAt: _data(json['used_at']),
+      couponUsedAt: _data(json['coupon_used_at']),
+      expiresAt: _data(json['expires_at']),
       orderId: json['order_id'] != null
-          ? int.parse(json['order_id'].toString())
+          ? int.tryParse(json['order_id'].toString())
           : null,
-      notes: json['notes'],
+      couponCode: json['generated_coupon_code'],
+      notes: json['admin_notes'] ?? json['notes'],
       rewardName: json['reward_name'],
       rewardDescription: json['reward_description'],
       rewardImage: json['reward_image'],
     );
   }
 
-  bool get isActive => status == 'active';
-  bool get isUsed => status == 'used';
+  static DateTime? _data(dynamic v) {
+    if (v == null) return null;
+    return DateTime.tryParse(v.toString());
+  }
+
+  bool get isPending => status == 'pending';
+  bool get isRejected => status == 'rejected';
   bool get isExpired => status == 'expired';
+  bool get isUsed => status == 'used' || usedAt != null || couponUsedAt != null;
+
+  /// Riscattato e ancora spendibile: i crediti sono gia' nel wallet, il
+  /// coupon aspetta il prossimo checkout.
+  bool get isActive => !isUsed && (status == 'active' || status == 'approved');
 
   bool get isExpiringSoon {
     if (expiresAt == null) return false;
@@ -64,11 +80,15 @@ class LoyaltyRedemption {
   }
 
   String get statusLabel {
+    if (isUsed) return 'Utilizzato';
     switch (status) {
       case 'active':
-        return 'Attivo';
-      case 'used':
-        return 'Utilizzato';
+      case 'approved':
+        return 'Riscattato';
+      case 'pending':
+        return 'In attesa';
+      case 'rejected':
+        return 'Rifiutato';
       case 'expired':
         return 'Scaduto';
       default:

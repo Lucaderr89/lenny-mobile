@@ -321,6 +321,13 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
             _buildLoyaltyOverview(),
             const SizedBox(height: 16),
 
+            // Il prossimo premio e' la cosa che muove davvero: sta in alto.
+            if (_loyaltyData!.nextReward != null ||
+                _loyaltyData!.affordableRewards > 0) ...[
+              _buildNextRewardCard(),
+              const SizedBox(height: 16),
+            ],
+
             // Progressi verso prossimo tier
             if (_loyaltyData!.nextTier != null) ...[
               _buildNextTierProgress(),
@@ -411,6 +418,23 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      if (_loyaltyData != null)
+                        Text(
+                          _loyaltyData!.affordableRewards > 0
+                              ? (_loyaltyData!.affordableRewards == 1
+                                    ? 'Un premio riscattabile adesso'
+                                    : '${_loyaltyData!.affordableRewards} premi riscattabili adesso')
+                              : (_loyaltyData!.nextReward != null
+                                    ? 'Mancano ${_loyaltyData!.nextReward!.pointsMissing} punti al prossimo premio'
+                                    : 'Ordina e accumula punti'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _loyaltyData!.affordableRewards > 0
+                                ? AppColors.success
+                                : AppColors.gray,
+                          ),
+                        ),
                     ],
                   ),
                 ],
@@ -508,6 +532,20 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (currentTier != null && currentTier.pointsMultiplier > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _loyaltyData!.tierValidUntil != null
+                              ? 'Punti ${currentTier.moltiplicatoreLabel} fino al ${_formatDate(_loyaltyData!.tierValidUntil!)}'
+                              : 'Punti ${currentTier.moltiplicatoreLabel} su ogni ordine',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -589,8 +627,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
   // Progresso verso prossimo tier
   Widget _buildNextTierProgress() {
     final nextTier = _loyaltyData!.nextTier!;
-    final progress = _loyaltyData!.progressToNext!;
-    final customer = _loyaltyData!.customer;
+    final finestra = _loyaltyData!.nextTierWindow;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -624,24 +661,144 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                 ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Progressi spesa
-          _buildProgressBar(
-            label: 'Spesa lifetime',
-            current: customer.lifetimeSpending,
-            required: nextTier.unlockLifetimeSpending,
-            unit: '€',
-            progress: progress.spendingProgress,
+          const SizedBox(height: 6),
+          // Il livello si conquista con gli ordini recenti, non con la
+          // spesa di una vita: la barra conta gli ordini nella finestra.
+          Text(
+            finestra != null && finestra.windowDays > 0
+                ? (finestra.ordersMissing > 0
+                      ? 'Ti mancano ${finestra.ordersMissing} ${finestra.ordersMissing == 1 ? 'ordine' : 'ordini'} in ${finestra.windowDays} giorni: punti ${nextTier.moltiplicatoreLabel} per ${finestra.keepDays} giorni'
+                      : 'Requisito raggiunto: dal prossimo ordine consegnato sei ${nextTier.name}')
+                : 'Punti ${nextTier.moltiplicatoreLabel} su ogni ordine',
+            style: const TextStyle(fontSize: 12, color: AppColors.grayDark),
           ),
-          const SizedBox(height: 12),
-          // Progressi ordini
-          _buildProgressBar(
-            label: 'Ordini completati',
-            current: customer.totalOrdersCompleted.toDouble(),
-            required: nextTier.unlockMinOrders.toDouble(),
-            unit: '',
-            progress: progress.ordersProgress,
+          const SizedBox(height: 14),
+          if (finestra != null && finestra.windowDays > 0)
+            _buildProgressBar(
+              label: 'Ordini negli ultimi ${finestra.windowDays} giorni',
+              current: finestra.ordersInWindow.toDouble(),
+              required: finestra.ordersRequired.toDouble(),
+              unit: '',
+              progress: finestra.progress * 100,
+            )
+          else
+            _buildProgressBar(
+              label: 'Ordini completati',
+              current: _loyaltyData!.customer.totalOrdersCompleted.toDouble(),
+              required: nextTier.unlockMinOrders.toDouble(),
+              unit: '',
+              progress: _loyaltyData!.progressToNext?.ordersProgress ?? 0,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Numeri interi senza decimali: "3", non "3.0".
+  String _num(double v) {
+    if (v == v.roundToDouble()) return v.toInt().toString();
+    return v.toStringAsFixed(1).replaceAll('.', ',');
+  }
+
+  /// "5 EUR" oppure "2,50 EUR".
+  String _euro(double? v) {
+    final x = v ?? 0;
+    if (x == x.roundToDouble()) return '${x.toInt()} EUR';
+    return '${x.toStringAsFixed(2).replaceAll('.', ',')} EUR';
+  }
+
+  /// Prossimo premio e premi gia' riscattabili, con la barra dei punti.
+  Widget _buildNextRewardCard() {
+    final dati = _loyaltyData!;
+    final punti = dati.customer.loyaltyPoints;
+    final prossimo = dati.nextReward;
+    final riscattabili = dati.affordableRewards;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.light,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: riscattabili > 0 ? AppColors.success : AppColors.lightGray,
+          width: riscattabili > 0 ? 2 : 1,
+        ),
+        boxShadow: [AppColors.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  riscattabili > 0
+                      ? (riscattabili == 1
+                            ? 'Hai un premio da riscattare'
+                            : 'Hai $riscattabili premi da riscattare')
+                      : 'Prossimo premio',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: riscattabili > 0
+                        ? AppColors.success
+                        : AppColors.dark,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _tabController.animateTo(1),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  riscattabili > 0 ? 'Riscatta' : 'Vedi i premi',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (prossimo != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${prossimo.name}: ti mancano ${prossimo.pointsMissing} punti',
+              style: const TextStyle(fontSize: 12, color: AppColors.grayDark),
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: prossimo.pointsRequired > 0
+                    ? (punti / prossimo.pointsRequired).clamp(0, 1).toDouble()
+                    : 1,
+                backgroundColor: AppColors.lightGray,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$punti / ${prossimo.pointsRequired} punti',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.gray.withValues(alpha: 0.8),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Hai i punti per ogni premio del catalogo',
+              style: TextStyle(fontSize: 12, color: AppColors.grayDark),
+            ),
+          ],
         ],
       ),
     );
@@ -671,9 +828,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
               ),
             ),
             Text(
-              remaining > 0
-                  ? 'Mancano ${remaining.toStringAsFixed(remaining < 10 ? 1 : 0)}$unit'
-                  : 'Completato!',
+              remaining > 0 ? 'Mancano ${_num(remaining)}$unit' : 'Completato!',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -696,7 +851,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
         ),
         const SizedBox(height: 4),
         Text(
-          '${current.toStringAsFixed(current < 10 ? 1 : 0)}$unit / ${required.toStringAsFixed(0)}$unit',
+          '${_num(current)}$unit / ${_num(required)}$unit',
           style: TextStyle(
             fontSize: 11,
             color: AppColors.gray.withValues(alpha: 0.8),
@@ -774,9 +929,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
       children: allTiers.map((tier) {
         final isCurrent = tier.id == currentTierId;
         final isUnlocked =
-            _loyaltyData!.customer.lifetimeSpending >=
-                tier.unlockLifetimeSpending &&
-            _loyaltyData!.customer.totalOrdersCompleted >= tier.unlockMinOrders;
+            tier.displayOrder <= (_loyaltyData!.currentTier?.displayOrder ?? 0);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -838,7 +991,9 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Spesa: €${tier.unlockLifetimeSpending.toStringAsFixed(0)} • Ordini: ${tier.unlockMinOrders}',
+                        tier.durata.isEmpty
+                            ? tier.requisito
+                            : '${tier.requisito}, ${tier.durata.toLowerCase()}',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.gray.withValues(alpha: 0.8),
@@ -847,7 +1002,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                       if (tier.pointsMultiplier > 1.0) ...[
                         const SizedBox(height: 4),
                         Text(
-                          'Punti x${tier.pointsMultiplier.toStringAsFixed(1)}',
+                          'Punti ${tier.moltiplicatoreLabel} su ogni ordine',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -889,10 +1044,22 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
       );
     }
 
+    final punti = _loyaltyData?.customer.loyaltyPoints ?? 0;
+    // Dal piu' vicino al piu' lontano: cosi' la scala si legge da sola.
+    final lista = [..._rewards]
+      ..sort((a, b) => a.pointsRequired.compareTo(b.pointsRequired));
+
     return Column(
-      children: _rewards.map((reward) {
-        final canAfford = reward.canAfford ?? false;
-        final isAvailable = reward.isAvailable ?? true;
+      children: lista.map((reward) {
+        final inArrivo = reward.comingSoon;
+        final canAfford = (reward.canAfford ?? false) && !inArrivo;
+        final isAvailable = (reward.isAvailable ?? true) && !inArrivo;
+        final attivo = canAfford && isAvailable;
+        final Color coloreBadge = attivo
+            ? AppColors.success
+            : inArrivo
+            ? AppColors.primaryLight
+            : AppColors.warning;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
@@ -901,10 +1068,12 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
               color: AppColors.light,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: canAfford && isAvailable
+                color: attivo
                     ? AppColors.success
+                    : inArrivo
+                    ? AppColors.primaryLight
                     : AppColors.lightGray,
-                width: canAfford && isAvailable ? 2 : 1,
+                width: attivo ? 2 : 1,
               ),
             ),
             child: Column(
@@ -939,26 +1108,45 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              reward.name,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.dark,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  reward.name,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.dark,
+                                  ),
+                                ),
+                                if (inArrivo || reward.typeLabel.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      inArrivo ? 'In arrivo' : reward.typeLabel,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: inArrivo
+                                            ? AppColors.primaryLight
+                                            : AppColors.gray,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: canAfford
-                                  ? AppColors.success
-                                  : AppColors.warning,
+                              color: coloreBadge,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -991,24 +1179,46 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                           color: AppColors.gray.withValues(alpha: 0.8),
                         ),
                       ),
+                      // Quanto manca, a colpo d'occhio, per i premi non
+                      // ancora raggiunti.
+                      if (!canAfford && !inArrivo && isAvailable) ...[
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: reward.progresso(punti),
+                            backgroundColor: AppColors.lightGray,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.warning,
+                            ),
+                            minHeight: 5,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: canAfford && isAvailable
+                          onPressed: attivo
                               ? () => _handleRedeemReward(reward)
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: canAfford && isAvailable
+                            backgroundColor: attivo
                                 ? AppColors.primary
                                 : AppColors.gray,
+                            disabledBackgroundColor: inArrivo
+                                ? AppColors.primaryLight.withValues(alpha: 0.35)
+                                : AppColors.lightGray,
+                            disabledForegroundColor: AppColors.grayDark,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           child: Text(
-                            !isAvailable
+                            inArrivo
+                                ? 'In arrivo'
+                                : !isAvailable
                                 ? 'Non disponibile'
                                 : canAfford
                                 ? 'Riscatta'
@@ -1062,7 +1272,11 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                           color: AppColors.success,
                           size: 20,
                         )
-                      : const Icon(Icons.check, color: AppColors.gray, size: 20),
+                      : const Icon(
+                          Icons.check,
+                          color: AppColors.gray,
+                          size: 20,
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1079,12 +1293,24 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${redemption.pointsSpent} punti • ${_formatDate(redemption.redeemedAt)}',
+                        '${redemption.pointsSpent} punti, ${_formatDate(redemption.redeemedAt)}',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.gray.withValues(alpha: 0.8),
                         ),
                       ),
+                      if (redemption.isActive &&
+                          redemption.couponCode != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Coupon ${redemption.couponCode}: lo trovi al checkout',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1098,6 +1324,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
                         ? AppColors.success
                         : redemption.isUsed
                         ? AppColors.gray
+                        : redemption.isPending
+                        ? AppColors.warning
                         : AppColors.danger,
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -1119,13 +1347,18 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
   }
 
   Future<void> _handleRedeemReward(LoyaltyReward reward) async {
-    // Conferma riscatto
+    final String dettaglio = reward.isCredit
+        ? '${_euro(reward.creditAmount)} finiscono subito nel tuo wallet, pronti per il prossimo ordine.'
+        : reward.isCoupon
+        ? 'Il coupon compare da solo al prossimo checkout, tra quelli suggeriti, e vale 30 giorni.'
+        : 'Ti contatteremo per la consegna del premio.';
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Conferma riscatto'),
+        title: const Text('Riscatti questo premio?'),
         content: Text(
-          'Vuoi riscattare "${reward.name}" per ${reward.pointsRequired} punti?',
+          '${reward.name} per ${reward.pointsRequired} punti.\n\n$dettaglio',
         ),
         actions: [
           TextButton(
@@ -1144,44 +1377,68 @@ class _LoyaltyScreenState extends State<LoyaltyScreen>
     if (confirm != true) return;
 
     try {
-      await _loyaltyService.redeemReward(reward.id);
+      final esito = await _loyaltyService.redeemReward(reward.id);
 
       // Ricarica dati
       await _loadLoyaltyData();
+      if (!mounted) return;
 
-      if (mounted) {
-        // Deep-link al wallet: il premio riscattato diventa spesso un
-        // credito spendibile, e prima l'utente non aveva modo di vederlo.
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Premio riscattato con successo!'),
-            backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Vai al wallet',
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WalletScreen()),
-                );
-              },
-            ),
+      final tipo = esito?['reward_type']?.toString() ?? reward.rewardType;
+      final codice = esito?['coupon_code']?.toString();
+      final importo =
+          double.tryParse(
+            '${esito?['credit_amount'] ?? reward.creditAmount ?? 0}',
+          ) ??
+          0;
+      final bool crediti = tipo == 'app_credit';
+
+      // Una finestra, non un toast: il cliente deve capire DOVE e' finito
+      // il premio (nel wallet o al checkout), altrimenti lo cerca a vuoto.
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(crediti ? 'Crediti accreditati' : 'Premio riscattato'),
+          content: Text(
+            crediti
+                ? '${_euro(importo)} sono nel tuo wallet: al prossimo ordine li scali dal totale, anche su più ordini.'
+                : codice != null && codice.isNotEmpty
+                ? 'Il coupon $codice è pronto. Al prossimo checkout lo trovi tra i coupon suggeriti: un tocco e lo applichi. Vale 30 giorni.'
+                : 'Premio registrato: ti contatteremo a breve.',
           ),
-        );
-      }
+          actions: [
+            if (crediti)
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WalletScreen(),
+                    ),
+                  );
+                },
+                child: const Text('Vai al wallet'),
+              ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text('Ok'),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Errore: ${e.toString().replaceFirst('Exception: ', '')}',
-            ),
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
             backgroundColor: AppColors.danger,
           ),
         );
       }
-    } finally {}
+    }
   }
 
   String? _getTierIconPath(String? slug) {

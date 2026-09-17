@@ -8,6 +8,8 @@ class LoyaltyTier {
   final String? color;
   final double unlockLifetimeSpending;
   final int unlockMinOrders;
+  final int? windowDays;
+  final int? keepDays;
   final double? maintainSpending12m;
   final int? maintainMinOrders12m;
   final double pointsMultiplier;
@@ -25,6 +27,8 @@ class LoyaltyTier {
     this.color,
     required this.unlockLifetimeSpending,
     required this.unlockMinOrders,
+    this.windowDays,
+    this.keepDays,
     this.maintainSpending12m,
     this.maintainMinOrders12m,
     required this.pointsMultiplier,
@@ -42,25 +46,48 @@ class LoyaltyTier {
       slug: json['slug'] ?? '',
       icon: json['icon'],
       color: json['color'],
-      unlockLifetimeSpending: double.parse(
-        json['unlock_lifetime_spending'].toString(),
-      ),
-      unlockMinOrders: int.parse(json['unlock_min_orders'].toString()),
+      unlockLifetimeSpending:
+          double.tryParse('${json['unlock_lifetime_spending'] ?? 0}') ?? 0,
+      unlockMinOrders: int.tryParse('${json['unlock_min_orders'] ?? 0}') ?? 0,
+      windowDays: _intoNull(json['window_days']),
+      keepDays: _intoNull(json['keep_days']),
       maintainSpending12m: json['maintain_spending_12m'] != null
-          ? double.parse(json['maintain_spending_12m'].toString())
+          ? double.tryParse(json['maintain_spending_12m'].toString())
           : null,
-      maintainMinOrders12m: json['maintain_min_orders_12m'] != null
-          ? int.parse(json['maintain_min_orders_12m'].toString())
-          : null,
-      pointsMultiplier: double.parse(json['points_multiplier'].toString()),
+      maintainMinOrders12m: _intoNull(json['maintain_min_orders_12m']),
+      pointsMultiplier:
+          double.tryParse('${json['points_multiplier'] ?? 1}') ?? 1,
       description: json['description'],
       benefitsList: json['benefits_list'],
-      displayOrder: int.parse(json['display_order'].toString()),
+      displayOrder: int.tryParse('${json['display_order'] ?? 0}') ?? 0,
       isActive: json['is_active'] == 1 || json['is_active'] == true,
-      customerCount: json['customer_count'] != null
-          ? int.parse(json['customer_count'].toString())
-          : null,
+      customerCount: _intoNull(json['customer_count']),
     );
+  }
+
+  static int? _intoNull(dynamic v) {
+    if (v == null) return null;
+    final n = int.tryParse(v.toString());
+    return (n == null || n == 0) ? null : n;
+  }
+
+  /// Livello base: e' di tutti, non si conquista.
+  bool get isBase => windowDays == null || unlockMinOrders <= 0;
+
+  /// "5 ordini in 30 giorni" oppure "Per tutti, da subito".
+  String get requisito {
+    if (isBase) return 'Per tutti, da subito';
+    return '$unlockMinOrders ordini in $windowDays giorni';
+  }
+
+  /// "Vale 60 giorni" oppure stringa vuota.
+  String get durata => keepDays == null ? '' : 'Vale $keepDays giorni';
+
+  /// "x1,25" / "x1,5" / "x2": senza zeri inutili, virgola italiana.
+  String get moltiplicatoreLabel {
+    var s = pointsMultiplier.toStringAsFixed(2);
+    s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    return 'x${s.replaceAll('.', ',')}';
   }
 
   List<String> get benefits {
