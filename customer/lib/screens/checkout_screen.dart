@@ -3772,57 +3772,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       widgets.add(const SizedBox(height: 10));
     }
 
-    // Metodi di pagamento standard - GRIGLIA 2 COLONNE
-    final gridChildren = <Widget>[];
-
-    for (final method in _paymentMethods) {
-      if (method['slug'] == 'stripe') continue; // gia' mostrato sopra
-      String icon;
-      switch (method['slug']) {
-        case 'stripe':
-        case 'nexi':
-        case 'pos':
-        case 'smac':
-          icon = 'assets/icons/icons8-card-32.png';
-          break;
-        case 'cash':
-          icon = 'assets/icons/icons8-soldi-32.png';
-          break;
-        default:
-          icon = 'assets/icons/icons8-card-32.png';
-      }
-
-      gridChildren.add(
-        _buildPaymentOption(
-          icon: icon,
-          name: method['description'] ?? 'Pagamento',
-          value: method['id'].toString(),
+    // Paga alla consegna: UN solo bottone per contanti e POS. Il metodo vero
+    // lo dichiara il driver alla porta (dove il POS e' il suo telefono, Tap
+    // to Pay): l'ordine resta "in attesa di incasso" fino ad allora. SMAC,
+    // se abilitata nel pannello, la vede solo il driver.
+    final offline = _paymentMethods
+        .where((m) => ['cash', 'pos', 'smac'].contains(m['slug']))
+        .toList();
+    if (offline.isNotEmpty) {
+      // L'ordine nasce come "contanti" (metodo 1) se abilitato: e' il
+      // segnaposto dell'incasso alla consegna, che il driver precisa dopo.
+      final preferito = offline.firstWhere(
+        (m) => m['slug'] == 'cash',
+        orElse: () => offline.first,
+      );
+      final voci = <String>[
+        if (offline.any((m) => m['slug'] == 'cash')) 'Contanti',
+        if (offline.any((m) => m['slug'] == 'pos')) 'POS',
+      ];
+      widgets.add(
+        _buildDeliveryOption(
+          value: preferito['id'].toString(),
+          sottotitolo: voci.isEmpty ? 'Alla consegna' : voci.join(' o '),
         ),
       );
     }
 
-    widgets.add(
-      GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 3.5,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        children: gridChildren,
-      ),
-    );
-
     return widgets;
   }
 
-  Widget _buildPaymentOption({
-    required String icon,
-    required String name,
+  /// Riga "Paga alla consegna": contanti o POS, lo decide il cliente alla
+  /// porta e lo registra il driver. Stesso disegno della riga Stripe.
+  Widget _buildDeliveryOption({
     required String value,
+    required String sottotitolo,
   }) {
-    final isSelected = _selectedPaymentId == value;
+    final isSelected = !_useOneClick && _selectedPaymentId == value;
     return InkWell(
+      borderRadius: BorderRadius.circular(10),
       onTap: () {
         setState(() {
           _selectedPaymentId = value;
@@ -3831,7 +3818,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor.withValues(alpha: 0.1)
@@ -3840,28 +3827,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             color: isSelected ? primaryColor : lightGrayColor,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             AppIcon(
-              icon,
-              size: 18,
+              'assets/icons/icons8-soldi-32.png',
+              size: 22,
               color: isSelected ? primaryColor : grayColor,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? primaryColor : darkColor,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Paga alla consegna',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? primaryColor : darkColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sottotitolo,
+                    style: const TextStyle(fontSize: 11, color: grayColor),
+                  ),
+                ],
               ),
+            ),
+            Icon(
+              isSelected ? Icons.check_circle : Icons.circle_outlined,
+              size: 20,
+              color: isSelected ? primaryColor : grayColor,
             ),
           ],
         ),

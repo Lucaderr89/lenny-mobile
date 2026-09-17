@@ -4,21 +4,34 @@ import '../config/app_colors.dart';
 import '../models/order.dart';
 import '../services/tap_to_pay_service.dart';
 
+/// Come e' finito l'incasso col POS, per chi ha aperto il foglio.
+enum EsitoPos {
+  /// Carta letta dal telefono: l'ordine e' gia' pagato con Stripe sul server.
+  pagato,
+
+  /// Il telefono non poteva fare da POS e il driver ha incassato con un POS
+  /// fisico: l'ordine va segnato "Bancomat/POS".
+  posFisico,
+
+  /// Il driver ha scelto di riscuotere in contanti.
+  contanti,
+}
+
 /// Il foglio del POS: il telefono del driver fa da lettore di carte.
 ///
 /// Tre momenti che il driver vede: "preparo il POS", "avvicina la carta" e
-/// l'esito. Quando riesce il foglio si chiude da solo e restituisce true: chi
+/// l'esito. Quando riesce il foglio si chiude da solo con EsitoPos.pagato: chi
 /// lo ha aperto conferma la consegna, e l'ordine e' gia' segnato pagato dal
-/// server.
+/// server. Se il telefono non fa da POS, riporta cosa ha fatto il driver.
 class FoglioTapToPay extends StatefulWidget {
   final Order order;
 
   const FoglioTapToPay({super.key, required this.order});
 
   /// Apre il foglio e parte subito: il driver ha appena toccato il pulsante,
-  /// non deve premere altro. Ritorna true se l'incasso e' riuscito.
-  static Future<bool?> apri(BuildContext context, {required Order order}) {
-    return showModalBottomSheet<bool>(
+  /// non deve premere altro. Ritorna come e' finito l'incasso, o null se annullato.
+  static Future<EsitoPos?> apri(BuildContext context, {required Order order}) {
+    return showModalBottomSheet<EsitoPos>(
       context: context,
       isDismissible: false,
       enableDrag: false,
@@ -54,12 +67,12 @@ class _FoglioTapToPayState extends State<FoglioTapToPay> {
     if (_servizio.stato.value.stato == TapToPayStato.riuscito) {
       Future.delayed(const Duration(milliseconds: 1400), () {
         if (!mounted) return;
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(EsitoPos.pagato);
       });
     }
   }
 
-  void _chiudi([bool? esito]) {
+  void _chiudi([EsitoPos? esito]) {
     _servizio.interrompi();
     if (mounted) Navigator.of(context).pop(esito);
   }
@@ -210,7 +223,12 @@ class _FoglioTapToPayState extends State<FoglioTapToPay> {
             _primario('Riprova', _riprova),
             const SizedBox(height: 10),
           ],
-          _secondario('Riscuoto in contanti', secondario, () => _chiudi(false)),
+          // Il telefono non fa da POS ma il driver ne ha uno fisico: l'ordine
+          // va segnato "Bancomat/POS", non contanti.
+          _secondario('Ho incassato con un POS fisico', secondario,
+              () => _chiudi(EsitoPos.posFisico)),
+          _secondario('Riscuoto in contanti', secondario,
+              () => _chiudi(EsitoPos.contanti)),
         ];
     }
   }

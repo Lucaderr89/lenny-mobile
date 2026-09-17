@@ -19,7 +19,6 @@ import '../services/tts_service.dart';
 import '../widgets/location_permission_dialog.dart';
 import '../widgets/azione_card.dart';
 import '../widgets/foglio_tap_to_pay.dart';
-import '../services/tap_to_pay_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
@@ -41,6 +40,22 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  /// Metodi di pagamento accesi nel pannello (slug). Servono al dialog
+  /// "Come ha pagato?": SMAC compare solo se abilitata. Finche' la risposta
+  /// non arriva si mostrano contanti e POS, che ci sono sempre.
+  Set<String> _metodiPagamentoAbilitati = {'cash', 'pos'};
+
+  Future<void> _caricaMetodiPagamento() async {
+    try {
+      final slugs = await _driverService.getPaymentMethods();
+      if (mounted && slugs.isNotEmpty) {
+        setState(() => _metodiPagamentoAbilitati = slugs);
+      }
+    } catch (_) {
+      // Si resta su contanti e POS: nessun errore in faccia al driver.
+    }
+  }
+
   final DriverSessionService _sessionService = DriverSessionService();
   final DriverService _driverService = DriverService();
   final ShiftService _shiftService = ShiftService();
@@ -71,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _caricaMetodiPagamento();
     WidgetsBinding.instance.addObserver(this);
     _loadData();
 
@@ -3814,7 +3830,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _showPaymentConfirmationDialog(Order order) async {
-    int selectedPaymentMethod = order.paymentMethodId;
+    int selectedPaymentMethod = [1, 2, 3].contains(order.paymentMethodId)
+        ? order.paymentMethodId
+        : 1;
+    if (selectedPaymentMethod == 3 &&
+        !_metodiPagamentoAbilitati.contains('smac')) {
+      selectedPaymentMethod = 1;
+    }
 
     final result = await showDialog<int>(
       context: context,
@@ -3862,36 +3884,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 () => setState(() => selectedPaymentMethod = 1),
               ),
               const SizedBox(height: 8),
+              // POS = il telefono del driver (Tap to Pay): confermando si
+              // apre il lettore. L'incasso passa da Stripe e l'ordine diventa
+              // "pagato online"; se il telefono non puo' fare da POS il foglio
+              // offre il POS fisico o i contanti.
               _buildPaymentMethodOption(
                 context,
                 2,
-                'Bancomat/POS',
-                Icons.credit_card,
+                'POS (carta sul mio telefono)',
+                Icons.contactless_outlined,
                 selectedPaymentMethod == 2,
                 () => setState(() => selectedPaymentMethod = 2),
               ),
-              const SizedBox(height: 8),
-              _buildPaymentMethodOption(
-                context,
-                3,
-                'SMAC',
-                Icons.mobile_friendly,
-                selectedPaymentMethod == 3,
-                () => setState(() => selectedPaymentMethod = 3),
-              ),
-              const SizedBox(height: 8),
-              // Tap to Pay: il telefono del driver fa da POS. L'incasso passa
-              // da Stripe e l'ordine diventa "pagato online" (metodo 4).
-              _buildPaymentMethodOption(
-                context,
-                TapToPayService.metodoStripe,
-                'Carta sul mio telefono',
-                Icons.contactless_outlined,
-                selectedPaymentMethod == TapToPayService.metodoStripe,
-                () => setState(
-                  () => selectedPaymentMethod = TapToPayService.metodoStripe,
+              // SMAC solo se e' abilitata nel pannello.
+              if (_metodiPagamentoAbilitati.contains('smac')) ...[
+                const SizedBox(height: 8),
+                _buildPaymentMethodOption(
+                  context,
+                  3,
+                  'SMAC',
+                  Icons.mobile_friendly,
+                  selectedPaymentMethod == 3,
+                  () => setState(() => selectedPaymentMethod = 3),
                 ),
-              ),
+              ],
             ],
           ),
           actions: [
@@ -3912,8 +3928,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               child: Text(
-                selectedPaymentMethod == TapToPayService.metodoStripe
-                    ? 'INCASSA CON LA CARTA'
+                selectedPaymentMethod == 2
+                    ? 'INCASSA COL POS'
                     : 'CONFERMA CONSEGNA',
                 style: const TextStyle(
                   color: Colors.white,
@@ -3928,13 +3944,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (result == null) return;
 
-    if (result == TapToPayService.metodoStripe) {
-      // Carta sul telefono: prima si incassa, poi si conferma la consegna.
-      // A incasso riuscito il server ha gia' segnato l'ordine pagato con
-      // Stripe, quindi qui non si passa nessun metodo di pagamento.
-      final pagato = await FoglioTapToPay.apri(context, order: order);
-      if (pagato == true && mounted) {
-        await _confirmOrderDeliveredWithPayment(order, null);
+    if (result == 2) {
+      // POS: prima si incassa col telefono, poi si conferma la consegna.
+      // A carta letta il server ha gia' segnato l'ordine pagato con Stripe
+      // (metodo 4): qui non si passa nessun metodo. Se il telefono non fa da
+      // POS, il foglio riporta cosa ha fatto il driver.
+      final esito = await FoglioTapToPay.apri(context, order: order);
+      if (!mounted || esito == null) return;
+      switch (esito) {
+        case EsitoPos.pagato:
+          await _confirmOrderDeliveredWithPayment(order, null);
+        case EsitoPos.posFisico:
+          await _confirmOrderDeliveredWithPayment(order, 2);
+        case EsitoPos.contanti:
+          await _confirmOrderDeliveredWithPayment(order, 1);
       }
       return;
     }

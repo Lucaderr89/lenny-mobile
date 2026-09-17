@@ -159,6 +159,26 @@ class DriverService {
     }
   }
 
+  /// Metodi di pagamento abilitati nel pannello (slug: cash, pos, smac,
+  /// stripe...). Alla consegna il driver dichiara come ha incassato e vede
+  /// solo le voci accese: SMAC compare solo se e' abilitata.
+  Future<Set<String>> getPaymentMethods() async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('${AppConstants.apiUrl}/driver/payment-methods'),
+      headers: headers,
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Errore metodi di pagamento: ${response.statusCode}');
+    }
+    final data = json.decode(response.body);
+    final list = (data['data']?['methods'] as List<dynamic>? ?? []);
+    return list
+        .map((m) => (m['slug'] ?? '').toString())
+        .where((s) => s.isNotEmpty)
+        .toSet();
+  }
+
   /// Ottiene i dettagli completi del driver
   Future<Map<String, dynamic>> getDriverDetails(int driverId) async {
     try {
