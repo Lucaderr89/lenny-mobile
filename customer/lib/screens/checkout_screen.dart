@@ -20,7 +20,9 @@ import '../providers/cart_provider.dart';
 import '../providers/location_provider.dart';
 import '../widgets/order_type_dialog.dart';
 import '../widgets/address_selector_bottom_sheet.dart';
+import 'dart:io' show Platform;
 import 'nexi_build_payment_screen.dart';
+import '../services/stripe_payment_service.dart';
 import 'restaurant_menu_screen.dart';
 import 'order_completed_screen.dart';
 import '../widgets/app_icon.dart';
@@ -1729,6 +1731,59 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  /// Pagamento con Stripe: foglio nativo (carta, Apple Pay, Google Pay, Link,
+  /// carta ricordata). L'ordine e' gia' creato in attesa di pagamento: a esito
+  /// positivo il server lo conferma e qui si mostra la STESSA conferma degli
+  /// altri metodi.
+  Future<void> _handleStripePayment(int orderId) async {
+    final servizio = StripePaymentService();
+    StripeSheetData dati;
+
+    // Preparazione (server + modulo nativo): un attimo di attesa visibile.
+    if (!mounted) return;
+    bool loadingVisible = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: primaryColor)),
+    );
+    try {
+      dati = await servizio.preparaFoglio(orderId);
+      await servizio.inizializzaFoglio(dati);
+    } catch (e) {
+      if (mounted && loadingVisible) {
+        Navigator.of(context).pop();
+        loadingVisible = false;
+      }
+      _pendingOrderId = orderId;
+      _showToast(e.toString().replaceFirst('Exception: ', ''));
+      return;
+    }
+    if (mounted && loadingVisible) {
+      Navigator.of(context).pop();
+      loadingVisible = false;
+    }
+    if (!mounted) return;
+
+    final esito = await servizio.presentaEConferma(orderId, dati);
+    if (!mounted) return;
+    if (esito.riuscito) {
+      _showOrderConfirmation(orderId);
+      return;
+    }
+
+    // Annullato o non riuscito: l'ordine resta in attesa e si riusa al
+    // prossimo tentativo, anche con un altro metodo, senza crearne un doppione.
+    _pendingOrderId = orderId;
+    _showToast(
+      esito.annullato
+          ? 'Pagamento annullato. Puoi riprovare o scegliere un altro metodo.'
+          : (esito.motivo ??
+                'Il pagamento non e\' andato a buon fine. Puoi riprovare o scegliere un altro metodo.'),
+    );
+  }
+
   /// Invito ad accedere o registrarsi mostrato quando un ospite prova a
   /// completare l'ordine. Il carrello e' persistente: dopo l'accesso lo ritrova.
   ///
@@ -1995,17 +2050,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // 🆕 ONECLICK: Determina se usare Nexi (OneClick o Build)
       bool isNexiPayment = _useOneClick;
+      bool isStripePayment = false;
       if (!isNexiPayment && _selectedPaymentId != null) {
         final selectedMethod = _paymentMethods.firstWhere(
           (method) => method['id'].toString() == _selectedPaymentId,
           orElse: () => {},
         );
         isNexiPayment = selectedMethod['slug'] == 'nexi';
+        isStripePayment = selectedMethod['slug'] == 'stripe';
       }
 
       if (isNexiPayment) {
         // 🆕 Pagamento Nexi: OneClick o XPay Build
         await _handleNexiPayment(orderId);
+      } else if (isStripePayment) {
+        // Stripe: foglio nativo con carta, Apple Pay, Google Pay
+        await _handleStripePayment(orderId);
       } else {
         // Pagamento offline (contanti, POS, ecc.) - mostra conferma diretta
         _showOrderConfirmation(orderId);
@@ -3684,10 +3744,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       widgets.add(const SizedBox(height: 12));
     }
 
+    // Stripe (carta, Apple Pay, Google Pay): riga intera in cima. E' la
+    // scelta piu' comoda e merita piu' spazio di una cella della griglia.
+    final stripeMethod = _paymentMethods.firstWhere(
+      (m) => m['slug'] == 'stripe',
+      orElse: () => {},
+    );
+    if (stripeMethod.isNotEmpty) {
+      widgets.add(_buildStripeOption(stripeMethod));
+      widgets.add(const SizedBox(height: 10));
+    }
+
     // Metodi di pagamento standard - GRIGLIA 2 COLONNE
     final gridChildren = <Widget>[];
 
     for (final method in _paymentMethods) {
+      if (method['slug'] == 'stripe') continue; // gia' mostrato sopra
       String icon;
       switch (method['slug']) {
         case 'stripe':
@@ -3773,6 +3845,75 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Riga dedicata a Stripe: carta, Apple Pay (iPhone) o Google Pay (Android)
+  /// nel foglio di pagamento nativo. Stesso linguaggio delle altre opzioni,
+  /// con un sottotitolo che dice cosa si trova dentro.
+  Widget _buildStripeOption(Map<String, dynamic> method) {
+    final value = method['id'].toString();
+    final isSelected = !_useOneClick && _selectedPaymentId == value;
+    final sottotitolo = Platform.isIOS
+        ? 'Carta o Apple Pay, in modo sicuro'
+        : 'Carta o Google Pay, in modo sicuro';
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        setState(() {
+          _selectedPaymentId = value;
+          _useOneClick = false;
+          _selectedCardAlias = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor.withValues(alpha: 0.1)
+              : lightGrayColor,
+          border: Border.all(
+            color: isSelected ? primaryColor : lightGrayColor,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            AppIcon(
+              'assets/icons/icons8-card-32.png',
+              size: 22,
+              color: isSelected ? primaryColor : grayColor,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Paga online',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? primaryColor : darkColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sottotitolo,
+                    style: const TextStyle(fontSize: 11, color: grayColor),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isSelected ? Icons.check_circle : Icons.circle_outlined,
+              size: 20,
+              color: isSelected ? primaryColor : grayColor,
             ),
           ],
         ),

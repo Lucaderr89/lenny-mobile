@@ -18,6 +18,8 @@ import '../services/overlay_bolla_service.dart';
 import '../services/tts_service.dart';
 import '../widgets/location_permission_dialog.dart';
 import '../widgets/azione_card.dart';
+import '../widgets/foglio_tap_to_pay.dart';
+import '../services/tap_to_pay_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
@@ -3877,6 +3879,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 selectedPaymentMethod == 3,
                 () => setState(() => selectedPaymentMethod = 3),
               ),
+              const SizedBox(height: 8),
+              // Tap to Pay: il telefono del driver fa da POS. L'incasso passa
+              // da Stripe e l'ordine diventa "pagato online" (metodo 4).
+              _buildPaymentMethodOption(
+                context,
+                TapToPayService.metodoStripe,
+                'Carta sul mio telefono',
+                Icons.contactless_outlined,
+                selectedPaymentMethod == TapToPayService.metodoStripe,
+                () => setState(
+                  () => selectedPaymentMethod = TapToPayService.metodoStripe,
+                ),
+              ),
             ],
           ),
           actions: [
@@ -3896,9 +3911,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   vertical: 12,
                 ),
               ),
-              child: const Text(
-                'CONFERMA CONSEGNA',
-                style: TextStyle(
+              child: Text(
+                selectedPaymentMethod == TapToPayService.metodoStripe
+                    ? 'INCASSA CON LA CARTA'
+                    : 'CONFERMA CONSEGNA',
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -3909,9 +3926,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
 
-    if (result != null) {
-      await _confirmOrderDeliveredWithPayment(order, result);
+    if (result == null) return;
+
+    if (result == TapToPayService.metodoStripe) {
+      // Carta sul telefono: prima si incassa, poi si conferma la consegna.
+      // A incasso riuscito il server ha gia' segnato l'ordine pagato con
+      // Stripe, quindi qui non si passa nessun metodo di pagamento.
+      final pagato = await FoglioTapToPay.apri(context, order: order);
+      if (pagato == true && mounted) {
+        await _confirmOrderDeliveredWithPayment(order, null);
+      }
+      return;
     }
+
+    await _confirmOrderDeliveredWithPayment(order, result);
   }
 
   Widget _buildPaymentMethodOption(

@@ -30,6 +30,13 @@
 	<string>Lenny Driver usa la fotocamera per aggiornare la tua foto profilo.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Lenny Driver necessita della posizione in background per tracciare le consegne anche a schermo spento.</string>
+	<!-- Lettore di carte (Tap to Pay): lo SDK di Stripe Terminal pretende queste
+	     frasi all'avvio anche se il lettore e' il telefono stesso. Senza, iOS
+	     chiude l'app all'istante (trappola gia' pagata sull'app lane). -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Lenny Driver usa il Bluetooth per collegare il lettore di carte quando incassi con la carta.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Lenny Driver usa il Bluetooth per collegare il lettore di carte quando incassi con la carta.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Lenny Driver necessita della posizione in background per tracciare le consegne anche a schermo spento.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

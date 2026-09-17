@@ -4,5 +4,19 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Apple Pay nel foglio di pagamento di Stripe. Il Merchant ID va creato
+	     sull'account sviluppatore Apple (Certificates, Identifiers, Merchant
+	     IDs), abilitato sull'App ID com.lenny.customer con la capability
+	     "Apple Pay", e il suo certificato di elaborazione pagamenti va caricato
+	     su Stripe (Impostazioni, Metodi di pagamento, Apple Pay). Finche' il
+	     Merchant ID non esiste, la firma della build fallisce: la procedura
+	     passo per passo sta in docs/stripe-pagamenti.md. -->
+	<!-- DA RIATTIVARE quando il Merchant ID esiste (e applePayPronto = true
+	     in StripePaymentService): fino ad allora la firma fallirebbe.
+	<key>com.apple.developer.in-app-payments</key>
+	<array>
+		<string>merchant.com.lenny.customer</string>
+	</array>
+	-->
 </dict>
 </plist>

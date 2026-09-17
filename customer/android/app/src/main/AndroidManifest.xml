@@ -32,6 +32,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Ritorno nell'app dai metodi di pagamento che passano da un'altra
+                 app o dal browser (conferma della banca, wallet): Stripe riapre
+                 Lenny con questo schema. Stesso valore in StripePaymentService. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="lennycustomer" android:host="stripe-redirect"/>
+            </intent-filter>
         </activity>
         <!-- FCM: colore e icona di default per le notifiche -->
         <meta-data

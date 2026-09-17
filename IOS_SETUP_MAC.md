@@ -144,6 +144,7 @@ Avviare le app e verificare che iOS mostri i dialog di autorizzazione per:
 
 ### Driver:
 - [ ] Posizione ("Sempre") → accettare — **critico per il tracking consegne**
+- [ ] Bluetooth (Tap to Pay): il permesso viene chiesto solo al primo "Carta sul mio telefono"; su iPhone il POS resta spento finche' Apple non concede l'entitlement (docs/stripe-pagamenti.md, par. 5.3)
 - [ ] Notifiche push → accettare
 - [ ] Audio in background → verificare che gli alert sonori arrivino anche a schermo spento
 - [ ] Fotocamera → accettare
@@ -166,9 +167,20 @@ pod repo update
 pod install
 ```
 
-### Errore: `Swift package manager` conflict
-Il progetto usa CocoaPods classico (`swift_package_manager_enabled: false`).
-Se Xcode propone di migrare a SPM → **rifiutare**.
+### Swift Package Manager: SERVE per l'app driver (Tap to Pay)
+Dal 17/09/2026 l'app driver usa `mek_stripe_terminal` (lettore di carte Stripe),
+che dalla versione 5.7 e' distribuito SOLO come pacchetto Swift: con i soli pod
+la compilazione si ferma su `module mek_stripe_terminal not found`.
+Sul Mac, una volta sola:
+
+```bash
+flutter config --enable-swift-package-manager
+cd mobile/driver && flutter pub get && flutter build ios --config-only
+cd ios && pod install
+```
+
+Poi si compila come sempre (`flutter build ios` / Xcode). L'app cliente non ha
+bisogno di SPM ma non ne e' disturbata. Dettagli in `docs/stripe-pagamenti.md`.
 
 ### Errore: `No such module 'Firebase'`
 ```bash

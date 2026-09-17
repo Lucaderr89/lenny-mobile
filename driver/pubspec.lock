@@ -765,6 +765,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  mek_stripe_terminal:
+    dependency: "direct main"
+    description:
+      name: mek_stripe_terminal
+      sha256: f074f2611fa36c0fd4f412975c7e7ae8594d89390a78ac3e8799bf872c6a54de
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.7.3"
   meta:
     dependency: transitive
     description:

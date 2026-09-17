@@ -38,7 +38,11 @@ android {
         applicationId = "com.lenny.drivers"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Android 8 (26) e non il minimo di Flutter: il Tap to Pay di Stripe
+        // (stripeterminal-taptopay) non accetta meno, e forzarlo con
+        // overrideLibrary farebbe cadere l'app proprio all'incasso.
+        // Esclude i telefoni fermi ad Android 7 (2016) o precedenti.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

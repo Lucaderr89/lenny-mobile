@@ -2,7 +2,7 @@ name: driver
 description: "Lenny Driver App - App per driver di consegna"
 publish_to: 'none'
 
-version: 1.0.1+4
+version: 1.0.2+5
 
 environment:
   sdk: ^3.10.0
@@ -69,6 +69,13 @@ dependencies:
   
   # Audio alerts
   audioplayers: ^6.1.0
+
+  # Tap to Pay: il telefono del driver fa da lettore di carte (Stripe
+  # Terminal). Stripe non pubblica un SDK Terminal per Flutter: questo e' il
+  # plugin della comunita' usato anche nell'app lane. Su iOS dalla 5.7 e' SOLO
+  # Swift Package Manager: sul Mac serve `flutter config
+  # --enable-swift-package-manager` prima di compilare (vedi IOS_SETUP_MAC.md).
+  mek_stripe_terminal: ^5.7.3
 
 dev_dependencies:
   flutter_test:

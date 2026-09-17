@@ -74,6 +74,11 @@ android {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Dichiarata qui e non lasciata alle dipendenze altrui: i temi dell'app
+    // discendono da Theme.AppCompat (serve al foglio di pagamento di Stripe) e
+    // se un domani il plugin che la portava di rimbalzo sparisse, la
+    // compilazione fallirebbe con un errore che non parla di pagamenti.
+    implementation("androidx.appcompat:appcompat:1.7.0")
 }
 
 flutter {
