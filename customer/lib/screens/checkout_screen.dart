@@ -87,6 +87,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Ordine pending da aggiornare (se pagamento fallisce)
   int? _pendingOrderId;
 
+  /// Impronta (piatti, data, orario, totale) dell'ordine rimasto in attesa
+  /// dopo un pagamento annullato o rifiutato: si riusa quell'ordine SOLO se
+  /// il cliente non ha cambiato niente nel frattempo. Altrimenti se ne crea
+  /// uno nuovo e il server elimina i precedenti in attesa.
+  String? _pendingOrderFingerprint;
+
   // Data e ora selezionate
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
@@ -1970,6 +1976,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final serviceFee = _serviceFeeAmount;
       final total = _finalTotal;
 
+      // Cosa il cliente sta ordinando adesso: se dopo un pagamento annullato
+      // ha toccato piatti, quantita', orario o totale, l'ordine in attesa non
+      // corrisponde piu' e non va riusato.
+      final impronta =
+          '$dateOrder|$slotStartTime|$_deliveryType|${total.toStringAsFixed(2)}|${json.encode(items)}';
+      if (_pendingOrderId != null && _pendingOrderFingerprint != impronta) {
+        _pendingOrderId = null;
+        _pendingOrderFingerprint = null;
+      }
+
       // Verifica se esiste un ordine pending da aggiornare
       int orderId;
       if (_pendingOrderId != null) {
@@ -2040,6 +2056,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
 
         orderId = result['data']['order_id'];
+        _pendingOrderFingerprint = impronta;
       }
 
       // Chiudi loading
