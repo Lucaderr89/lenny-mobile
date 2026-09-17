@@ -1,50 +1,7 @@
-class SavedCard {
-  final String cardAlias; // numeroContratto Nexi
-  final String brand; // VISA, MasterCard
-  final String last4; // Ultime 4 cifre
-  final String? expiry; // MM/YY
-  final bool isDefault;
-
-  SavedCard({
-    required this.cardAlias,
-    required this.brand,
-    required this.last4,
-    this.expiry,
-    required this.isDefault,
-  });
-
-  factory SavedCard.fromJson(Map<String, dynamic> json) {
-    return SavedCard(
-      cardAlias: json['numeroContratto'] as String,
-      brand: json['brand'] as String,
-      last4: json['last4'] as String,
-      expiry: json['expiry'] as String?,
-      isDefault: json['is_default'] == true || json['is_default'] == 1,
-    );
-  }
-
-  /// Ottiene icona del circuito carta
-  String get brandIcon {
-    switch (brand.toUpperCase()) {
-      case 'VISA':
-        return '💳'; // Puoi sostituire con asset immagine
-      case 'MASTERCARD':
-        return '💳';
-      case 'MAESTRO':
-        return '💳';
-      case 'AMEX':
-      case 'AMERICAN EXPRESS':
-        return '💳';
-      default:
-        return '💳';
-    }
-  }
-
-  /// Formatta numero carta con asterischi
-  String get maskedNumber {
-    return '**** **** **** $last4';
-  }
-}
+/// Credito Lenny nel wallet (rimborsi, premi fedelta', regali).
+///
+/// Stava in saved_card.dart insieme alle carte Nexi; le carte ora le gestisce
+/// il foglio di pagamento di Stripe e quel file non esiste piu'.
 
 class WalletCredit {
   final int id;

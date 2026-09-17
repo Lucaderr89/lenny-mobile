@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models/saved_card.dart';
+import '../models/wallet_credit.dart';
 import '../services/wallet_service.dart';
 import '../config/app_colors.dart';
 import '../widgets/app_icon.dart';
 
-/// Screen Wallet - Gestione carte salvate e crediti Lenny
+/// Screen Wallet - Crediti Lenny.
+///
+/// Le carte non stanno qui: le gestisce il foglio di pagamento di Stripe, che
+/// le propone gia' salvate al pagamento successivo e permette di rimuoverle.
+/// La vecchia sezione "Carte salvate" parlava solo con Nexi (alias, carta
+/// predefinita) ed e' stata tolta il 17/09/2026 insieme al passaggio a Stripe.
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
@@ -15,11 +20,9 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   final WalletService _service = WalletService();
 
-  List<SavedCard> _cards = [];
   double _totalCredits = 0.0;
   List<WalletCredit> _credits = [];
 
-  bool _isLoadingCards = false;
   bool _isLoadingCredits = false;
 
   @override
@@ -29,25 +32,7 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Future<void> _loadWalletData() async {
-    await Future.wait([_loadCards(), _loadCredits()]);
-  }
-
-  Future<void> _loadCards() async {
-    setState(() {
-      _isLoadingCards = true;
-    });
-
-    try {
-      final cards = await _service.getSavedCards();
-      setState(() {
-        _cards = cards;
-        _isLoadingCards = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingCards = false;
-      });
-    }
+    await _loadCredits();
   }
 
   Future<void> _loadCredits() async {
@@ -66,55 +51,6 @@ class _WalletScreenState extends State<WalletScreen> {
       setState(() {
         _isLoadingCredits = false;
       });
-    }
-  }
-
-  Future<void> _setDefaultCard(SavedCard card) async {
-    final success = await _service.setDefaultCard(card.cardAlias);
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Carta predefinita aggiornata')),
-      );
-      _loadCards();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Errore aggiornamento carta')),
-      );
-    }
-  }
-
-  Future<void> _removeCard(SavedCard card) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rimuovi carta'),
-        content: Text('Vuoi rimuovere la carta ${card.maskedNumber}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Rimuovi'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      final success = await _service.removeSavedCard();
-      if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Carta rimossa')));
-        _loadCards();
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Errore rimozione carta')));
-      }
     }
   }
 
@@ -167,11 +103,6 @@ class _WalletScreenState extends State<WalletScreen> {
               children: [
                 // Sezione Crediti Lenny
                 _buildCreditsSection(),
-
-                const SizedBox(height: 24),
-
-                // Sezione Carte Salvate
-                _buildCardsSection(),
               ],
             ),
           ),
@@ -495,181 +426,5 @@ class _WalletScreenState extends State<WalletScreen> {
       'dic',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
-  }
-
-  Widget _buildCardsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            AppIcon(
-              'assets/icons/icons8-portafoglio-32.png',
-              width: 20,
-              height: 20,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Carte Salvate',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const Spacer(),
-            if (_isLoadingCards)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        if (_cards.isEmpty && !_isLoadingCards)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.lightGray,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(Icons.credit_card_off, size: 48, color: AppColors.gray),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Nessuna carta salvata',
-                    style: TextStyle(fontSize: 14, color: AppColors.gray),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Aggiungi una carta al primo pagamento',
-                    style: TextStyle(fontSize: 12, color: AppColors.gray),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-        if (_cards.isNotEmpty) ..._cards.map((card) => _buildCardItem(card)),
-      ],
-    );
-  }
-
-  Widget _buildCardItem(SavedCard card) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: card.isDefault ? AppColors.primaryDark : AppColors.lightGray,
-          width: card.isDefault ? 2 : 1,
-        ),
-        boxShadow: [
-          if (card.isDefault)
-            BoxShadow(
-              color: AppColors.primaryDark.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AppIcon(
-                  'assets/icons/icons8-card-32.png',
-                  width: 24,
-                  height: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        card.brand,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        card.maskedNumber,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.gray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (card.isDefault)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryDark,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'Predefinita',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (card.expiry != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Scadenza: ${card.expiry}',
-                style: TextStyle(fontSize: 12, color: AppColors.gray),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (!card.isDefault)
-                  TextButton.icon(
-                    onPressed: () => _setDefaultCard(card),
-                    icon: const Icon(Icons.check_circle_outline, size: 16),
-                    label: const Text('Imposta predefinita'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primaryDark,
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () => _removeCard(card),
-                  icon: const AppIcon(
-                    'assets/icons_svg/lenny-cestino.svg',
-                    size: 16,
-                  ),
-                  label: const Text('Rimuovi'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
