@@ -27,6 +27,25 @@ import FirebaseCore
     // Non duplica l'inizializzazione fatta da Dart in main(): firebase_core
     // riusa l'app di default se la trova gia' configurata.
     FirebaseApp.configure()
+
+    // Badge dell'icona: si azzera OGNI volta che l'app torna in primo piano.
+    //
+    // Con il ciclo di vita "a scene" (UIApplicationSceneManifest nel
+    // Info.plist) iOS NON chiama piu' applicationDidBecomeActive sull'app
+    // delegate: e' la scena a ricevere gli eventi. L'azzeramento che stava li'
+    // non girava mai, e il "1" restava sull'icona anche dopo aver letto e
+    // cancellato le notifiche (visto sull'iPhone il 17/09/2026). Le notifiche
+    // di sistema qui sotto arrivano invece in tutti e due i cicli di vita.
+    let centro = NotificationCenter.default
+    centro.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+      AppDelegate.azzeraBadge()
+    }
+    if #available(iOS 13.0, *) {
+      centro.addObserver(forName: UIScene.didActivateNotification, object: nil, queue: .main) { _ in
+        AppDelegate.azzeraBadge()
+      }
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -63,14 +82,18 @@ import FirebaseCore
   // Il badge sull'icona lo accende il server: ogni push porta aps.badge = 1.
   // iOS non lo toglie da solo - resta finche' non e' l'app ad azzerarlo, anche
   // dopo che la notifica e' stata letta. Segnarla come letta dentro l'app non
-  // c'entra: quello e' un contatore locale, questo e' di sistema, e senza
-  // questo azzeramento il "1" restava sull'icona per sempre.
-  override func applicationDidBecomeActive(_ application: UIApplication) {
-    super.applicationDidBecomeActive(application)
+  // c'entra: quello e' un contatore locale, questo e' di sistema.
+  static func azzeraBadge() {
     if #available(iOS 16.0, *) {
       UNUserNotificationCenter.current().setBadgeCount(0)
     } else {
-      application.applicationIconBadgeNumber = 0
+      UIApplication.shared.applicationIconBadgeNumber = 0
     }
+  }
+
+  // Tenuto per il ciclo di vita senza scene (se un giorno il manifest sparisse).
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    AppDelegate.azzeraBadge()
   }
 }
