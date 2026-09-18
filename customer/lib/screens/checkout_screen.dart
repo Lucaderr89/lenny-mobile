@@ -127,6 +127,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   // Costi - valori caricati dinamicamente dal backend
   double _serviceFeePercent = 3.5; // Default, verrà sovrascritto
+  double _serviceFeeTakeoutPercent = 3.5; // Ritiro in negozio (dal server)
 
   // 🆕 Delivery fee dinamico basato su delivery_zone_roles
   DeliveryFeeResult? _deliveryFeeResult;
@@ -231,9 +232,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (data['success'] == true && data['data'] != null) {
           final newValue = (data['data']['service_fee_percent'] ?? 3.5)
               .toDouble();
+          final takeoutValue =
+              (data['data']['service_fee_takeout_percent'] ?? newValue)
+                  .toDouble();
           print('✅ [CHECKOUT] Service fee ricevuto dal server: $newValue%');
           setState(() {
             _serviceFeePercent = newValue;
+            _serviceFeeTakeoutPercent = takeoutValue;
           });
           print('✅ [CHECKOUT] Service fee impostato a: $_serviceFeePercent%');
         } else {
@@ -683,21 +688,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   double get _totalBeforeDiscount {
-    // Calcola il service fee come percentuale del subtotale
-    double serviceFeeAmount = _currentSubtotal * (_serviceFeePercent / 100);
-
-    double total = _currentSubtotal + serviceFeeAmount;
-    if (_deliveryType == 'delivery') {
-      // 🆕 Usa delivery fee dinamico
-      double deliveryFee = _deliveryFeeResult?.finalDeliveryFee ?? 0.0;
-      total += deliveryFee;
-    }
-    return total;
+    return _currentSubtotal + _serviceFeeAmount + _deliveryFeeAmount;
   }
 
-  // Getter per il costo servizio calcolato
+  /// Percentuale in vigore per questo ordine: consegna o ritiro (dal server).
+  double get _serviceFeePercentInUse =>
+      _deliveryType == 'delivery' ? _serviceFeePercent : _serviceFeeTakeoutPercent;
+
+  /// Costo servizio con la regola del server e di lenny-app: percentuale su
+  /// piatti + consegna, arrotondata PER ECCESSO ai 10 centesimi. Deve dare lo
+  /// stesso numero di OrderPricingService (ServiceFeeService), altrimenti il
+  /// totale mostrato qui non coincide con quello addebitato dal server.
   double get _serviceFeeAmount {
-    return _currentSubtotal * (_serviceFeePercent / 100);
+    final base = _currentSubtotal + _deliveryFeeAmount;
+    final pct = _serviceFeePercentInUse;
+    if (base <= 0 || pct <= 0) return 0.0;
+    // Decimi di euro arrotondati a 4 decimali prima del ceil: 20,00 x 3,5% = 0,70
+    // non deve diventare 0,80 per un residuo binario.
+    final tenths = ((base * pct / 100 * 10 * 10000).round() / 10000 - 1e-7).ceil();
+    return tenths / 10;
   }
 
   // 🆕 Getter per il costo consegna (gestisce consegna gratuita)
