@@ -68,6 +68,13 @@ android {
                 logger.warn("key.properties assente: release firmata DEBUG, buona solo per prove locali")
                 signingConfigs.getByName("debug")
             }
+            // Senza questa riga R8 non legge proguard-rules.pro e la
+            // compilazione si ferma sulle classi di Stripe che non includiamo
+            // (push provisioning). Vedi i commenti dentro quel file.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
