@@ -39,7 +39,7 @@ class OrderService {
     String? phone,
     String? allergents,
     required List<Map<String, dynamic>> items,
-    required int paymentMethodId,
+    int? paymentMethodId, // null = totale coperto dai crediti
     required double subtotal,
     required double deliveryFee,
     required double total,
@@ -80,7 +80,7 @@ class OrderService {
         if (allergents != null && allergents.isNotEmpty)
           'allergents': allergents,
         'items': items,
-        'payment_method_id': paymentMethodId,
+        if (paymentMethodId != null) 'payment_method_id': paymentMethodId,
         'subtotal': subtotal,
         'delivery_fee': deliveryFee,
         'total': total,

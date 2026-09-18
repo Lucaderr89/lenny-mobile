@@ -744,6 +744,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return total;
   }
 
+  /// I crediti del wallet coprono tutto il totale: nessun pagamento da
+  /// chiedere, ne' carta ne' alla consegna, e l'ordine nasce gia' pagato.
+  /// Il server lo ricontrolla con il saldo reale: se nel frattempo resta
+  /// qualcosa da pagare risponde con un errore chiaro e si rimostrano i metodi.
+  bool get _copertoDaiCrediti =>
+      _useAppCredits && _calculatedCreditsToUse > 0 && _finalTotal <= 0;
+  }
+
   /// 🆕 CONTROLLA SE IL CLIENTE HA UNA CARTA SALVATA (OneClick)
   Future<void> _checkSavedCard() async {
     try {
@@ -1858,8 +1866,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         return;
       }
 
-      // Metodo di pagamento (validazione sincrona, prima del loading)
-      if (!_useOneClick &&
+      // Metodo di pagamento (validazione sincrona, prima del loading).
+      // Con i crediti che coprono tutto non serve nessun metodo.
+      if (!_copertoDaiCrediti &&
+          !_useOneClick &&
           (_selectedPaymentId == null || _selectedPaymentId!.isEmpty)) {
         _showToast('Seleziona un metodo di pagamento');
         return;
@@ -1962,8 +1972,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       // 🆕 ONECLICK: Determina payment method ID
-      int paymentMethodId;
-      if (_useOneClick) {
+      int? paymentMethodId;
+      if (_copertoDaiCrediti) {
+        // Crediti per tutto il totale: niente metodo, l'ordine nasce pagato
+        paymentMethodId = null;
+      } else if (_useOneClick) {
         // OneClick: usa metodo Nexi (trovalo dinamicamente)
         final nexiMethod = _paymentMethods.firstWhere(
           (m) => m['slug'] == 'nexi',
@@ -1974,7 +1987,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         paymentMethodId = int.tryParse(_selectedPaymentId!) ?? 0;
       }
 
-      if (paymentMethodId == 0) {
+      if (!_copertoDaiCrediti && (paymentMethodId ?? 0) == 0) {
         throw Exception('Metodo di pagamento non valido');
       }
 
@@ -1995,9 +2008,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _pendingOrderFingerprint = null;
       }
 
-      // Verifica se esiste un ordine pending da aggiornare
+      // Verifica se esiste un ordine pending da aggiornare. Senza metodo
+      // (crediti per tutto) si crea un ordine nuovo: quello in attesa lo
+      // pulisce il server.
       int orderId;
-      if (_pendingOrderId != null) {
+      if (_pendingOrderId != null && paymentMethodId != null) {
         // Aggiorna ordine esistente con nuovo metodo di pagamento
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString(AppConstants.keyApiToken);
@@ -2075,9 +2090,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       // 🆕 ONECLICK: Determina se usare Nexi (OneClick o Build)
-      bool isNexiPayment = _useOneClick;
+      bool isNexiPayment = !_copertoDaiCrediti && _useOneClick;
       bool isStripePayment = false;
-      if (!isNexiPayment && _selectedPaymentId != null) {
+      if (!_copertoDaiCrediti && !isNexiPayment && _selectedPaymentId != null) {
         final selectedMethod = _paymentMethods.firstWhere(
           (method) => method['id'].toString() == _selectedPaymentId,
           orElse: () => {},
@@ -3722,6 +3737,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Widget> _buildPaymentOptions() {
     if (_isLoading) {
       return [const Center(child: CircularProgressIndicator())];
+    }
+
+    // I crediti coprono tutto: nessun metodo da scegliere, nemmeno la carta
+    // salvata. Il cliente conferma e basta (regola del 18/09/2026).
+    if (_copertoDaiCrediti) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: lightGrayColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.account_balance_wallet_outlined,
+                color: primaryColor,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Totale coperto dai tuoi crediti Lenny: nessun pagamento richiesto.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ];
     }
 
     if (_paymentMethods.isEmpty) {

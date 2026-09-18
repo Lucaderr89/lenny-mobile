@@ -94,12 +94,24 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
     }
   }
 
+  String _euro(double v) => v.toStringAsFixed(2).replaceAll('.', ',');
+
   Future<void> _cancelOrder(LiveOrder order) async {
+    // Ordine gia' pagato (carta e/o crediti): il server, a conferma data,
+    // rimette tutto nel wallet come credito. Il cliente lo sa PRIMA di dire si'.
+    final rimborso = order.refundOnCancel;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Annulla ordine'),
-        content: Text('Vuoi annullare l\'ordine #${order.id}?'),
+        content: Text(
+          rimborso > 0
+              ? 'L\'ordine #${order.id} era già pagato.\n\n'
+                    'Se lo annulli, ${_euro(rimborso)} € tornano subito nel tuo '
+                    'wallet come credito Lenny, pronti per il prossimo ordine.\n\n'
+                    'Vuoi annullare?'
+              : 'Vuoi annullare l\'ordine #${order.id}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -118,9 +130,16 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       final success = await _service.cancelOrder(order.id);
 
       if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Ordine annullato')));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              rimborso > 0
+                  ? 'Ordine annullato: ${_euro(rimborso)} € aggiunti al tuo wallet'
+                  : 'Ordine annullato',
+            ),
+          ),
+        );
         _loadOrders();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

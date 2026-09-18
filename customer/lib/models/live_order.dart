@@ -30,6 +30,11 @@ class LiveOrder {
   final List<LiveOrderItem> items;
   final bool canCancel; // Calcolato dal backend
 
+  /// Euro che tornano nel wallet come credito se il cliente annulla adesso
+  /// (carta e/o crediti gia' dati). Lo calcola il server; 0 = niente da
+  /// restituire, per esempio un ordine da pagare alla consegna.
+  final double refundOnCancel;
+
   LiveOrder({
     required this.id,
     required this.createdAt,
@@ -61,6 +66,7 @@ class LiveOrder {
     this.driverPhone,
     required this.items,
     this.canCancel = false, // Default false
+    this.refundOnCancel = 0.0,
   });
 
   factory LiveOrder.fromJson(Map<String, dynamic> json) {
@@ -105,6 +111,8 @@ class LiveOrder {
               .toList() ??
           [],
       canCancel: json['can_cancel'] == true || json['can_cancel'] == 1,
+      refundOnCancel:
+          double.tryParse((json['refund_on_cancel'] ?? 0).toString()) ?? 0.0,
     );
   }
 
