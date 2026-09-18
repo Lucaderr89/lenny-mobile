@@ -750,7 +750,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   /// qualcosa da pagare risponde con un errore chiaro e si rimostrano i metodi.
   bool get _copertoDaiCrediti =>
       _useAppCredits && _calculatedCreditsToUse > 0 && _finalTotal <= 0;
-  }
 
   /// 🆕 CONTROLLA SE IL CLIENTE HA UNA CARTA SALVATA (OneClick)
   Future<void> _checkSavedCard() async {
