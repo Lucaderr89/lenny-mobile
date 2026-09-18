@@ -135,6 +135,7 @@ class _RistorantiTabState extends State<RistorantiTab>
           r.actualMinOrder = src.actualMinOrder;
           r.actualFreeOver = src.actualFreeOver;
           r.freeDelivery = src.freeDelivery;
+          r.roadKm = src.roadKm;
         }
       }
     }
@@ -272,6 +273,7 @@ class _RistorantiTabState extends State<RistorantiTab>
         restaurant.actualMinOrder = null;
         restaurant.actualFreeOver = null;
         restaurant.freeDelivery = false;
+        restaurant.roadKm = null;
       }
     }
 
@@ -313,6 +315,11 @@ class _RistorantiTabState extends State<RistorantiTab>
               : null;
 
           restaurant.freeDelivery = rule['free_delivery'] as bool? ?? false;
+
+          // Km di STRADA dal ristorante alla posizione (calcolati dal server con
+          // GraphHopper): sono la stessa misura che decide il prezzo. Il badge
+          // sulla card mostra questi, non piu' la linea d'aria calcolata qui.
+          restaurant.roadKm = (rule['road_km'] as num?)?.toDouble();
         }
       }
     } catch (e) {
@@ -369,6 +376,9 @@ class _RistorantiTabState extends State<RistorantiTab>
 
     if (userLat != null && userLng != null) {
       double distanza(Restaurant r) {
+        // Km di strada dal server quando ci sono, cosi' l'ordine della lista
+        // coincide con il badge; linea d'aria solo finche' non sono arrivati.
+        if (r.roadKm != null) return r.roadKm!;
         if (r.latitude == null ||
             r.longitude == null ||
             r.latitude == 0 ||
@@ -501,10 +511,15 @@ class _RistorantiTabState extends State<RistorantiTab>
         ? '€${restaurant.actualDeliveryFee!.toStringAsFixed(2)}'
         : null;
 
+    // Badge distanza: km di STRADA dal server (stessa misura del prezzo).
+    // La linea d'aria resta solo come attesa, prima che arrivino le regole:
+    // da Cailungo Giulietti KM0 e' a 1,2 km in aria ma 3,7 km di strada.
     String? distanceText;
     final userLat = locationProvider.activeLatitude;
     final userLng = locationProvider.activeLongitude;
-    if (userLat != null &&
+    if (restaurant.roadKm != null) {
+      distanceText = '${restaurant.roadKm!.toStringAsFixed(1)} km';
+    } else if (userLat != null &&
         userLng != null &&
         restaurant.latitude != null &&
         restaurant.longitude != null &&
@@ -1051,7 +1066,10 @@ class _RistorantiTabState extends State<RistorantiTab>
     if (showDistance) {
       final userLat = locationProvider.activeLatitude;
       final userLng = locationProvider.activeLongitude;
-      if (userLat != null &&
+      if (restaurant.roadKm != null) {
+        // km di strada dal server: stessa misura del prezzo
+        distance = restaurant.roadKm;
+      } else if (userLat != null &&
           userLng != null &&
           restaurant.latitude != null &&
           restaurant.longitude != null &&

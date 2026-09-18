@@ -475,9 +475,14 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   /// Distanza in km tra l'indirizzo attivo del cliente e il ristorante.
+  /// Prima i km di STRADA calcolati dal server con la regola di consegna
+  /// (stessa misura del prezzo); se non ci sono ancora, la linea d'aria.
   /// Null se mancano le coordinate di uno dei due: in quel caso il
   /// chip distanza non viene mostrato.
   double? _distanceKm() {
+    final roadKm = (_deliveryRule?['road_km'] as num?)?.toDouble();
+    if (roadKm != null) return roadKm;
+
     final location = Provider.of<LocationProvider>(context, listen: false);
     final lat1 = location.activeLatitude;
     final lon1 = location.activeLongitude;

@@ -1080,11 +1080,14 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       listen: false,
     );
 
-    // Calcola distanza
+    // Distanza: km di STRADA dal server quando ci sono (stessa misura del
+    // prezzo di consegna), linea d'aria solo come ripiego.
     String? distanceText;
     final userLat = locationProvider.activeLatitude;
     final userLng = locationProvider.activeLongitude;
-    if (userLat != null &&
+    if (widget.restaurant.roadKm != null) {
+      distanceText = '${widget.restaurant.roadKm!.toStringAsFixed(1)}km';
+    } else if (userLat != null &&
         userLng != null &&
         widget.restaurant.latitude != null &&
         widget.restaurant.longitude != null &&

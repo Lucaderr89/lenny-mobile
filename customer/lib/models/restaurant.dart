@@ -25,6 +25,10 @@ class Restaurant {
   double? actualMinOrder;
   double? actualFreeOver;
   bool? freeDelivery;
+  // Km di STRADA dal ristorante alla posizione del cliente, calcolati dal server
+  // (GraphHopper) insieme al costo: e' la misura che decide il prezzo, quindi e'
+  // quella da mostrare. Null finche' le regole di consegna non sono caricate.
+  double? roadKm;
 
   // 🆕 Info disponibilità oraria
   bool? isOpenNow; // true = aperto ora, false = chiuso ora
@@ -57,6 +61,7 @@ class Restaurant {
     this.actualMinOrder,
     this.actualFreeOver,
     this.freeDelivery,
+    this.roadKm,
     this.isOpenNow,
     this.opensAt,
     this.closesAt,

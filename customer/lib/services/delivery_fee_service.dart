@@ -90,6 +90,8 @@ class DeliveryFeeResult {
   final String? matchedRule;
   final String? ruleType;
   final String? reason; // Solo se non deliverable
+  /// Km di strada ristorante -> cliente (un decimale), calcolati dal server.
+  final double? roadKm;
 
   DeliveryFeeResult({
     required this.isDeliverable,
@@ -102,6 +104,7 @@ class DeliveryFeeResult {
     this.matchedRule,
     this.ruleType,
     this.reason,
+    this.roadKm,
   });
 
   factory DeliveryFeeResult.fromJson(Map<String, dynamic> json) {
@@ -118,6 +121,7 @@ class DeliveryFeeResult {
       matchedRule: json['matched_rule'] as String?,
       ruleType: json['rule_type'] as String?,
       reason: json['reason'] as String?,
+      roadKm: (json['road_km'] as num?)?.toDouble(),
     );
   }
 
