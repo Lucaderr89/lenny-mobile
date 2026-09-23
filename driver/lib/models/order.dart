@@ -72,6 +72,11 @@ class Order {
   /// dell'app).
   final int reassignedCount;
 
+  /// Il POS sul telefono (Tap to Pay) si puo' usare per questo ordine: si' per
+  /// food e partner, NO per COAL, i cui clienti pagano a COAL. Lo decide il
+  /// server; se non lo manda (versione vecchia) vale si', come prima.
+  final bool tapToPay;
+
   Order({
     required this.id,
     required this.dateOrder,
@@ -105,6 +110,7 @@ class Order {
     this.routePlanRaw,
     this.routeSteps = const [],
     this.reassignedCount = 0,
+    this.tapToPay = true,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -179,6 +185,7 @@ class Order {
       routeSteps: steps,
       reassignedCount:
           int.tryParse(json['reassigned_count']?.toString() ?? '0') ?? 0,
+      tapToPay: json['tap_to_pay']?.toString() != '0',
     );
   }
 
@@ -249,6 +256,7 @@ class Order {
       'payment_method_id': paymentMethodId,
       'payment_method': paymentMethod,
       'payment_method_description': paymentMethodDescription,
+      'tap_to_pay': tapToPay ? 1 : 0,
       'products': products.map((p) => p.toJson()).toList(),
     };
   }

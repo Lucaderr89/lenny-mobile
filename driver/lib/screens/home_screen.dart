@@ -3911,12 +3911,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // POS = il telefono del driver (Tap to Pay): confermando si
               // apre il lettore. L'incasso passa da Stripe e l'ordine diventa
               // "pagato online"; se il telefono non puo' fare da POS il foglio
-              // offre il POS fisico o i contanti.
+              // offre il POS fisico o i contanti. Per gli ordini COAL il
+              // telefono non si usa (pagano a COAL): POS = POS fisico.
               _buildPaymentMethodOption(
                 context,
                 2,
-                'POS (carta sul mio telefono)',
-                Icons.contactless_outlined,
+                order.tapToPay ? 'POS (carta sul mio telefono)' : 'POS',
+                order.tapToPay ? Icons.contactless_outlined : Icons.credit_card,
                 selectedPaymentMethod == 2,
                 () => setState(() => selectedPaymentMethod = 2),
               ),
@@ -3979,7 +3980,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               child: Text(
-                selectedPaymentMethod == 2
+                selectedPaymentMethod == 2 && order.tapToPay
                     ? 'INCASSA COL POS'
                     : 'CONFERMA CONSEGNA',
                 style: const TextStyle(
@@ -4000,7 +4001,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    if (result == 2) {
+    if (result == 2 && order.tapToPay) {
       // POS: prima si incassa col telefono, poi si conferma la consegna.
       // A carta letta il server ha gia' segnato l'ordine pagato con Stripe
       // (metodo 4): qui non si passa nessun metodo. Se il telefono non fa da

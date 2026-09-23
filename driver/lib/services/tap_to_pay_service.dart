@@ -127,12 +127,20 @@ class TapToPayService {
     );
   }
 
-  Future<IncassoPreparato> preparaIncasso(int orderId) async {
+  /// [orderSource]: 'food' o 'partner'. Il server cerca l'ordine nella
+  /// tabella giusta: i numeri degli ordini partner non sono quelli dei food.
+  Future<IncassoPreparato> preparaIncasso(
+    int orderId, {
+    String orderSource = 'food',
+  }) async {
     final r = await http
         .post(
           Uri.parse('${AppConstants.apiUrl}/stripe/tap-to-pay'),
           headers: await _headers(),
-          body: json.encode(<String, dynamic>{'order_id': orderId}),
+          body: json.encode(<String, dynamic>{
+            'order_id': orderId,
+            'order_source': orderSource,
+          }),
         )
         .timeout(const Duration(seconds: 30));
     final d = _decodifica(r);
@@ -157,7 +165,11 @@ class TapToPayService {
   /// La carta e' stata letta: il server verifica su Stripe e segna l'ordine
   /// pagato. Qualche tentativo, perche' i soldi sono gia' incassati e un
   /// singhiozzo di rete non deve lasciare l'ordine "da riscuotere".
-  Future<void> confermaIncasso(int orderId, String paymentIntentId) async {
+  Future<void> confermaIncasso(
+    int orderId,
+    String paymentIntentId, {
+    String orderSource = 'food',
+  }) async {
     Object? ultimo;
     for (var tentativo = 0; tentativo < 4; tentativo++) {
       try {
@@ -168,6 +180,7 @@ class TapToPayService {
               body: json.encode(<String, dynamic>{
                 'order_id': orderId,
                 'payment_intent_id': paymentIntentId,
+                'order_source': orderSource,
               }),
             )
             .timeout(const Duration(seconds: 30));
@@ -192,7 +205,7 @@ class TapToPayService {
   // Lettore
   // ------------------------------------------------------------------
 
-  Future<void> incassa(int orderId) async {
+  Future<void> incassa(int orderId, {String orderSource = 'food'}) async {
     if (inCorso) return;
     stato.value = const TapToPayState(TapToPayStato.verifica);
 
@@ -242,7 +255,7 @@ class TapToPayService {
       }
 
       // 5. Il pagamento lo prepara il server: importo e ordine li decide lui.
-      final incasso = await preparaIncasso(orderId);
+      final incasso = await preparaIncasso(orderId, orderSource: orderSource);
       final intent =
           await Terminal.instance.retrievePaymentIntent(incasso.clientSecret);
 
@@ -254,7 +267,11 @@ class TapToPayService {
 
       // 7. Il server registra l'incasso sull'ordine.
       stato.value = const TapToPayState(TapToPayStato.conferma);
-      await confermaIncasso(orderId, incasso.paymentIntentId);
+      await confermaIncasso(
+        orderId,
+        incasso.paymentIntentId,
+        orderSource: orderSource,
+      );
 
       stato.value = const TapToPayState(TapToPayStato.riuscito);
     } on TerminalException catch (e) {

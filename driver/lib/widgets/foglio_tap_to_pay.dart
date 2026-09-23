@@ -55,7 +55,7 @@ class _FoglioTapToPayState extends State<FoglioTapToPay> {
   void initState() {
     super.initState();
     _servizio.stato.addListener(_suCambioStato);
-    _servizio.incassa(widget.order.id);
+    _servizio.incassa(widget.order.id, orderSource: widget.order.orderSource);
   }
 
   @override
@@ -83,7 +83,7 @@ class _FoglioTapToPayState extends State<FoglioTapToPay> {
 
   void _riprova() {
     _servizio.azzera();
-    _servizio.incassa(widget.order.id);
+    _servizio.incassa(widget.order.id, orderSource: widget.order.orderSource);
   }
 
   @override
