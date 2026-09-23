@@ -83,10 +83,15 @@ class DriverService {
     }
   }
 
-  /// Conferma la consegna di un ordine
+  /// Conferma la consegna di un ordine.
+  ///
+  /// [paymentMethodId]: come ha incassato il driver (contanti, POS, SMAC).
+  /// [notaNonIncassato]: il driver ha consegnato SENZA incassare; e' il motivo
+  /// (obbligatorio, max 250 caratteri) e l'ordine diventa "non incassato".
   Future<void> confirmOrderDelivered(
     int orderId, {
     int? paymentMethodId,
+    String? notaNonIncassato,
     String orderSource = 'food',
   }) async {
     try {
@@ -97,7 +102,10 @@ class DriverService {
         'order_id': orderId,
         'order_source': orderSource,
       };
-      if (paymentMethodId != null) {
+      if (notaNonIncassato != null) {
+        body['payment_status'] = 'not_paid';
+        body['not_paid_note'] = notaNonIncassato;
+      } else if (paymentMethodId != null) {
         body['payment_method_id'] = paymentMethodId;
       }
 
@@ -114,14 +122,36 @@ class DriverService {
       print('🔵 Response Body: ${response.body}');
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(
-          'Errore conferma consegna: Status ${response.statusCode}',
+        // Il server spiega il perche' (es. "ordine gia' pagato"): va detto
+        // al driver cosi' com'e', non come codice di stato.
+        throw _RifiutoServer(
+          _messaggioErrore(response.body) ??
+              'Errore conferma consegna: Status ${response.statusCode}',
         );
       }
+    } on _RifiutoServer {
+      rethrow;
     } catch (e) {
       print('❌ Exception in confirmOrderDelivered: $e');
       throw Exception('Errore connessione: $e');
     }
+  }
+
+  /// Il messaggio d'errore dentro una risposta dell'API, se c'e'.
+  String? _messaggioErrore(String corpo) {
+    try {
+      final dati = json.decode(corpo);
+      if (dati is Map) {
+        final err = dati['error'];
+        if (err is Map && (err['message'] ?? '').toString().isNotEmpty) {
+          return err['message'].toString();
+        }
+        if ((dati['message'] ?? '').toString().isNotEmpty) {
+          return dati['message'].toString();
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Aggiorna lo stato di un ordine partner (picking_up | in_delivery).
@@ -326,4 +356,14 @@ class DriverService {
       throw Exception('Errore connessione: $e');
     }
   }
+}
+
+/// Il server ha rifiutato la richiesta e ha spiegato perche': il testo va
+/// mostrato al driver cosi' com'e'.
+class _RifiutoServer implements Exception {
+  final String messaggio;
+  const _RifiutoServer(this.messaggio);
+
+  @override
+  String toString() => messaggio;
 }

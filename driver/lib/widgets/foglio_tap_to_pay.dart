@@ -15,6 +15,10 @@ enum EsitoPos {
 
   /// Il driver ha scelto di riscuotere in contanti.
   contanti,
+
+  /// Il POS non va e il cliente non ha altro modo di pagare: il driver
+  /// consegna senza incassare (chi ha aperto il foglio chiede il motivo).
+  nonIncassato,
 }
 
 /// Il foglio del POS: il telefono del driver fa da lettore di carte.
@@ -229,6 +233,10 @@ class _FoglioTapToPayState extends State<FoglioTapToPay> {
               () => _chiudi(EsitoPos.posFisico)),
           _secondario('Riscuoto in contanti', secondario,
               () => _chiudi(EsitoPos.contanti)),
+          // Il caso piu' comune del mancato incasso: POS giu' e niente
+          // contanti. La consegna si chiude "non incassato", con il motivo.
+          _secondario('Non incassato', AppColors.danger,
+              () => _chiudi(EsitoPos.nonIncassato)),
         ];
     }
   }

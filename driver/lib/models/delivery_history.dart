@@ -12,6 +12,12 @@ class DeliveryHistory {
   final double total;
   final String? paymentMethod;
   final String? paymentMethodDescription;
+
+  /// Stato del pagamento: 'not_paid' = consegnato senza incassare
+  final String? paymentStatus;
+
+  /// Motivo scritto dal driver quando non ha incassato
+  final String? notPaidNote;
   final String assignedAt;
   final String? pickedUpAt;
   final String deliveredAt;
@@ -31,6 +37,8 @@ class DeliveryHistory {
     required this.total,
     this.paymentMethod,
     this.paymentMethodDescription,
+    this.paymentStatus,
+    this.notPaidNote,
     required this.assignedAt,
     this.pickedUpAt,
     required this.deliveredAt,
@@ -52,6 +60,8 @@ class DeliveryHistory {
       total: double.tryParse(json['total'].toString()) ?? 0.0,
       paymentMethod: json['payment_method']?.toString(),
       paymentMethodDescription: json['payment_method_description']?.toString(),
+      paymentStatus: json['payment_status']?.toString(),
+      notPaidNote: json['not_paid_note']?.toString(),
       assignedAt: json['assigned_at'] ?? '',
       pickedUpAt: json['picked_up_at'],
       deliveredAt: json['delivered_at'] ?? '',
@@ -64,6 +74,26 @@ class DeliveryHistory {
                 .toList()
           : [],
     );
+  }
+
+  /// Consegnato senza incassare
+  bool get nonIncassato => paymentStatus == 'not_paid';
+
+  /// Nome del metodo da mostrare: il server manda lo slug (cash, pos...).
+  String get etichettaMetodo {
+    switch (paymentMethod) {
+      case 'cash':
+        return 'Contanti';
+      case 'pos':
+        return 'POS';
+      case 'smac':
+        return 'SMAC';
+      case 'stripe':
+      case 'nexi':
+        return 'Online';
+      default:
+        return paymentMethodDescription ?? paymentMethod?.toUpperCase() ?? '';
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -80,6 +110,8 @@ class DeliveryHistory {
       'total': total,
       'payment_method': paymentMethod,
       'payment_method_description': paymentMethodDescription,
+      'payment_status': paymentStatus,
+      'not_paid_note': notPaidNote,
       'assigned_at': assignedAt,
       'picked_up_at': pickedUpAt,
       'delivered_at': deliveredAt,

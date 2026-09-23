@@ -721,7 +721,37 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                   Icons.euro,
                   '€${delivery.total.toStringAsFixed(2)}',
                 ),
-                if (delivery.paymentMethod != null)
+                if (delivery.nonIncassato)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.money_off,
+                          size: 14,
+                          color: AppColors.danger,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'NON INCASSATO',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (delivery.paymentMethod != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -745,11 +775,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          delivery.paymentMethod == 'cash'
-                              ? 'Contanti'
-                              : delivery.paymentMethod == 'pos'
-                              ? 'POS'
-                              : delivery.paymentMethod?.toUpperCase() ?? '',
+                          delivery.etichettaMetodo,
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -997,10 +1023,37 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Pagamento: ${delivery.paymentMethodDescription ?? delivery.paymentMethod}',
+                      'Pagamento: ${delivery.etichettaMetodo}',
                       style: TextStyle(
                         fontSize: 14,
                         color: context.cTesto,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // Consegnato senza incassare: stato e motivo scritto dal driver
+              if (delivery.nonIncassato) ...[
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.money_off,
+                      size: 16,
+                      color: AppColors.danger,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'NON INCASSATO'
+                        '${(delivery.notPaidNote ?? '').isNotEmpty ? ': ${delivery.notPaidNote}' : ''}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.danger,
+                        ),
                       ),
                     ),
                   ],

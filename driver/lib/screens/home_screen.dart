@@ -19,6 +19,7 @@ import '../services/tts_service.dart';
 import '../widgets/location_permission_dialog.dart';
 import '../widgets/azione_card.dart';
 import '../widgets/foglio_tap_to_pay.dart';
+import '../widgets/dialog_non_incassato.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
@@ -3485,19 +3486,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _confirmOrderDeliveredWithPayment(
     Order order,
-    int? paymentMethodId,
-  ) async {
+    int? paymentMethodId, {
+    String? notaNonIncassato,
+  }) async {
     try {
       await _driverService.confirmOrderDelivered(
         order.id,
         paymentMethodId: paymentMethodId,
+        notaNonIncassato: notaNonIncassato,
         orderSource: order.orderSource,
       );
-      _showToast('Consegna confermata! 🎉', isError: false);
+      _showToast(
+        notaNonIncassato != null
+            ? 'Consegna registrata come NON INCASSATA'
+            : 'Consegna confermata!',
+        isError: false,
+      );
       await _loadOrders();
     } catch (e) {
       _showToast('Errore: $e', isError: true);
     }
+  }
+
+  /// Consegnato senza incassare: si chiede il motivo (obbligatorio) e solo
+  /// allora si conferma. Se il driver ci ripensa l'ordine resta in consegna.
+  Future<void> _confermaNonIncassato(Order order) async {
+    final motivo = await DialogNonIncassato.chiedi(context, order: order);
+    if (!mounted || motivo == null) return;
+    await _confirmOrderDeliveredWithPayment(
+      order,
+      null,
+      notaNonIncassato: motivo,
+    );
   }
 
   /// NAVIGA dalla card: apre la NAVIGAZIONE INTEGRATA (mappa in-app con
@@ -3829,6 +3849,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Valore restituito dal dialog "Come ha pagato?" quando il driver preme
+  /// NON INCASSATO (gli altri valori sono gli id dei metodi, tutti positivi).
+  static const int _esitoNonIncassato = -1;
+
   Future<void> _showPaymentConfirmationDialog(Order order) async {
     int selectedPaymentMethod = [1, 2, 3].contains(order.paymentMethodId)
         ? order.paymentMethodId
@@ -3908,6 +3932,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   () => setState(() => selectedPaymentMethod = 3),
                 ),
               ],
+              // Consegnato ma il cliente non ha pagato: staccato dai metodi,
+              // perche' non e' un modo di pagare. Chiede poi il motivo.
+              const SizedBox(height: 16),
+              Divider(color: context.cBordo),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      Navigator.of(context).pop(_esitoNonIncassato),
+                  icon: const Icon(Icons.money_off, color: AppColors.danger),
+                  label: const Text(
+                    'NON INCASSATO',
+                    style: TextStyle(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.danger),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           actions: [
@@ -3944,6 +3995,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (result == null) return;
 
+    if (result == _esitoNonIncassato) {
+      await _confermaNonIncassato(order);
+      return;
+    }
+
     if (result == 2) {
       // POS: prima si incassa col telefono, poi si conferma la consegna.
       // A carta letta il server ha gia' segnato l'ordine pagato con Stripe
@@ -3958,6 +4014,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           await _confirmOrderDeliveredWithPayment(order, 2);
         case EsitoPos.contanti:
           await _confirmOrderDeliveredWithPayment(order, 1);
+        case EsitoPos.nonIncassato:
+          await _confermaNonIncassato(order);
       }
       return;
     }
