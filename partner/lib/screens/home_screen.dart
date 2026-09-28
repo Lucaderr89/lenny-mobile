@@ -9,6 +9,7 @@ import '../models/order.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
 import '../services/printer_service.dart';
+import '../services/traccia_stampe_service.dart';
 import '../services/fcm_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'menu_preview_screen.dart';
@@ -59,6 +60,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   /// Problema stampante rilevato dal controllo periodico (null = tutto ok).
   String? _problemaStampante;
+
+  /// Il dispositivo ha la stampante Sunmi integrata (null = non ancora
+  /// verificato). Viaggia con la traccia comande: distingue il tablet del
+  /// locale da un telefono con la stessa app.
+  bool? _stampanteIntegrata;
 
   /// Rete ballerina: quando un giro di polling fallisce, il ristorante deve
   /// sapere che la lista che guarda potrebbe essere vecchia.
@@ -152,8 +158,11 @@ class _HomeScreenState extends State<HomeScreen>
           prefs.getString(AppConstants.keyRestaurantName) ?? 'Ristorante';
       _autoPrintEnabled = prefs.getBool(_chiaveAutoPrint) ?? true;
 
-      await _loadOrders();
+      // Stampante prima degli ordini: la prima richiesta porta gia' al
+      // server lo stato vero della stampante, non un "tutto ok" di default.
+      _stampanteIntegrata = await _printerService.isPrinterAvailable();
       await _controllaStampante();
+      await _loadOrders();
     } catch (e) {
       debugPrint('Errore caricamento dati: $e');
     } finally {
@@ -231,7 +240,13 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadOrders() async {
     try {
-      final orders = await _orderService.getOrders();
+      final orders = await _orderService.getOrders(
+        stampaAutomatica: _autoPrintEnabled,
+        problemaStampante: _problemaStampante,
+        stampanteIntegrata: _stampanteIntegrata,
+      );
+      // La rete c'e': partono gli esiti di stampa rimasti in coda.
+      unawaited(TracciaStampe.instance.invia());
       if (!mounted) return;
 
       await _caricaMemoriaStampe(orders);
@@ -290,12 +305,19 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   /// Stampa gli ordini uno alla volta, segnando l'esito.
-  Future<void> _stampaInSequenza(List<Order> ordini) async {
+  Future<void> _stampaInSequenza(
+    List<Order> ordini, {
+    OrigineStampa origine = OrigineStampa.automatica,
+  }) async {
     if (_stampaInCorso) return;
     _stampaInCorso = true;
     try {
       for (final order in ordini) {
-        final esito = await _printerService.printOrder(order, _restaurantName);
+        final esito = await _printerService.printOrder(
+          order,
+          _restaurantName,
+          origine: origine,
+        );
         if (esito.ok) {
           _stampati.add(order.id);
           _stampeFallite.remove(order.id);
@@ -353,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   /// Stampa manuale di un ordine (dalla card o dopo un fallimento).
   Future<void> _ristampa(Order order) async {
-    await _stampaInSequenza([order]);
+    await _stampaInSequenza([order], origine: OrigineStampa.manuale);
     if (!mounted) return;
     final fallita = _stampeFallite[order.id];
     _showMessage(
@@ -1623,7 +1645,11 @@ class _OrderDetailsSheet extends StatelessWidget {
     );
 
     try {
-      final esito = await printerService.printOrder(order, restaurantName);
+      final esito = await printerService.printOrder(
+        order,
+        restaurantName,
+        origine: OrigineStampa.manuale,
+      );
 
       if (context.mounted) {
         Navigator.pop(context); // Chiudi loading

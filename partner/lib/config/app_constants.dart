@@ -11,6 +11,8 @@ class AppConstants {
   static const String confirmPickupEndpoint =
       '$apiUrl/partner/orders/{id}/confirm-pickup';
   static const String orderHistoryEndpoint = '$apiUrl/partner/orders/history';
+  // Traccia comande: esiti di stampa (riuscita / fallita con il motivo)
+  static const String printLogEndpoint = '$apiUrl/partner/print-log';
   static const String profileEndpoint = '$apiUrl/partner/profile';
   static const String closureCreateEndpoint = '$apiUrl/partner/closures/create';
   static const String closureDeleteEndpoint =

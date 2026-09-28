@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 import '../services/printer_service.dart';
+import '../services/traccia_stampe_service.dart';
 
 /// Schermata storico ordini (consegnati e annullati)
 class OrderHistoryScreen extends StatefulWidget {
@@ -728,7 +729,11 @@ class _HistoryOrderSheet extends StatelessWidget {
     );
     try {
       final restaurantName = await _getRestaurantName();
-      final esito = await printer.printOrder(order, restaurantName);
+      final esito = await printer.printOrder(
+        order,
+        restaurantName,
+        origine: OrigineStampa.storico,
+      );
       if (context.mounted) {
         Navigator.pop(context);
         Navigator.pop(context);

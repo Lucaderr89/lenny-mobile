@@ -1,5 +1,6 @@
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 import '../models/order.dart';
+import 'traccia_stampe_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 
@@ -147,7 +148,29 @@ class PrinterService {
     }
   }
 
-  Future<EsitoStampa> printOrder(Order order, String restaurantName) async {
+  /// Stampa la comanda di un ordine e ne manda l'esito alla traccia sul
+  /// server. [origine] e' obbligatoria apposta: ogni nuovo punto da cui si
+  /// stampa deve dichiarare da dove parte, cosi' nessuna stampa sfugge.
+  Future<EsitoStampa> printOrder(
+    Order order,
+    String restaurantName, {
+    required OrigineStampa origine,
+  }) async {
+    final esito = await _stampaComanda(order, restaurantName);
+    await TracciaStampe.instance.registra(
+      orderId: order.id,
+      ok: esito.ok,
+      motivo: esito.motivo,
+      origine: origine,
+    );
+    return esito;
+  }
+
+  /// Quanto si osserva la stampante dopo il taglio, e ogni quanto.
+  static const Duration _osservazioneDopoStampa = Duration(seconds: 3);
+  static const Duration _passoOsservazione = Duration(milliseconds: 500);
+
+  Future<EsitoStampa> _stampaComanda(Order order, String restaurantName) async {
     try {
       // Verifica disponibilità stampante
       final available = await isPrinterAvailable();
@@ -443,6 +466,21 @@ class PrinterService {
 
       // Taglia la carta
       await SunmiPrinter.cutPaper();
+
+      // Il servizio di stampa Sunmi accoda i comandi e risponde subito "ok":
+      // la carta che finisce a meta' comanda non produce errori qui sopra.
+      // Si osserva la stampante mentre la comanda esce: se in quel tempo
+      // finisce la carta o si apre il coperchio, la comanda non si da' per
+      // stampata e resta da ristampare. Meglio una comanda doppia che una
+      // mezza comanda segnata come uscita.
+      final fine = DateTime.now().add(_osservazioneDopoStampa);
+      while (DateTime.now().isBefore(fine)) {
+        await Future.delayed(_passoOsservazione);
+        final problemaDopo = await problemaCorrente();
+        if (problemaDopo != null) {
+          return EsitoStampa.fallita('Comanda interrotta. $problemaDopo');
+        }
+      }
 
       return const EsitoStampa.riuscita();
     } catch (e) {

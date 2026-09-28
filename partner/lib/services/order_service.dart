@@ -4,11 +4,28 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import '../models/order.dart';
+import 'traccia_stampe_service.dart';
 
 /// Service per gestire gli ordini del partner
 class OrderService {
-  /// Ottiene gli ordini del ristorante
-  Future<List<Order>> getOrders() async {
+  // Stato del collegamento, per la traccia comande: il server ricostruisce
+  // i periodi in cui il tablet non si e' fatto sentire, e la causa gliela
+  // dice l'app alla prima richiesta riuscita. Statico perche' riguarda il
+  // processo, non la schermata: la home puo' essere ricreata.
+  static bool _giaCollegato = false;
+  static DateTime? _inizioProblemiRete;
+
+  /// Ottiene gli ordini del ristorante.
+  ///
+  /// Con la richiesta viaggia lo stato del tablet (stampa automatica,
+  /// stampante, rete): e' il "battito" che il server conserva per la
+  /// traccia comande. Senza rete il tablet non puo' avvisare nessuno: lo
+  /// dice alla prima richiesta che torna a passare.
+  Future<List<Order>> getOrders({
+    bool? stampaAutomatica,
+    String? problemaStampante,
+    bool? stampanteIntegrata,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(AppConstants.keyApiToken);
@@ -17,9 +34,28 @@ class OrderService {
         throw Exception('Token non trovato');
       }
 
+      final inizioProblemi = _inizioProblemiRete;
+      final statoTablet = <String, String>{
+        'device': await TracciaStampe.instance.dispositivo(),
+        if (stampaAutomatica != null)
+          'autoprint': stampaAutomatica ? '1' : '0',
+        if (stampanteIntegrata != null)
+          'con_stampante': stampanteIntegrata ? '1' : '0',
+        // Vuoto = stampante pronta
+        'stampante': problemaStampante ?? '',
+        if (!_giaCollegato) 'avvio': '1',
+        if (inizioProblemi != null)
+          'senza_rete': DateTime.now()
+              .difference(inizioProblemi)
+              .inSeconds
+              .toString(),
+      };
+
       final response = await http
           .get(
-            Uri.parse(AppConstants.ordersEndpoint),
+            Uri.parse(
+              AppConstants.ordersEndpoint,
+            ).replace(queryParameters: statoTablet),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
@@ -28,6 +64,8 @@ class OrderService {
           .timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       if (response.statusCode == 200) {
+        _giaCollegato = true;
+        _inizioProblemiRete = null;
         final data = jsonDecode(response.body);
 
         // Gli ordini possono essere in data.orders o data.data.orders
@@ -46,6 +84,7 @@ class OrderService {
       }
     } catch (e) {
       debugPrint('Errore getOrders: $e');
+      _inizioProblemiRete ??= DateTime.now();
       rethrow;
     }
   }
