@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../services/auth_service.dart';
@@ -16,6 +17,8 @@ import '../services/availability_service.dart';
 import '../services/delivery_fee_service.dart';
 import '../services/nominatim_service.dart';
 import '../services/wallet_service.dart';
+import '../services/preventivo_service.dart';
+import '../models/preventivo.dart';
 import '../providers/cart_provider.dart';
 import '../providers/location_provider.dart';
 import '../widgets/order_type_dialog.dart';
@@ -32,6 +35,10 @@ import '../widgets/gate_account_sheet.dart';
 /// Checkout Screen - Basato sul prototipo 9-checkout.html
 class CheckoutScreen extends StatefulWidget {
   final Restaurant restaurant;
+
+  /// Righe all'apertura del checkout. Ordine e preventivo usano invece le
+  /// righe ATTUALI del CartProvider: una riga tolta qui dentro sparisce dal
+  /// provider, non da questa lista.
   final List<CartItem> cartItems;
   final double subtotal;
 
@@ -132,6 +139,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // 🆕 Delivery fee dinamico basato su delivery_zone_roles
   DeliveryFeeResult? _deliveryFeeResult;
 
+  // Preventivo del server per il carrello e le scelte di ADESSO: sono gli
+  // importi che verranno scritti sull'ordine e addebitati, quindi il
+  // riepilogo mostra questi. null = non ancora arrivato, o superato da una
+  // modifica: nel frattempo vale il calcolo locale (stessa formula).
+  Preventivo? _preventivo;
+  // Numero dell'ultima richiesta: una risposta che arriva dopo una modifica
+  // successiva si scarta.
+  int _preventivoRichiesta = 0;
+  Timer? _preventivoTimer;
+
   @override
   void initState() {
     super.initState();
@@ -199,6 +216,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // 🆕 CARICA COSTO CONSEGNA DINAMICO (dopo aver caricato indirizzi)
       await _loadDeliveryFee();
+
+      // Importi del server gia' al primo disegno del riepilogo
+      await _aggiornaPreventivo();
     } catch (e) {
       print('Errore caricamento dati checkout: $e');
       _showToast('Errore nel caricamento dei dati');
@@ -673,18 +693,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   void dispose() {
+    _preventivoTimer?.cancel();
     _couponController.dispose();
     _instructionsController.dispose();
     super.dispose();
   }
 
-  // Calcola subtotale dinamicamente dai cartItems
+  /// Righe ATTUALI del carrello: quelle tolte qui dentro non ci sono piu'.
+  List<CartItem> get _righeCarrello =>
+      Provider.of<CartProvider>(context, listen: false).items;
+
+  // Subtotale: quello del preventivo, altrimenti dai cartItems
   double get _currentSubtotal {
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final preventivo = _preventivo;
+    if (preventivo != null) return preventivo.subtotale;
     // item.totalPrice include gli extra e le scelte a pagamento: usarlo qui
     // allinea il subtotale del checkout a quello del carrello e a quello che
     // ricalcola il server.
-    return cartProvider.items.fold(0.0, (sum, item) => sum + item.totalPrice);
+    return _righeCarrello.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
 
   double get _totalBeforeDiscount {
@@ -700,6 +726,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   /// stesso numero di OrderPricingService (ServiceFeeService), altrimenti il
   /// totale mostrato qui non coincide con quello addebitato dal server.
   double get _serviceFeeAmount {
+    final preventivo = _preventivo;
+    if (preventivo != null) return preventivo.costoServizio;
     final base = _currentSubtotal + _deliveryFeeAmount;
     final pct = _serviceFeePercentInUse;
     if (base <= 0 || pct <= 0) return 0.0;
@@ -712,17 +740,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // 🆕 Getter per il costo consegna (gestisce consegna gratuita)
   double get _deliveryFeeAmount {
     if (_deliveryType != 'delivery') return 0.0;
-    return _deliveryFeeResult?.finalDeliveryFee ?? 0.0;
+    return _preventivo?.costoConsegna ??
+        _deliveryFeeResult?.finalDeliveryFee ??
+        0.0;
   }
 
   // 🆕 Verifica se la consegna è gratuita per ordine >= soglia
   bool get _isFreeDelivery {
+    // Il preventivo segue le quantita' attuali; il calcolo della consegna
+    // e' fermo al subtotale di quando e' stato chiesto.
+    final preventivo = _preventivo;
+    if (preventivo != null) {
+      return _deliveryType == 'delivery' &&
+          preventivo.costoConsegna <= 0 &&
+          (_deliveryFeeResult?.deliveryFee ?? 0) > 0;
+    }
     return _deliveryFeeResult?.freeDelivery ?? false;
   }
 
   /// Calcola i crediti che verranno effettivamente usati
   double get _calculatedCreditsToUse {
     if (!_useAppCredits || _availableCredits <= 0) return 0.0;
+
+    // Il server li limita al saldo reale e a quanto resta da pagare
+    final preventivo = _preventivo;
+    if (preventivo != null) return preventivo.creditiUsati;
 
     // Calcola il totale prima dei crediti
     final totalBeforeCredits = _totalBeforeDiscount - _couponDiscount;
@@ -734,6 +776,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   double get _finalTotal {
+    // Il totale del preventivo e' quello che verra' addebitato
+    final preventivo = _preventivo;
+    if (preventivo != null) return preventivo.totale;
+
     double total = _totalBeforeDiscount - _couponDiscount;
 
     // Applica crediti Lenny se attivi
@@ -875,6 +921,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           _deliveryFeeResult = null;
         });
       }
+      _ricalcolaPreventivo();
     } else {
       debugPrint('⚠️ [CHANGE ORDER TYPE] Nessun cambio tipo ordine');
     }
@@ -1137,6 +1184,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _deliveryType = 'pickup';
       _deliveryFeeResult = null;
     });
+    _ricalcolaPreventivo();
   }
 
   void _showToast(String message) {
@@ -1158,6 +1206,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (index >= 0) {
       cartProvider.updateQuantity(index, item.quantity + 1);
       setState(() {}); // Aggiorna UI
+      _ricalcolaPreventivo();
     }
   }
 
@@ -1169,6 +1218,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (item.quantity > 1) {
         cartProvider.updateQuantity(index, item.quantity - 1);
         setState(() {}); // Aggiorna UI
+        _ricalcolaPreventivo();
       } else {
         // Se quantità è 1, rimuovi completamente
         cartProvider.removeItem(index);
@@ -1183,6 +1233,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         } else {
           setState(() {}); // Aggiorna UI
+          _ricalcolaPreventivo();
         }
       }
     }
@@ -1604,6 +1655,108 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  /// Dove consegnare, nel formato del preventivo: gli stessi dati che
+  /// partono con l'ordine, cosi' il server calcola gli stessi importi.
+  /// Null per il ritiro.
+  Map<String, dynamic>? _consegnaPerPreventivo() {
+    if (_deliveryType != 'delivery') return null;
+
+    if (_deliveryMode == 'saved_address' && _selectedSavedAddress?.id != null) {
+      return {
+        'source': 'saved_address',
+        'saved_address_id': _selectedSavedAddress!.id,
+      };
+    }
+
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    return {
+      'source': 'current_position',
+      'latitude': locationProvider.activeLatitude,
+      'longitude': locationProvider.activeLongitude,
+      'postal_code': locationProvider.activePostalCode,
+    };
+  }
+
+  /// Chiede un nuovo preventivo dopo una modifica (quantita', consegna o
+  /// ritiro, indirizzo, coupon, crediti). Fino alla risposta il riepilogo
+  /// torna al calcolo locale: mai importi di un carrello che non c'e' piu'.
+  void _ricalcolaPreventivo() {
+    _preventivoTimer?.cancel();
+    _preventivoRichiesta++; // una risposta ancora in viaggio e' superata
+    if (mounted && _preventivo != null) {
+      setState(() => _preventivo = null);
+    }
+    _preventivoTimer = Timer(
+      const Duration(milliseconds: 300),
+      _aggiornaPreventivo,
+    );
+  }
+
+  /// Preventivo per lo stato attuale del checkout. Errore = resta il calcolo
+  /// locale: l'ordine lo prezza comunque il server.
+  Future<void> _aggiornaPreventivo() async {
+    _preventivoTimer?.cancel();
+    if (!mounted) return;
+
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final righe = List<CartItem>.from(cartProvider.items);
+    if (righe.isEmpty) return;
+
+    final richiesta = ++_preventivoRichiesta;
+    final coupon = _couponApplied
+        ? _couponController.text.trim().toUpperCase()
+        : null;
+
+    try {
+      final preventivo = await PreventivoService().richiedi(
+        restaurantId: widget.restaurant.id,
+        pickupDelivery: _deliveryType,
+        items: righe.map((riga) => riga.perApi()).toList(),
+        delivery: _consegnaPerPreventivo(),
+        couponCode: coupon,
+        appCreditsUsed: _useAppCredits ? _availableCredits : 0.0,
+      );
+      if (!mounted || preventivo == null) return;
+      if (richiesta != _preventivoRichiesta) return;
+
+      // Il coupon non vale piu' (es. il suo minimo non e' piu' raggiunto
+      // dopo aver tolto un piatto): si toglie, e il cliente sa perche' lo
+      // sconto sparisce. Il totale del preventivo e' gia' senza sconto.
+      if (coupon != null && !preventivo.couponValido) {
+        setState(() {
+          _couponApplied = false;
+          _couponDiscount = 0.0;
+        });
+        _showToast(preventivo.erroreCoupon ?? 'Il coupon non è più valido');
+      }
+
+      _applicaPreventivo(preventivo, righe, cartProvider);
+    } catch (e) {
+      debugPrint('[PREVENTIVO] Non disponibile, resta il calcolo locale: $e');
+    }
+  }
+
+  /// Preventivo arrivato per [righe]: righe del carrello al prezzo del
+  /// server (senza avvisi) e riepilogo con i suoi importi.
+  void _applicaPreventivo(
+    Preventivo preventivo,
+    List<CartItem> righe,
+    CartProvider cartProvider,
+  ) {
+    cartProvider.riallineaDaPreventivo(righe, preventivo);
+
+    // Con righe rifiutate dal server il preventivo non descrive il carrello:
+    // resta il calcolo locale, e alla conferma il cliente vede cosa non va.
+    final valido = preventivo.righeValide;
+    setState(() {
+      _preventivo = valido ? preventivo : null;
+      if (_couponApplied && valido) _couponDiscount = preventivo.sconto;
+    });
+  }
+
   /// Valida il coupon sul server e applica lo sconto che il server ha calcolato.
   /// Il client non decide piu' l'importo: chiede un preventivo e mostra quello.
   Future<void> _applyCoupon() async {
@@ -1613,113 +1766,72 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Letto PRIMA di qualsiasi await: il context non va usato dopo un async gap.
-    final locationProvider = Provider.of<LocationProvider>(
-      context,
-      listen: false,
-    );
+    // Letti PRIMA di qualsiasi await: il context non va usato dopo un async gap.
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final righe = List<CartItem>.from(cartProvider.items);
+    final consegna = _consegnaPerPreventivo();
 
     setState(() => _couponLoading = true);
+    _preventivoTimer?.cancel();
+    final richiesta = ++_preventivoRichiesta;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.keyApiToken);
-
-      final body = <String, dynamic>{
-        'restaurant_id': widget.restaurant.id,
-        'pickup_delivery': _deliveryType,
-        'items': _buildItemsPayload(),
-        'coupon_code': couponCode,
-      };
-
-      if (_deliveryType == 'delivery') {
-        if (_deliveryMode == 'saved_address' &&
-            _selectedSavedAddress?.id != null) {
-          body['delivery'] = {
-            'source': 'saved_address',
-            'saved_address_id': _selectedSavedAddress!.id,
-          };
-        } else {
-          body['delivery'] = {
-            'source': 'current_position',
-            'latitude': locationProvider.activeLatitude,
-            'longitude': locationProvider.activeLongitude,
-            'postal_code': locationProvider.activePostalCode,
-          };
-        }
+      final preventivo = await PreventivoService().richiedi(
+        restaurantId: widget.restaurant.id,
+        pickupDelivery: _deliveryType,
+        items: righe.map((riga) => riga.perApi()).toList(),
+        delivery: consegna,
+        couponCode: couponCode,
+        appCreditsUsed: _useAppCredits ? _availableCredits : 0.0,
+      );
+      if (!mounted) return;
+      if (preventivo == null) {
+        // Sessione scaduta: senza accesso il server non da' preventivi
+        _showToast('Impossibile verificare il coupon, riprova');
+        if (_preventivo == null) _ricalcolaPreventivo();
+        return;
       }
 
-      final response = await http
-          .post(
-            Uri.parse('${AppConstants.apiUrl}/customer/order/quote'),
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Token': token ?? '',
-            },
-            body: json.encode(body),
-          )
-          .timeout(const Duration(seconds: 20));
+      setState(() {
+        _couponApplied = preventivo.couponValido;
+        _couponDiscount = preventivo.couponValido ? preventivo.sconto : 0.0;
+      });
 
-      final decoded = json.decode(response.body) as Map<String, dynamic>;
-      final data = decoded['data'] as Map<String, dynamic>?;
-
-      if (response.statusCode == 200 &&
-          data != null &&
-          data['coupon_valid'] == true) {
-        setState(() {
-          _couponApplied = true;
-          _couponDiscount = (data['discount_amount'] as num).toDouble();
-        });
-        _showToast('Coupon applicato');
+      // E' un preventivo completo dello stato attuale: vale anche per il
+      // riepilogo, se nel frattempo non e' cambiato niente.
+      if (richiesta == _preventivoRichiesta) {
+        _applicaPreventivo(preventivo, righe, cartProvider);
       } else {
-        final message =
-            data?['coupon_error'] as String? ??
-            (decoded['error'] is Map
-                ? decoded['error']['message'] as String?
-                : null) ??
-            'Codice coupon non valido';
-        setState(() {
-          _couponApplied = false;
-          _couponDiscount = 0.0;
-        });
-        _showToast(message);
+        _ricalcolaPreventivo();
       }
+
+      _showToast(
+        preventivo.couponValido
+            ? 'Coupon applicato'
+            : (preventivo.erroreCoupon ?? 'Codice coupon non valido'),
+      );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _couponApplied = false;
         _couponDiscount = 0.0;
       });
-      _showToast('Impossibile verificare il coupon, riprova');
+      _showToast(
+        e is PreventivoException
+            ? e.messaggio
+            : 'Impossibile verificare il coupon, riprova',
+      );
+      if (_preventivo == null) _ricalcolaPreventivo();
     } finally {
       if (mounted) setState(() => _couponLoading = false);
     }
   }
 
   /// Righe carrello nel formato atteso dalle API (preventivo e creazione ordine).
+  /// Sono le righe ATTUALI: prima si usava la lista ricevuta all'apertura, e
+  /// un piatto tolto qui dentro spariva dal totale ma partiva lo stesso.
   List<Map<String, dynamic>> _buildItemsPayload() {
-    return widget.cartItems.map((item) {
-      final extras = <Map<String, dynamic>>[];
-      final extrasData = item.customizationData['extras'];
-      if (extrasData is List) {
-        for (final extra in extrasData) {
-          if (extra is Map) {
-            final extraMap = Map<String, dynamic>.from(extra);
-            extras.add({
-              'extra_id': extraMap['id'] ?? 0,
-              'price': (extraMap['price'] as num?)?.toDouble() ?? 0.0,
-            });
-          }
-        }
-      }
-
-      return {
-        'food_id': item.menuItem.id,
-        'quantity': item.quantity,
-        'price': item.menuItem.price,
-        'discount_amount': 0.0,
-        'extras': extras,
-      };
-    }).toList();
+    return _righeCarrello.map((item) => item.perApi()).toList();
   }
 
   /// 🆕 Gestisce il pagamento tramite Nexi Build (UI Custom)
@@ -1835,6 +1947,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!loggato) {
         _mostraGateAccount();
         return;
+      }
+
+      // Un preventivo ancora in arrivo dopo l'ultima modifica si aspetta qui:
+      // minimo d'ordine, crediti e importi inviati devono essere quelli del
+      // server. Se intanto il coupon e' decaduto ci si ferma: il cliente deve
+      // vedere il totale senza sconto prima di confermare.
+      if (_preventivo == null) {
+        final avevaCoupon = _couponApplied;
+        await _aggiornaPreventivo();
+        if (!mounted) return;
+        if (avevaCoupon && !_couponApplied) return;
       }
 
       if (_selectedDate == null || _selectedTime == null) {
@@ -2141,7 +2264,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ).format(_selectedDate ?? DateTime.now());
 
       final results = await Future.wait(
-        widget.cartItems.map((cartItem) async {
+        _righeCarrello.map((cartItem) async {
           final isAvailable = await availabilityService.isDishAvailable(
             date: dateStr,
             restaurantId: widget.restaurant.id,
@@ -2769,6 +2892,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     // Dopo la chiusura del bottom sheet, ricalcola delivery fee
     // perché l'utente potrebbe aver cambiato indirizzo
     await _loadDeliveryFee();
+    _ricalcolaPreventivo();
   }
 
   /// Note per l'ordine: campo UNICO (cucina + consegna), finisce nella
@@ -3091,6 +3215,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 setState(() {
                   _useAppCredits = !_useAppCredits;
                 });
+                _ricalcolaPreventivo();
               },
               child: Container(
                 padding: const EdgeInsets.all(10),
@@ -3139,6 +3264,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         setState(() {
                           _useAppCredits = value;
                         });
+                        _ricalcolaPreventivo();
                       },
                       activeThumbColor: primaryColor,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -3296,6 +3422,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         _couponDiscount = 0.0;
                         _couponController.clear();
                       });
+                      _ricalcolaPreventivo();
                     },
                     icon: const Icon(Icons.close, size: 16, color: grayColor),
                     padding: EdgeInsets.zero,

@@ -50,6 +50,31 @@ class MenuItem {
 
   bool get hasDiscount => originalPrice != null && originalPrice! > price;
 
+  /// Stesso piatto a un altro prezzo: il listino del server e' cambiato
+  /// mentre il piatto era nel carrello. Il prezzo barrato si toglie perche'
+  /// non si sa quanto valga adesso, e un numero inventato non si mostra.
+  MenuItem conPrezzo(double nuovoPrezzo) {
+    if ((nuovoPrezzo - price).abs() < 0.005) return this;
+    return MenuItem(
+      id: id,
+      name: name,
+      description: description,
+      price: nuovoPrezzo,
+      imageUrl: imageUrl,
+      thumbnailUrl: thumbnailUrl,
+      category: category,
+      badges: badges,
+      hasAR: hasAR,
+      originalPrice: null,
+      customizations: customizations,
+      allergens: allergens,
+      dietaryOptions: dietaryOptions,
+      availabilityLabel: availabilityLabel,
+      minTotalExtras: minTotalExtras,
+      maxTotalExtras: maxTotalExtras,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

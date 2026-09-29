@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cart_item.dart';
 import '../models/menu_item.dart';
+import '../models/preventivo.dart';
 
 /// Provider per la gestione globale del carrello con persistenza locale
 class CartProvider with ChangeNotifier {
@@ -187,21 +188,10 @@ class CartProvider with ChangeNotifier {
       _restaurantLogoUrl = restaurantLogoUrl;
     }
 
-    // Calcola il prezzo degli extra
-    double extrasPrice = 0.0;
-    List<String> customizationsList = [];
-
-    if (selectedExtras != null && selectedExtras.isNotEmpty) {
-      for (var extra in selectedExtras) {
-        extrasPrice += (extra['price'] as double? ?? 0.0);
-        customizationsList.add(extra['name'] as String? ?? '');
-      }
-    }
-
-    // Aggiungi note alle customizzazioni se presenti
-    if (notes != null && notes.isNotEmpty) {
-      customizationsList.add('Note: $notes');
-    }
+    final (customizationsList, extrasPrice) = _riassuntoScelte(
+      selectedExtras,
+      notes,
+    );
 
     // Verifica se esiste già un item identico
     final existingIndex = _items.indexWhere(
@@ -266,27 +256,95 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  /// Aggiorna completamente un item esistente nel carrello
-  void updateItem({
+  /// Testi delle scelte come li mostra il carrello, e prezzo unitario delle
+  /// scelte: stessa regola per la riga nuova e per quella modificata.
+  static (List<String>, double) _riassuntoScelte(
+    List<Map<String, dynamic>>? selectedExtras,
+    String? notes,
+  ) {
+    double prezzo = 0.0;
+    final testi = <String>[];
+
+    for (final extra in selectedExtras ?? const <Map<String, dynamic>>[]) {
+      prezzo += (extra['price'] as num?)?.toDouble() ?? 0.0;
+      testi.add(extra['name'] as String? ?? '');
+    }
+
+    if (notes != null && notes.isNotEmpty) {
+      testi.add('Note: $notes');
+    }
+
+    return (testi, prezzo);
+  }
+
+  /// Nuova quantita' e nuove scelte per una riga (tasto "Modifica" del
+  /// carrello). Le scelte arrivano nel formato di [addItem], quello di
+  /// [scelteDallaScheda]: cosi' finiscono nell'ordine come quelle di un
+  /// piatto appena aggiunto.
+  void modificaRiga({
     required int index,
     required int quantity,
-    required List<String> customizations,
-    required Map<String, dynamic> customizationData,
-    required double customizationsPriceModifier,
+    List<Map<String, dynamic>>? selectedExtras,
+    String? notes,
   }) {
-    if (index >= 0 && index < _items.length) {
-      _items[index].quantity = quantity;
-      _items[index].customizations = customizations;
-      _items[index].customizationData = customizationData;
-      // Note: customizationsPriceModifier is final, so we need to replace the item
-      final updatedItem = CartItem(
-        menuItem: _items[index].menuItem,
-        quantity: quantity,
-        customizations: customizations,
-        customizationData: customizationData,
-        customizationsPriceModifier: customizationsPriceModifier,
+    if (index < 0 || index >= _items.length) return;
+
+    final (testi, prezzo) = _riassuntoScelte(selectedExtras, notes);
+    _items[index] = CartItem(
+      menuItem: _items[index].menuItem,
+      quantity: quantity,
+      customizations: testi,
+      customizationData: {'extras': selectedExtras ?? [], 'notes': notes},
+      customizationsPriceModifier: prezzo,
+    );
+    _saveCart();
+    notifyListeners();
+  }
+
+  /// Prezzi delle righe riallineati al preventivo del server.
+  ///
+  /// Il carrello resta salvato sul telefono col prezzo del momento in cui il
+  /// piatto e' stato aggiunto: se nel frattempo il listino e' cambiato conta
+  /// quello del server, che e' anche quello che verra' addebitato. Nessun
+  /// avviso al cliente (decisione del 29/09/2026): la riga mostra solo il
+  /// prezzo giusto.
+  ///
+  /// [righe] sono le righe mandate al preventivo, nello stesso ordine delle
+  /// righe di [preventivo]. Se il server ne ha scartata qualcuna le posizioni
+  /// non corrispondono piu' e non si tocca niente; una riga tolta o
+  /// modificata nel frattempo viene saltata.
+  void riallineaDaPreventivo(List<CartItem> righe, Preventivo preventivo) {
+    if (!preventivo.righeValide) return;
+    final prezzi = preventivo.righe;
+    if (prezzi.length != righe.length) return;
+    for (var i = 0; i < righe.length; i++) {
+      if (prezzi[i].foodId != righe[i].menuItem.id) return;
+    }
+
+    var cambiato = false;
+    for (var i = 0; i < righe.length; i++) {
+      final index = _items.indexOf(righe[i]);
+      if (index < 0) continue;
+
+      final riga = _items[index];
+      final prezzo = prezzi[i];
+      if ((riga.menuItem.price - prezzo.prezzoPiatto).abs() < 0.005 &&
+          (riga.customizationsPriceModifier - prezzo.prezzoScelte).abs() <
+              0.005) {
+        continue;
+      }
+
+      _items[index] = CartItem(
+        menuItem: riga.menuItem.conPrezzo(prezzo.prezzoPiatto),
+        quantity: riga.quantity,
+        customizations: riga.customizations,
+        customizationData: riga.customizationData,
+        customizationsPriceModifier: prezzo.prezzoScelte,
       );
-      _items[index] = updatedItem;
+      cambiato = true;
+    }
+
+    if (cambiato) {
       _saveCart();
       notifyListeners();
     }

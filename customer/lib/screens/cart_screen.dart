@@ -11,6 +11,7 @@ import '../models/menu_item.dart';
 import '../providers/cart_provider.dart';
 import '../providers/location_provider.dart';
 import '../services/restaurant_service.dart';
+import '../services/preventivo_service.dart';
 import 'product_detail_modal.dart';
 import 'checkout_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -74,6 +75,31 @@ class _CartScreenState extends State<CartScreen> {
     _loadSuggestions();
     _loadDeliveryRule();
     _loadRestaurantDetailSeIncompleto();
+    _riallineaPrezzi();
+  }
+
+  /// Prezzi delle righe riallineati al listino del server, senza avvisi: il
+  /// carrello resta salvato sul telefono col prezzo del momento in cui il
+  /// piatto e' stato aggiunto. Il preventivo lo da' solo a chi ha fatto
+  /// l'accesso; per gli ospiti, o se la rete non risponde, restano i prezzi
+  /// salvati e ci riprova il checkout. Qui contano solo i prezzi delle righe,
+  /// quindi basta il ritiro: niente indirizzo da mandare.
+  Future<void> _riallineaPrezzi() async {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final righe = List<CartItem>.from(cartProvider.items);
+    if (righe.isEmpty) return;
+
+    try {
+      final preventivo = await PreventivoService().richiedi(
+        restaurantId: _rest.id,
+        pickupDelivery: 'pickup',
+        items: righe.map((riga) => riga.perApi()).toList(),
+      );
+      if (!mounted || preventivo == null) return;
+      cartProvider.riallineaDaPreventivo(righe, preventivo);
+    } catch (e) {
+      if (kDebugMode) print('Prezzi carrello non riallineati: $e');
+    }
   }
 
   Future<void> _loadRestaurantDetailSeIncompleto() async {
@@ -286,73 +312,23 @@ class _CartScreenState extends State<CartScreen> {
             listen: false,
           );
 
-          // Prepara la lista di customizzazioni in formato stringa
-          final customizationsList = <String>[];
-
-          // Gestisci options (single-select groups)
-          final options = customizations['options'];
-          if (options != null && options is Map) {
-            options.forEach((groupId, optionId) {
-              for (var group in menuItem.customizations) {
-                if (group.id == groupId.toString()) {
-                  try {
-                    final CustomizationOption option = group.options.firstWhere(
-                      (opt) => opt.id == optionId.toString(),
-                    );
-                    customizationsList.add(option.label);
-                  } catch (e) {
-                    // Opzione non trovata, ignora
-                  }
-                }
-              }
-            });
-          }
-
-          // Gestisci extras (multi-select groups)
-          final extras = customizations['extras'];
-          if (extras != null && extras is List) {
-            for (var extraId in extras) {
-              for (var group in menuItem.customizations) {
-                if (group.isMultiSelect) {
-                  try {
-                    final CustomizationOption option = group.options.firstWhere(
-                      (opt) => opt.id == extraId.toString(),
-                    );
-                    customizationsList.add(option.label);
-                  } catch (e) {
-                    // Extra non trovato, ignora
-                  }
-                }
-              }
-            }
-          }
-
-          // Gestisci istruzioni
-          final instructions = customizations['instructions'];
-          if (instructions != null && instructions.toString().isNotEmpty) {
-            customizationsList.add('Note: $instructions');
-          }
-
-          // Aggiorna l'item nel CartProvider
+          // Stesso formato di un piatto appena aggiunto dal menu: prima qui
+          // si salvava il formato grezzo della scheda, che il checkout non
+          // legge, e l'ordine partiva senza extra ne' scelte.
           if (itemIndex >= 0) {
-            cartProvider.updateItem(
+            final scelte = scelteDallaScheda(menuItem, customizations);
+            final notes = customizations['instructions'] as String?;
+            cartProvider.modificaRiga(
               index: itemIndex,
               quantity: quantity,
-              customizations: customizationsList,
-              customizationData: customizations,
-              customizationsPriceModifier: priceModifier,
+              selectedExtras: scelte.isNotEmpty ? scelte : null,
+              notes: notes,
             );
 
             // Aggiorna anche lo stato locale
             if (mounted) {
               setState(() {
-                _cartItems[itemIndex] = CartItem(
-                  menuItem: menuItem,
-                  quantity: quantity,
-                  customizations: customizationsList,
-                  customizationData: customizations,
-                  customizationsPriceModifier: priceModifier,
-                );
+                _cartItems = List.from(cartProvider.items);
               });
             }
           }
@@ -409,43 +385,7 @@ class _CartScreenState extends State<CartScreen> {
         restaurantId: _rest.id,
         restaurantName: _rest.name,
         onAddToCart: (menuItem, quantity, customizations, priceModifier) {
-          final List<Map<String, dynamic>> selectedExtras = [];
-
-          bool addOptionFromGroup(CustomizationGroup group, String optionId) {
-            for (final option in group.options) {
-              if (option.id == optionId) {
-                selectedExtras.add({
-                  'id': option.id,
-                  'name': option.label,
-                  'price': option.priceModifier,
-                });
-                return true;
-              }
-            }
-            return false;
-          }
-
-          final singleChoices = customizations['options'];
-          if (singleChoices is Map) {
-            singleChoices.forEach((groupId, optionId) {
-              for (final group in menuItem.customizations) {
-                if (group.id == groupId.toString()) {
-                  addOptionFromGroup(group, optionId.toString());
-                  break;
-                }
-              }
-            });
-          }
-
-          if (customizations['extras'] != null) {
-            for (final extraId in customizations['extras']) {
-              for (final group in menuItem.customizations) {
-                if (!group.isMultiSelect) continue;
-                if (addOptionFromGroup(group, extraId.toString())) break;
-              }
-            }
-          }
-
+          final selectedExtras = scelteDallaScheda(menuItem, customizations);
           final notes = customizations['instructions'] as String?;
 
           try {

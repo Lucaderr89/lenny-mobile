@@ -66,22 +66,45 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
         });
       }
 
-      // Gestisci extras - può essere una lista di stringhe o di oggetti
+      // Gestisci extras - può essere una lista di stringhe o di oggetti.
+      // Nel carrello le scelte singole (taglia, pezzi...) stanno nella stessa
+      // lista degli extra ({id, name, price}): ognuna torna al suo gruppo,
+      // altrimenti riaprendo "Modifica" il gruppo obbligatorio risulterebbe
+      // vuoto e il suo prezzo sparirebbe dal totale.
       final extras = widget.initialCustomizations?['extras'];
       if (extras != null && extras is List) {
         for (var extra in extras) {
+          final String id;
           if (extra is String) {
-            _selectedExtras.add(extra);
+            id = extra;
           } else if (extra is Map && extra.containsKey('id')) {
-            _selectedExtras.add(extra['id'].toString());
+            id = extra['id'].toString();
           } else {
-            _selectedExtras.add(extra.toString());
+            id = extra.toString();
+          }
+
+          String? gruppoSingolo;
+          for (final group in widget.menuItem.customizations) {
+            if (!group.isMultiSelect && group.options.any((o) => o.id == id)) {
+              gruppoSingolo = group.id;
+              break;
+            }
+          }
+
+          if (gruppoSingolo != null &&
+              !_selectedOptions.containsKey(gruppoSingolo)) {
+            _selectedOptions[gruppoSingolo] = id;
+          } else {
+            _selectedExtras.add(id);
           }
         }
       }
 
       _instructionsController.text =
-          widget.initialCustomizations?['instructions']?.toString() ?? '';
+          (widget.initialCustomizations?['instructions'] ??
+                  widget.initialCustomizations?['notes'])
+              ?.toString() ??
+          '';
     } else {
       // Preselezione dei gruppi obbligatori a scelta singola SOLO se la
       // prima opzione costa zero: preselezionare un'opzione con sovrapprezzo

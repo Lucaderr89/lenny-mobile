@@ -8,6 +8,7 @@ import '../services/restaurant_service.dart';
 import '../providers/cart_provider.dart';
 import '../providers/location_provider.dart';
 import '../models/menu_item.dart';
+import '../models/cart_item.dart';
 import '../config/app_colors.dart';
 import '../widgets/cart_conflict_dialog.dart';
 import 'product_detail_modal.dart';
@@ -404,7 +405,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 restaurantId: aiDish.restaurantId,
                 restaurantName: aiDish.restaurantName,
                 quantity: qty,
-                selectedExtras: _extractExtras(customizations),
+                selectedExtras: scelteDallaScheda(item, customizations),
               );
               _addFallbackText('${item.name} aggiunto al carrello.');
             } catch (e) {
@@ -449,7 +450,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 restaurantId: aiDish.restaurantId,
                 restaurantName: aiDish.restaurantName,
                 quantity: qty,
-                selectedExtras: _extractExtras(customizations),
+                selectedExtras: scelteDallaScheda(item, customizations),
               );
               _addFallbackText('${item.name} aggiunto al carrello.');
             } catch (e) {
@@ -486,32 +487,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
         _showCartConflictDialog(aiDish);
       }
     }
-  }
-
-  List<Map<String, dynamic>> _extractExtras(
-    Map<String, dynamic> customizations,
-  ) {
-    final extras = <Map<String, dynamic>>[];
-    customizations.forEach((_, value) {
-      if (value is List) {
-        for (final opt in value) {
-          if (opt is Map<String, dynamic>) {
-            extras.add({
-              'id': opt['id'],
-              'name': opt['label'] ?? opt['name'] ?? '',
-              'price': (opt['price_modifier'] as num?)?.toDouble() ?? 0.0,
-            });
-          }
-        }
-      } else if (value is Map<String, dynamic>) {
-        extras.add({
-          'id': value['id'],
-          'name': value['label'] ?? value['name'] ?? '',
-          'price': (value['price_modifier'] as num?)?.toDouble() ?? 0.0,
-        });
-      }
-    });
-    return extras;
   }
 
   void _showCartConflictDialog(AIDish dish) {
