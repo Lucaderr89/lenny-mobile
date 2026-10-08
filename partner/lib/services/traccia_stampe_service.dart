@@ -50,6 +50,9 @@ class TracciaStampe {
   /// il motivo cambia.
   final Map<int, String> _ultimoFallimento = {};
 
+  /// Lo stesso per le chiusure di giornata, per giorno chiuso (AAAA-MM-GG).
+  final Map<String, String> _ultimoFallimentoChiusura = {};
+
   /// Identificativo di questo dispositivo, generato una volta e salvato.
   /// Distingue il Sunmi del locale da un telefono su cui il titolare ha
   /// aperto la stessa app con le stesse credenziali.
@@ -109,29 +112,75 @@ class TracciaStampe {
         _ultimoFallimento[orderId] = m;
       }
 
-      await _carica();
       final adesso = DateTime.now().millisecondsSinceEpoch;
-      _coda.add({
+      await _accoda({
         'uid': '${orderId}_${adesso}_${_codice(6)}',
         'order_id': orderId,
         'outcome': ok ? 'printed' : 'failed',
-        'source': switch (origine) {
-          OrigineStampa.automatica => 'auto',
-          OrigineStampa.manuale => 'manual',
-          OrigineStampa.storico => 'history',
-        },
+        'source': _origine(origine),
         'reason': ok ? null : motivo,
         'at_ms': adesso,
       });
-      if (_coda.length > _maxCoda) {
-        _coda.removeRange(0, _coda.length - _maxCoda);
-      }
-      await _salva();
     } catch (e) {
       debugPrint('Traccia stampa non salvata: $e');
       return;
     }
     unawaited(invia());
+  }
+
+  /// Registra l'esito della stampa di una chiusura di giornata: stessa coda
+  /// e stesso viaggio delle comande, sul server una tabella a parte.
+  /// [data] e' il giorno chiuso (AAAA-MM-GG), [impronta] la firma dei numeri
+  /// stampati: con quella il server sa che la chiusura automatica dello
+  /// stesso giorno non serve piu'.
+  Future<void> registraChiusura({
+    required String data,
+    required String impronta,
+    required bool ok,
+    String? motivo,
+    required OrigineStampa origine,
+  }) async {
+    try {
+      if (ok) {
+        _ultimoFallimentoChiusura.remove(data);
+      } else if (origine == OrigineStampa.automatica) {
+        final m = motivo ?? '';
+        if (_ultimoFallimentoChiusura[data] == m) return;
+        _ultimoFallimentoChiusura[data] = m;
+      }
+
+      final adesso = DateTime.now().millisecondsSinceEpoch;
+      await _accoda({
+        'uid': 'c${data.replaceAll('-', '')}_${adesso}_${_codice(6)}',
+        'report_date': data,
+        'impronta': impronta,
+        'outcome': ok ? 'printed' : 'failed',
+        'source': _origine(origine),
+        'reason': ok ? null : motivo,
+        'at_ms': adesso,
+      });
+    } catch (e) {
+      debugPrint('Traccia chiusura non salvata: $e');
+      return;
+    }
+    unawaited(invia());
+  }
+
+  String _origine(OrigineStampa origine) => switch (origine) {
+    OrigineStampa.automatica => 'auto',
+    OrigineStampa.manuale => 'manual',
+    OrigineStampa.storico => 'history',
+  };
+
+  /// Mette un esito in coda su disco. Oltre [_maxCoda] si scartano i piu'
+  /// vecchi.
+  Future<void> _accoda(Map<String, dynamic> esito) async {
+    await _carica();
+    _coda.add(esito);
+    if (_coda.length > _maxCoda) {
+      _coda.removeRange(0, _coda.length - _maxCoda);
+    }
+    await _salva();
   }
 
   /// Manda al server gli esiti in coda. Si chiama dopo ogni stampa e a ogni
@@ -152,7 +201,10 @@ class TracciaStampe {
             .map(
               (e) => {
                 'uid': e['uid'],
-                'order_id': e['order_id'],
+                // Comanda (order_id) oppure chiusura di giornata (report_date)
+                if (e['order_id'] != null) 'order_id': e['order_id'],
+                if (e['report_date'] != null) 'report_date': e['report_date'],
+                if (e['impronta'] != null) 'impronta': e['impronta'],
                 'outcome': e['outcome'],
                 'source': e['source'],
                 'reason': e['reason'],

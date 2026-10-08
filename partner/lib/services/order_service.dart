@@ -3,8 +3,29 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
+import '../models/chiusura_giornata.dart';
 import '../models/order.dart';
 import 'traccia_stampe_service.dart';
+
+/// Risposta della lista ordini: gli ordini e, se il server la chiede, la
+/// chiusura di giornata da stampare in automatico (giorno prima, dopo le
+/// 00:05, finche' nessun tablet riporta di averla stampata).
+class RispostaOrdini {
+  final List<Order> ordini;
+  final ChiusuraGiornata? chiusuraDaStampare;
+
+  const RispostaOrdini(this.ordini, {this.chiusuraDaStampare});
+}
+
+/// Risposta della chiusura manuale: [riepilogo] null = nessun ordine quel
+/// giorno, con il [messaggio] del server da mostrare.
+class RispostaChiusura {
+  final String data;
+  final ChiusuraGiornata? riepilogo;
+  final String? messaggio;
+
+  const RispostaChiusura({required this.data, this.riepilogo, this.messaggio});
+}
 
 /// Service per gestire gli ordini del partner
 class OrderService {
@@ -21,7 +42,7 @@ class OrderService {
   /// stampante, rete): e' il "battito" che il server conserva per la
   /// traccia comande. Senza rete il tablet non puo' avvisare nessuno: lo
   /// dice alla prima richiesta che torna a passare.
-  Future<List<Order>> getOrders({
+  Future<RispostaOrdini> getOrders({
     bool? stampaAutomatica,
     String? problemaStampante,
     bool? stampanteIntegrata,
@@ -69,16 +90,27 @@ class OrderService {
         final data = jsonDecode(response.body);
 
         // Gli ordini possono essere in data.orders o data.data.orders
-        final ordersJson =
-            (data['data'] != null && data['data']['orders'] != null)
-            ? data['data']['orders'] as List<dynamic>?
-            : data['orders'] as List<dynamic>?;
+        final Map<String, dynamic> corpo = data['data'] is Map
+            ? Map<String, dynamic>.from(data['data'] as Map)
+            : Map<String, dynamic>.from(data as Map);
+        final ordersJson = corpo['orders'] as List<dynamic>?;
 
-        if (ordersJson == null) return [];
+        // Chiusura di giornata da stampare: i server vecchi non la mandano.
+        final chiusuraJson = corpo['chiusura_da_stampare'];
+        final chiusura = chiusuraJson is Map
+            ? ChiusuraGiornata.fromJson(Map<String, dynamic>.from(chiusuraJson))
+            : null;
+
+        if (ordersJson == null) {
+          return RispostaOrdini(const [], chiusuraDaStampare: chiusura);
+        }
 
         // Non si logga il contenuto della risposta: contiene nome, telefono e
         // indirizzo dei clienti.
-        return ordersJson.map((json) => Order.fromJson(json)).toList();
+        return RispostaOrdini(
+          ordersJson.map((json) => Order.fromJson(json)).toList(),
+          chiusuraDaStampare: chiusura,
+        );
       } else {
         throw Exception('Errore caricamento ordini: ${response.statusCode}');
       }
@@ -87,6 +119,47 @@ class OrderService {
       _inizioProblemiRete ??= DateTime.now();
       rethrow;
     }
+  }
+
+  /// Totali di un giorno per la chiusura manuale. Senza [data] e' oggi
+  /// secondo il server (il giorno non lo decide mai il tablet); si puo'
+  /// chiedere fino a 7 giorni indietro. riepilogo null = nessun ordine.
+  Future<RispostaChiusura> getChiusura({String? data}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyApiToken);
+    if (token == null) {
+      throw Exception('Token non trovato');
+    }
+
+    final uri = Uri.parse(AppConstants.chiusuraEndpoint).replace(
+      queryParameters: data == null ? null : {'date': data},
+    );
+    final response = await http
+        .get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(const Duration(seconds: AppConstants.apiTimeout));
+
+    if (response.statusCode != 200) {
+      throw Exception('Errore chiusura giornata: ${response.statusCode}');
+    }
+
+    final json = jsonDecode(response.body);
+    final Map<String, dynamic> corpo = json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : <String, dynamic>{};
+    final riepilogoJson = corpo['riepilogo'];
+    return RispostaChiusura(
+      data: corpo['date']?.toString() ?? '',
+      riepilogo: riepilogoJson is Map
+          ? ChiusuraGiornata.fromJson(Map<String, dynamic>.from(riepilogoJson))
+          : null,
+      messaggio: corpo['messaggio']?.toString(),
+    );
   }
 
   /// Ottieni storico ordini (consegnati + annullati)

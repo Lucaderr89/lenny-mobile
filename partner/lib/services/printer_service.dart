@@ -1,4 +1,5 @@
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
+import '../models/chiusura_giornata.dart';
 import '../models/order.dart';
 import 'traccia_stampe_service.dart';
 import 'package:intl/intl.dart';
@@ -170,22 +171,45 @@ class PrinterService {
   static const Duration _osservazioneDopoStampa = Duration(seconds: 3);
   static const Duration _passoOsservazione = Duration(milliseconds: 500);
 
+  /// Controlli prima di mandare qualcosa alla stampante: null = via libera,
+  /// altrimenti l'esito fallito con il motivo per l'operatore. Con un
+  /// problema di carta o coperchio si esce subito, cosi' la stampa puo'
+  /// essere rifatta dopo averlo risolto.
+  Future<EsitoStampa?> _problemaPrimaDiStampare() async {
+    final available = await isPrinterAvailable();
+    if (!available) {
+      return const EsitoStampa.fallita(
+        'Stampante non disponibile: controlla che sia accesa e collegata',
+      );
+    }
+    final problema = await problemaCorrente();
+    if (problema != null) {
+      return EsitoStampa.fallita(problema);
+    }
+    return null;
+  }
+
+  /// Il servizio di stampa Sunmi accoda i comandi e risponde subito "ok":
+  /// la carta che finisce a meta' stampa non produce errori. Si osserva la
+  /// stampante mentre il foglio esce: se in quel tempo finisce la carta o si
+  /// apre il coperchio, la stampa non si da' per riuscita e resta da rifare.
+  /// Meglio una stampa doppia che una mezza stampa segnata come uscita.
+  Future<EsitoStampa> _osservaDopoIlTaglio(String interrotta) async {
+    final fine = DateTime.now().add(_osservazioneDopoStampa);
+    while (DateTime.now().isBefore(fine)) {
+      await Future.delayed(_passoOsservazione);
+      final problemaDopo = await problemaCorrente();
+      if (problemaDopo != null) {
+        return EsitoStampa.fallita('$interrotta $problemaDopo');
+      }
+    }
+    return const EsitoStampa.riuscita();
+  }
+
   Future<EsitoStampa> _stampaComanda(Order order, String restaurantName) async {
     try {
-      // Verifica disponibilità stampante
-      final available = await isPrinterAvailable();
-      if (!available) {
-        return const EsitoStampa.fallita(
-          'Stampante non disponibile: controlla che sia accesa e collegata',
-        );
-      }
-
-      // Stato carta/coperchio: se c'e' un problema si esce subito con il
-      // motivo, cosi' l'ordine puo' essere ristampato dopo averlo risolto.
-      final problema = await problemaCorrente();
-      if (problema != null) {
-        return EsitoStampa.fallita(problema);
-      }
+      final bloccata = await _problemaPrimaDiStampare();
+      if (bloccata != null) return bloccata;
 
       // --- LOGO ---
       // Si stampa SOLO dalla cache preparata da precaricaLogo(): il
@@ -467,22 +491,7 @@ class PrinterService {
       // Taglia la carta
       await SunmiPrinter.cutPaper();
 
-      // Il servizio di stampa Sunmi accoda i comandi e risponde subito "ok":
-      // la carta che finisce a meta' comanda non produce errori qui sopra.
-      // Si osserva la stampante mentre la comanda esce: se in quel tempo
-      // finisce la carta o si apre il coperchio, la comanda non si da' per
-      // stampata e resta da ristampare. Meglio una comanda doppia che una
-      // mezza comanda segnata come uscita.
-      final fine = DateTime.now().add(_osservazioneDopoStampa);
-      while (DateTime.now().isBefore(fine)) {
-        await Future.delayed(_passoOsservazione);
-        final problemaDopo = await problemaCorrente();
-        if (problemaDopo != null) {
-          return EsitoStampa.fallita('Comanda interrotta. $problemaDopo');
-        }
-      }
-
-      return const EsitoStampa.riuscita();
+      return await _osservaDopoIlTaglio('Comanda interrotta.');
     } catch (e) {
       debugPrint('Errore stampa ordine: $e');
       // Se la stampa si e' interrotta a meta', spesso il motivo e' leggibile
@@ -490,6 +499,132 @@ class PrinterService {
       final problema = await problemaCorrente();
       return EsitoStampa.fallita(
         problema ?? 'Errore durante la stampa della comanda',
+      );
+    }
+  }
+
+  /// Stampa la chiusura di giornata (i totali del giorno) e ne manda l'esito
+  /// alla traccia sul server. Solo totali, niente elenco ordini: la carta e'
+  /// a 32 colonne e l'elenco il ristorante ce l'ha sul pannello.
+  Future<EsitoStampa> printChiusura(
+    ChiusuraGiornata chiusura, {
+    required OrigineStampa origine,
+  }) async {
+    final esito = await _stampaChiusura(chiusura);
+    await TracciaStampe.instance.registraChiusura(
+      data: chiusura.data,
+      impronta: chiusura.impronta,
+      ok: esito.ok,
+      motivo: esito.motivo,
+      origine: origine,
+    );
+    return esito;
+  }
+
+  Future<EsitoStampa> _stampaChiusura(ChiusuraGiornata c) async {
+    try {
+      final bloccata = await _problemaPrimaDiStampare();
+      if (bloccata != null) return bloccata;
+
+      final Uint8List? logo = _logoComanda;
+      if (logo != null) {
+        try {
+          await SunmiPrinter.printImage(logo);
+          await SunmiPrinter.lineWrap(1);
+        } catch (e) {
+          debugPrint('Impossibile stampare logo: $e');
+        }
+      }
+
+      await SunmiPrinter.printText(
+        'CHIUSURA GIORNATA',
+        style: SunmiTextStyle(
+          bold: true,
+          fontSize: 28,
+          align: SunmiPrintAlign.CENTER,
+        ),
+      );
+      await SunmiPrinter.printText(
+        c.ristorante,
+        style: SunmiTextStyle(fontSize: 24, align: SunmiPrintAlign.CENTER),
+      );
+      await SunmiPrinter.printText(
+        c.dataFormattata,
+        style: SunmiTextStyle(
+          bold: true,
+          fontSize: 28,
+          align: SunmiPrintAlign.CENTER,
+        ),
+      );
+      await SunmiPrinter.lineWrap(1);
+      await SunmiPrinter.printText('================================');
+
+      // --- CONTEGGI ---
+      await SunmiPrinter.printText(
+        'ORDINI: ${c.ordini}',
+        style: SunmiTextStyle(bold: true, fontSize: 26),
+      );
+      await SunmiPrinter.printText(
+        'A domicilio: ${c.domicilio}   Asporto: ${c.asporto}',
+        style: SunmiTextStyle(fontSize: 22),
+      );
+      if (c.inCorso > 0) {
+        await SunmiPrinter.printText(
+          'Non ancora consegnati: ${c.inCorso}',
+          style: SunmiTextStyle(fontSize: 22),
+        );
+      }
+      if (c.annullati > 0) {
+        await SunmiPrinter.printText(
+          'Annullati (esclusi): ${c.annullati}',
+          style: SunmiTextStyle(fontSize: 22),
+        );
+      }
+      await SunmiPrinter.printText(
+        'Voci: ${c.voci}   Pezzi: ${c.pezzi}',
+        style: SunmiTextStyle(fontSize: 22),
+      );
+      await SunmiPrinter.printText('--------------------------------');
+
+      // --- IMPORTI, le stesse voci del pannello Lenny Platform ---
+      await SunmiPrinter.lineWrap(1);
+      await _riga('Subtotale', c.subtotale);
+      await _riga('Rincaro', c.rincaro);
+      await _riga('Consegna', c.consegna);
+      await _riga('Tassa', c.tassa);
+      if (c.sconto > 0) {
+        await _riga('Sconti', -c.sconto);
+      }
+      await SunmiPrinter.printText('--------------------------------');
+      await SunmiPrinter.printText(
+        'TOTALE',
+        style: SunmiTextStyle(bold: true, fontSize: 28),
+      );
+      await SunmiPrinter.printText(
+        'EUR ${c.totale.toStringAsFixed(2)}',
+        style: SunmiTextStyle(
+          bold: true,
+          fontSize: 32,
+          align: SunmiPrintAlign.RIGHT,
+        ),
+      );
+      await SunmiPrinter.lineWrap(1);
+      await SunmiPrinter.printText('================================');
+      await SunmiPrinter.lineWrap(1);
+      await SunmiPrinter.printText(
+        'Totali calcolati il ${c.generatoFormattato}',
+        style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 20),
+      );
+
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.cutPaper();
+
+      return await _osservaDopoIlTaglio('Chiusura interrotta.');
+    } catch (e) {
+      debugPrint('Errore stampa chiusura: $e');
+      final problema = await problemaCorrente();
+      return EsitoStampa.fallita(
+        problema ?? 'Errore durante la stampa della chiusura',
       );
     }
   }

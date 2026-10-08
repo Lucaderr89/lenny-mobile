@@ -11,8 +11,11 @@ class AppConstants {
   static const String confirmPickupEndpoint =
       '$apiUrl/partner/orders/{id}/confirm-pickup';
   static const String orderHistoryEndpoint = '$apiUrl/partner/orders/history';
-  // Traccia comande: esiti di stampa (riuscita / fallita con il motivo)
+  // Traccia comande: esiti di stampa (riuscita / fallita con il motivo),
+  // delle comande e delle chiusure di giornata
   static const String printLogEndpoint = '$apiUrl/partner/print-log';
+  // Chiusura di giornata: totali del giorno per la stampa manuale
+  static const String chiusuraEndpoint = '$apiUrl/partner/chiusura';
   static const String profileEndpoint = '$apiUrl/partner/profile';
   static const String closureCreateEndpoint = '$apiUrl/partner/closures/create';
   static const String closureDeleteEndpoint =

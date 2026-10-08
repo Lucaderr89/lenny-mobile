@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
+import '../models/chiusura_giornata.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 import '../services/auth_service.dart';
@@ -52,6 +53,13 @@ class _HomeScreenState extends State<HomeScreen>
   static const String _chiaveAutoPrint = 'partner_stampa_automatica';
 
   bool _stampaInCorso = false; // Evita stampe sovrapposte sulla stessa stampante
+
+  /// Chiusure di giornata gia' stampate da questo tablet (giorno chiuso,
+  /// AAAA-MM-GG), persistite: il server ripropone quella automatica finche'
+  /// non riceve l'esito, e l'esito viaggia in coda, anche minuti dopo.
+  final Set<String> _chiusureStampate = {};
+  static const String _chiaveChiusure = 'partner_chiusure_stampate';
+  static const int _maxChiusureMemorizzate = 30;
 
   /// Ordini gia' annunciati con suono e vibrazione in questa sessione: se una
   /// stampa fallisce e resta in coda, il suono non deve ripartire a ogni giro
@@ -183,6 +191,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     final prefs = await SharedPreferences.getInstance();
     final primoAvvioFatto = prefs.getBool(_chiavePrimoAvvio) ?? false;
+    _chiusureStampate.addAll(prefs.getStringList(_chiaveChiusure) ?? const []);
 
     if (!primoAvvioFatto) {
       for (final o in ordiniCorrenti) {
@@ -240,11 +249,12 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadOrders() async {
     try {
-      final orders = await _orderService.getOrders(
+      final risposta = await _orderService.getOrders(
         stampaAutomatica: _autoPrintEnabled,
         problemaStampante: _problemaStampante,
         stampanteIntegrata: _stampanteIntegrata,
       );
+      final orders = risposta.ordini;
       // La rete c'e': partono gli esiti di stampa rimasti in coda.
       unawaited(TracciaStampe.instance.invia());
       if (!mounted) return;
@@ -296,6 +306,14 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       await _mostraAvvisiBloccanti();
+
+      // Chiusura di giornata automatica (il giorno prima, dopo le 00:05):
+      // dopo le comande, mai in mezzo. Con la stampa automatica spenta non
+      // esce, come le comande.
+      final chiusura = risposta.chiusuraDaStampare;
+      if (chiusura != null && _autoPrintEnabled && mounted) {
+        await _stampaChiusuraAutomatica(chiusura);
+      }
     } catch (e) {
       debugPrint('Errore caricamento ordini: $e');
       if (mounted && !_connessioneAssente) {
@@ -332,6 +350,163 @@ class _HomeScreenState extends State<HomeScreen>
     } finally {
       _stampaInCorso = false;
     }
+  }
+
+  /// Chiusura automatica proposta dal server: una volta sola per giorno su
+  /// questo tablet. Se la stampa fallisce (carta finita) il server la
+  /// ripropone al giro dopo, come per le comande, finche' non esce.
+  Future<void> _stampaChiusuraAutomatica(ChiusuraGiornata chiusura) async {
+    if (_chiusureStampate.contains(chiusura.data)) return;
+    if (_stampanteIntegrata == false) return;
+    await _stampaChiusura(chiusura, OrigineStampa.automatica);
+  }
+
+  /// Stampa una chiusura tenendo il lucchetto della stampante. Null se
+  /// un'altra stampa era in corso: si riprova al giro dopo (automatica) o
+  /// lo si dice al ristorante (manuale).
+  Future<EsitoStampa?> _stampaChiusura(
+    ChiusuraGiornata chiusura,
+    OrigineStampa origine,
+  ) async {
+    if (_stampaInCorso) return null;
+    _stampaInCorso = true;
+    try {
+      final esito = await _printerService.printChiusura(
+        chiusura,
+        origine: origine,
+      );
+      if (esito.ok) {
+        _chiusureStampate.add(chiusura.data);
+        await _salvaChiusureStampate();
+      }
+      return esito;
+    } finally {
+      _stampaInCorso = false;
+    }
+  }
+
+  Future<void> _salvaChiusureStampate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lista = _chiusureStampate.toList()..sort();
+    final recenti = lista.length > _maxChiusureMemorizzate
+        ? lista.sublist(lista.length - _maxChiusureMemorizzate)
+        : lista;
+    _chiusureStampate
+      ..clear()
+      ..addAll(recenti);
+    await prefs.setStringList(_chiaveChiusure, recenti);
+  }
+
+  /// Voce "Chiusura giornata": i totali di oggi secondo il server, una
+  /// conferma con i numeri, la stampa. Senza ordini non si stampa niente.
+  /// Su un dispositivo senza stampante i totali si guardano e basta.
+  Future<void> _chiusuraManuale() async {
+    RispostaChiusura risposta;
+    try {
+      risposta = await _orderService.getChiusura();
+    } catch (e) {
+      debugPrint('Chiusura giornata non disponibile: $e');
+      _avvisoChiusura('Chiusura non disponibile: controlla la connessione');
+      return;
+    }
+    if (!mounted) return;
+
+    final riepilogo = risposta.riepilogo;
+    if (riepilogo == null) {
+      _avvisoChiusura(
+        risposta.messaggio ?? 'Nessun ordine oggi: niente da stampare',
+      );
+      return;
+    }
+
+    final stampabile = _stampanteIntegrata != false;
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Chiusura del ${riepilogo.dataFormattata}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _rigaChiusura('Ordini', '${riepilogo.ordini}'),
+            if (riepilogo.inCorso > 0)
+              _rigaChiusura('Non ancora consegnati', '${riepilogo.inCorso}'),
+            if (riepilogo.annullati > 0)
+              _rigaChiusura('Annullati (esclusi)', '${riepilogo.annullati}'),
+            const Divider(),
+            _rigaChiusura('Subtotale', _euro(riepilogo.subtotale)),
+            _rigaChiusura('Rincaro', _euro(riepilogo.rincaro)),
+            _rigaChiusura('Consegna', _euro(riepilogo.consegna)),
+            _rigaChiusura('Tassa', _euro(riepilogo.tassa)),
+            if (riepilogo.sconto > 0)
+              _rigaChiusura('Sconti', '-${_euro(riepilogo.sconto)}'),
+            const Divider(),
+            _rigaChiusura('TOTALE', _euro(riepilogo.totale), evidenza: true),
+            if (!stampabile)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text(
+                  'Questo dispositivo non ha la stampante: la chiusura si '
+                  'stampa dal tablet del locale.',
+                  style: TextStyle(fontSize: 12, color: AppColors.gray),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(stampabile ? 'Annulla' : 'Chiudi'),
+          ),
+          if (stampabile)
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              icon: const Icon(Icons.print_outlined),
+              label: const Text('Stampa'),
+            ),
+        ],
+      ),
+    );
+    if (conferma != true || !mounted) return;
+
+    final esito = await _stampaChiusura(riepilogo, OrigineStampa.manuale);
+    if (!mounted) return;
+    if (esito == null) {
+      _avvisoChiusura('Stampa in corso: riprova tra qualche secondo');
+    } else if (esito.ok) {
+      _avvisoChiusura('Chiusura del ${riepilogo.dataFormattata} stampata');
+    } else {
+      _avvisoChiusura(
+        'Chiusura non stampata: ${esito.motivo ?? 'errore stampante'}',
+      );
+    }
+  }
+
+  Widget _rigaChiusura(String etichetta, String valore, {bool evidenza = false}) {
+    final stile = TextStyle(
+      fontSize: evidenza ? 18 : 15,
+      fontWeight: evidenza ? FontWeight.bold : FontWeight.w500,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [Text(etichetta, style: stile), Text(valore, style: stile)],
+      ),
+    );
+  }
+
+  String _euro(double valore) => 'EUR ${valore.toStringAsFixed(2)}';
+
+  void _avvisoChiusura(String testo) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(testo),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   /// Notifica visiva per nuovo ordine
@@ -880,6 +1055,20 @@ class _HomeScreenState extends State<HomeScreen>
             onTap: () {
               Navigator.pop(context);
               context.push('/history');
+            },
+          ),
+          const Divider(height: 1),
+
+          // Totali di oggi come sul pannello: Subtotale, Rincaro, Consegna,
+          // Tassa, Totale. Dopo mezzanotte escono da soli, qui per chi
+          // chiude a fine servizio.
+          _voceDrawer(
+            icona: Icons.receipt_long_outlined,
+            titolo: 'Chiusura giornata',
+            sottotitolo: 'Stampa i totali di oggi',
+            onTap: () {
+              Navigator.pop(context);
+              _chiusuraManuale();
             },
           ),
           const Divider(height: 1),
