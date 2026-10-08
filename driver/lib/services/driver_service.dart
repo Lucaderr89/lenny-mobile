@@ -5,6 +5,15 @@ import '../config/app_constants.dart';
 import '../models/order.dart';
 import '../models/delivery_history.dart';
 
+/// Il server non riconosce piu' il token (401): la sessione e' stata
+/// invalidata, per esempio dal sync notturno che azzera il token quando la
+/// password cambia su Platform. Chi la riceve deve mandare al login, non
+/// riprovare in silenzio mostrando una lista vecchia.
+class SessioneScadutaException implements Exception {
+  @override
+  String toString() => 'Sessione scaduta: accedi di nuovo';
+}
+
 /// Service per gestire le operazioni del Driver
 class DriverService {
   /// Ottiene gli headers con autenticazione
@@ -27,10 +36,14 @@ class DriverService {
       print('🔵 API Request: GET $url');
       print('🔵 Headers: $headers');
 
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');
+
+      if (response.statusCode == 401) {
+        throw SessioneScadutaException();
+      }
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
@@ -46,6 +59,8 @@ class DriverService {
           'Errore caricamento ordini: Status ${response.statusCode}',
         );
       }
+    } on SessioneScadutaException {
+      rethrow; // la home manda al login: non va travestita da errore di rete
     } catch (e) {
       print('❌ Exception in getAssignedOrders: $e');
       throw Exception('Errore connessione: $e');
@@ -67,7 +82,7 @@ class DriverService {
         Uri.parse(url),
         headers: headers,
         body: json.encode({'order_id': orderId, 'order_source': orderSource}),
-      );
+      ).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');
@@ -116,7 +131,7 @@ class DriverService {
         Uri.parse(url),
         headers: headers,
         body: json.encode(body),
-      );
+      ).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');
@@ -171,7 +186,7 @@ class DriverService {
         Uri.parse(url),
         headers: headers,
         body: json.encode({'order_id': orderId, 'status': status}),
-      );
+      ).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Response Status: \${response.statusCode}');
       print('🔵 Response Body: \${response.body}');
@@ -197,7 +212,7 @@ class DriverService {
     final response = await http.get(
       Uri.parse('${AppConstants.apiUrl}/driver/payment-methods'),
       headers: headers,
-    );
+    ).timeout(const Duration(seconds: AppConstants.apiTimeout));
     if (response.statusCode != 200) {
       throw Exception('Errore metodi di pagamento: ${response.statusCode}');
     }
@@ -218,7 +233,7 @@ class DriverService {
       print('🔵 API Request: GET $url');
       print('🔵 Headers: $headers');
 
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');
@@ -254,7 +269,7 @@ class DriverService {
         Uri.parse('${AppConstants.baseUrl}/api/drivers/$driverId/iban'),
         headers: headers,
         body: json.encode({'iban': iban}),
-      );
+      ).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       if (response.statusCode != 200) {
         throw Exception('Errore aggiornamento IBAN');
@@ -286,7 +301,7 @@ class DriverService {
         Uri.parse(url),
         headers: headers,
         body: body,
-      );
+      ).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Upload Response Status: ${response.statusCode}');
       print('🔵 Upload Response Body: ${response.body}');
@@ -322,7 +337,7 @@ class DriverService {
 
       print('🔵 API Request: GET $url');
 
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await http.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: AppConstants.apiTimeout));
 
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');

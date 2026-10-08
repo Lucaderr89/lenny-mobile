@@ -260,6 +260,21 @@ class Order {
       'products': products.map((p) => p.toJson()).toList(),
     };
   }
+
+  /// Tutto cio' che la home mostra o usa, in una stringa: due ordini con la
+  /// stessa impronta sono identici a schermo. Il polling la confronta per
+  /// capire se c'e' davvero qualcosa di nuovo. Prima guardava solo stato e
+  /// giro: un indirizzo o una fascia corretti dall'ufficio restavano vecchi
+  /// sulle card fino al riavvio dell'app.
+  String get impronta => jsonEncode({
+    ...toJson(),
+    'batch_id': batchId,
+    'order_source': orderSource,
+    'partner_type': partnerType,
+    'delivery_sequence': deliverySequence,
+    'route_plan': routePlanRaw,
+    'reassigned_count': reassignedCount,
+  });
 }
 
 /// Model per un prodotto dell'ordine

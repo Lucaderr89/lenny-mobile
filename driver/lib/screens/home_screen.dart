@@ -71,6 +71,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ValueNotifier<List<Order>> _ordersNotifier = ValueNotifier(<Order>[]);
   List<Order> get _orders => _ordersNotifier.value;
   Timer? _ordersRefreshTimer;
+
+  /// Ora dell'ultimo caricamento riuscito della lista, mostrata accanto al
+  /// bottone di aggiornamento: il driver deve sapere se quello che guarda
+  /// e' fresco. Un aggiornamento alla volta: pull, bottone e polling possono
+  /// sovrapporsi.
+  DateTime? _ultimoAggiornamento;
+  bool _aggiornamentoInCorso = false;
   final Map<int, String> _previousOrderStatuses = {};
 
   // Ordine su cui il driver ha premuto NAVIGA: la bolla resta su questo
@@ -160,7 +167,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // anche solo cambiando applicazione dal sistema — hai gia' tutto sotto
       // gli occhi: la bolla diventa un ostacolo e va via da sola.
       OverlayBollaService().chiudi();
-      _loadData();
+      // Aggiornamento silenzioso: la rotella a tutto schermo di _loadData
+      // ogni volta che si torna dal navigatore era un lampo inutile.
+      _aggiorna();
     }
   }
 
@@ -231,7 +240,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadOrders() async {
+  /// Scarica gli ordini e aggiorna le card. True se la lista e' arrivata;
+  /// false se la rete non ha risposto (si resta su quella precedente).
+  Future<bool> _loadOrders() async {
     try {
       final orders = await _driverService.getAssignedOrders();
       if (mounted) {
@@ -312,42 +323,84 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           RegoleHome.ordinePerBolla(orders, _ordineBollaId),
         );
       }
+      _ultimoAggiornamento = DateTime.now();
+      return true;
+    } on SessioneScadutaException {
+      await _sessioneScaduta();
+      return false;
     } catch (e) {
       print('❌ Errore caricamento ordini: $e');
+      return false;
     }
   }
 
-  /// True se le due liste differiscono in cio' che conta per le card e per
-  /// la navigazione (id, stato, timestamp di avanzamento, giro).
+  /// True se le due liste differiscono in qualcosa che la home mostra o usa.
+  /// Si confronta l'impronta intera dell'ordine: prima si guardavano solo
+  /// stato e giro, e un indirizzo, una fascia o un telefono corretti
+  /// dall'ufficio restavano vecchi sulle card fino al riavvio dell'app.
   bool _ordiniCambiati(List<Order> vecchi, List<Order> nuovi) {
     if (vecchi.length != nuovi.length) return true;
     for (var i = 0; i < vecchi.length; i++) {
-      final a = vecchi[i];
-      final b = nuovi[i];
-      if (a.id != b.id ||
-          a.status != b.status ||
-          a.pickedUpAt != b.pickedUpAt ||
-          a.confirmedAt != b.confirmedAt ||
-          a.routePlanRaw != b.routePlanRaw ||
-          a.deliverySequence != b.deliverySequence) {
-        return true;
-      }
+      if (vecchi[i].impronta != nuovi[i].impronta) return true;
     }
     return false;
   }
 
+  /// Ricarica turno e ordini senza la rotella a tutto schermo: lo fanno il
+  /// pull-to-refresh, il bottone, il polling ogni 30 s e il ritorno in
+  /// primo piano. Con [manuale] l'ha chiesto il driver e, se non riesce,
+  /// glielo si dice: prima il bottone falliva in silenzio e sembrava morto.
+  /// Il turno si aggiorna solo se la chiamata risponde: una risposta mancata
+  /// non deve far sparire il turno gia' noto.
+  Future<void> _aggiorna({bool manuale = false}) async {
+    if (_aggiornamentoInCorso) return;
+    _aggiornamentoInCorso = true;
+    try {
+      final shift = await _shiftService.getShiftToday();
+      if (!mounted) return;
+      if (shift != null) {
+        setState(() => _shiftInfo = shift);
+      }
+      final ok = await _loadOrders();
+      if (!mounted) return;
+      setState(() {});
+      if (manuale && !ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Aggiornamento non riuscito: controlla la connessione e riprova',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      _aggiornamentoInCorso = false;
+    }
+  }
+
+  /// Il server ha rifiutato il token: la sessione non vale piu' (es. password
+  /// cambiata su Platform e token azzerato dal sync). Si esce e si torna al
+  /// login, invece di mostrare per sempre una lista vecchia.
+  Future<void> _sessioneScaduta() async {
+    _ordersRefreshTimer?.cancel();
+    await AuthService().forceLogout();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sessione scaduta: accedi di nuovo')),
+    );
+    context.go('/login');
+  }
+
+  String _oraBreve(DateTime t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
   void _startOrdersRefresh() {
     _ordersRefreshTimer?.cancel();
-    _ordersRefreshTimer = Timer.periodic(const Duration(seconds: 30), (
-      _,
-    ) async {
-      await _loadOrders();
-      // Aggiorna anche lo stato availability (online/offline/busy)
-      final updatedShift = await _shiftService.getShiftToday();
-      if (mounted) {
-        setState(() => _shiftInfo = updatedShift);
-      }
-    });
+    _ordersRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _aggiorna(),
+    );
   }
 
   void _showToast(String message, {required bool isError}) {
@@ -379,18 +432,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: context.cSfondo,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Card turno di oggi
-            _buildShiftCard(),
-            const SizedBox(height: 4),
+      // Pull-to-refresh SEMPRE, anche senza ordini: AlwaysScrollable rende
+      // trascinabile una pagina piu' corta dello schermo.
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => _aggiorna(manuale: true),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Card turno di oggi
+              _buildShiftCard(),
+              const SizedBox(height: 4),
 
-            // Card ordini attivi (CUORE DELL'APP - Focus 100% sugli ordini)
-            _buildActiveOrdersCard(),
-          ],
+              // Card ordini attivi (CUORE DELL'APP - Focus 100% sugli ordini)
+              _buildActiveOrdersCard(),
+            ],
+          ),
         ),
       ),
     );
@@ -854,13 +914,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             const Spacer(),
+            if (_ultimoAggiornamento != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(
+                  'agg. ${_oraBreve(_ultimoAggiornamento!)}',
+                  style: TextStyle(fontSize: 11, color: context.cTestoSec),
+                ),
+              ),
             IconButton(
               icon: const Icon(
                 Icons.refresh,
                 color: AppColors.primary,
                 size: 20,
               ),
-              onPressed: _loadOrders,
+              onPressed: () => _aggiorna(manuale: true),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
