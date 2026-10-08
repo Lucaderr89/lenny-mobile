@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_icon.dart';
 import '../config/app_colors.dart';
+import '../services/order_service.dart';
+import 'dart:async';
 import 'dart:math' as math;
 import 'live_orders_screen.dart';
 
@@ -31,6 +33,12 @@ class OrderCompletedScreen extends StatefulWidget {
 class _OrderCompletedScreenState extends State<OrderCompletedScreen>
     with TickerProviderStateMixin {
   static const Color primaryColor = AppColors.primary;
+
+  final OrderService _orderService = OrderService();
+
+  /// Ricevuta via email: invio in corso, oppure gia' partita (a che indirizzo).
+  bool _invioRicevuta = false;
+  String? _ricevutaInviataA;
 
   late AnimationController _scaleController;
   late AnimationController _fadeController;
@@ -285,6 +293,9 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
+                        // Ricevuta PDF via email, su richiesta
+                        _buildRicevuta(),
+                        const SizedBox(height: 12),
                         // Secondario: torna alla home
                         SizedBox(
                           width: double.infinity,
@@ -315,6 +326,105 @@ class _OrderCompletedScreenState extends State<OrderCompletedScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Il server genera la ricevuta PDF e la manda all'email dell'account.
+  /// Se non parte, il motivo (limite di invii, email mancante, posta del
+  /// server giu') arriva dal server e si mostra cosi' com'e'.
+  Future<void> _richiediRicevuta() async {
+    setState(() => _invioRicevuta = true);
+    try {
+      final email = await _orderService.richiediRicevutaEmail(widget.orderId);
+      if (!mounted) return;
+      setState(
+        () => _ricevutaInviataA = email.isNotEmpty ? email : 'la tua email',
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      _avvisoRicevuta('Il server non risponde: riprova tra poco');
+    } catch (e) {
+      if (!mounted) return;
+      _avvisoRicevuta(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _invioRicevuta = false);
+    }
+  }
+
+  void _avvisoRicevuta(String testo) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(testo),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  /// Tasto "Ricevi la ricevuta via email". Una volta partita lascia il posto
+  /// alla conferma con l'indirizzo: non serve mandarla due volte.
+  Widget _buildRicevuta() {
+    final inviataA = _ricevutaInviataA;
+    if (inviataA != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF66BB6A), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF43A047), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Ricevuta inviata a $inviataA',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      height: 46,
+      child: OutlinedButton.icon(
+        onPressed: _invioRicevuta ? null : _richiediRicevuta,
+        icon: _invioRicevuta
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const AppIcon(
+                'assets/icons_svg/icons8-email-32.svg',
+                size: 20,
+                color: primaryColor,
+              ),
+        label: Text(
+          _invioRicevuta ? 'Invio in corso...' : 'Ricevi la ricevuta via email',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryColor,
+          backgroundColor: Colors.white.withValues(alpha: 0.85),
+          side: BorderSide(
+            color: primaryColor.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
     );
   }

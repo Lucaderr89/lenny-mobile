@@ -159,6 +159,43 @@ class OrderService {
   }
 
   /// Recupera ordini del cliente
+  /// Chiede al server di mandare la ricevuta PDF dell'ordine all'email
+  /// dell'account. Ritorna l'indirizzo a cui e' partita; lancia con il
+  /// messaggio del server se non parte (limite di invii, email non valida,
+  /// posta del server giu').
+  Future<String> richiediRicevutaEmail(int orderId) async {
+    final headers = await _getHeaders();
+    // Il server genera il PDF e parla con l'SMTP: qualche secondo in piu'.
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/customer/orders/$orderId/receipt-email'),
+          headers: headers,
+        )
+        .timeout(const Duration(seconds: 45));
+
+    Map<String, dynamic> corpo = {};
+    try {
+      corpo = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      // Risposta non JSON (pagina di errore): conta lo stato HTTP
+    }
+
+    if (response.statusCode == 200 && corpo['success'] == true) {
+      final dati = corpo['data'];
+      return (dati is Map ? dati['sent_to'] : null)?.toString() ?? '';
+    }
+
+    // Il backend risponde {"success":false,"error":{"message":...}};
+    // alcuni endpoint usano ancora "message" a livello root.
+    final errore = corpo['error'];
+    final messaggio =
+        (errore is Map ? errore['message'] : null) ?? corpo['message'];
+    throw Exception(
+      messaggio?.toString() ??
+          'Invio della ricevuta non riuscito (${response.statusCode})',
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getCustomerOrders() async {
     try {
       print('📋 [ORDER] Recupero ordini cliente...');
