@@ -30,11 +30,26 @@ class OverlayBollaService {
   /// un margine "a occhio" finisce sotto la barra su alcuni telefoni.
   double _insetAlto = 28;
 
-  /// Mostra (o aggiorna) la bolla con la tappa ATTIVA di [ordine].
+  /// Tappa scelta dal driver per ordine: true = verso il cliente, false =
+  /// verso il ristorante. Il NAVIGA sta su ogni riga, quindi il driver puo'
+  /// partire verso il cliente anche se l'ordine e' ancora "in ritiro" (ha
+  /// gia' preso i sacchetti, o fa il giro a modo suo): la bolla deve
+  /// mostrare il posto verso cui sta andando, non quello che dice lo stato.
+  final Map<int, bool> _versoClienteScelto = {};
+
+  /// Mostra (o aggiorna) la bolla con la tappa di [ordine] scelta dal
+  /// driver ([versoCliente]; senza, segue lo stato dell'ordine).
   /// Se manca il permesso overlay, lo chiede UNA volta con spiegazione.
-  Future<void> mostraPerOrdine(BuildContext context, Order ordine) async {
+  Future<void> mostraPerOrdine(
+    BuildContext context,
+    Order ordine, {
+    bool? versoCliente,
+  }) async {
     if (!supportata) return;
 
+    if (versoCliente != null) {
+      _versoClienteScelto[ordine.id] = versoCliente;
+    }
     _insetAlto = MediaQuery.of(context).viewPadding.top;
     _ascoltaAzioniBolla();
 
@@ -138,6 +153,7 @@ class OverlayBollaService {
     try {
       if (!await FlutterOverlayWindow.isActive()) return;
       if (ordineAttivo == null) {
+        _versoClienteScelto.clear();
         await FlutterOverlayWindow.closeOverlay();
         return;
       }
@@ -156,7 +172,8 @@ class OverlayBollaService {
   }
 
   Future<void> _condividiDati(Order o) async {
-    final inConsegna = o.isInDelivery;
+    // Ritiro gia' fatto (stato) o scelta esplicita del driver: cliente.
+    final inConsegna = o.isInDelivery || (_versoClienteScelto[o.id] ?? false);
     await FlutterOverlayWindow.shareData(
       jsonEncode({
         'verbo': inConsegna ? 'CONSEGNA A' : 'RITIRA DA',

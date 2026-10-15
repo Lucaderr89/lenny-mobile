@@ -11,6 +11,10 @@ class AzioneProssima extends StatelessWidget {
   final String soggetto; // es. nome ristorante o cliente
   final String? dettaglio; // es. fascia oraria o indirizzo breve
   final String? incasso; // es. "INCASSA €25,40" (solo consegne non pagate)
+
+  /// Numero d'ordine, sempre in vista: al banco del ristorante ci sono
+  /// 4-5 sacchetti e il driver deve prendere il suo al primo colpo.
+  final String? numero;
   final Color colore;
   final IconData icona;
 
@@ -20,12 +24,33 @@ class AzioneProssima extends StatelessWidget {
     required this.soggetto,
     this.dettaglio,
     this.incasso,
+    this.numero,
     required this.colore,
     required this.icona,
   });
 
+  Widget _pillola(String testo, {double fontSize = 15}) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppRadius.chip),
+    ),
+    child: Text(
+      testo,
+      style: TextStyle(
+        color: colore,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
+    final pillole = <Widget>[
+      if (numero != null && numero!.isNotEmpty) _pillola('N. $numero'),
+      if (incasso != null) _pillola(incasso!),
+    ];
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -78,25 +103,86 @@ class AzioneProssima extends StatelessWidget {
               ],
             ),
           ),
-          if (incasso != null) ...[
+          if (pillole.isNotEmpty) ...[
             const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(AppRadius.chip),
-              ),
-              child: Text(
-                incasso!,
-                style: TextStyle(
-                  color: colore,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < pillole.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 4),
+                  pillole[i],
+                ],
+              ],
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Numero d'ordine in evidenza sulla riga del cliente: il driver lo
+/// confronta con lo scontrino sul sacchetto. Grande e contrastato apposta,
+/// prima era un "#id" grigio da 11 punti che nessuno vedeva.
+class NumeroOrdineChip extends StatelessWidget {
+  final String numero;
+  final Color colore;
+
+  const NumeroOrdineChip({
+    super.key,
+    required this.numero,
+    this.colore = AppColors.primary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colore,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+      ),
+      child: Text(
+        'N. $numero',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pulsante NAVIGA agganciato alla RIGA a cui appartiene: sulla riga del
+/// ristorante porta al ristorante, su quella del cliente porta dal
+/// cliente. Ogni posto ha il suo: il giro lo sceglie il driver, non l'app.
+/// Pieno (non tinto) perche' e' l'azione principale della riga.
+class NavigaRiga extends StatelessWidget {
+  final Color colore;
+  final VoidCallback onTap;
+
+  const NavigaRiga({super.key, required this.colore, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Naviga',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: colore,
+            borderRadius: BorderRadius.circular(AppRadius.chip),
+          ),
+          child: const Icon(Icons.navigation, color: Colors.white, size: 23),
+        ),
       ),
     );
   }

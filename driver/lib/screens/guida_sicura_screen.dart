@@ -82,10 +82,10 @@ class GuidaSicuraScreen extends StatelessWidget {
               ),
               child: const Text(
                 'Il telefono in mano mentre guidi costa caro, in tutti i '
-                'sensi. L\'app gia\' ti annuncia a voce ordini e tappe: '
-                'con la lettura notifiche del TUO telefono puoi farti '
-                'leggere anche WhatsApp e il resto, con cuffie o casco '
-                'connessi. Si attiva una volta sola.',
+                'sensi. L\'app ti avvisa con un suono quando arriva un '
+                'ordine: con la lettura notifiche del TUO telefono puoi '
+                'farti leggere anche WhatsApp e il resto, con cuffie o '
+                'casco connessi. Si attiva una volta sola.',
                 style: TextStyle(fontSize: 14, height: 1.45),
               ),
             ),
@@ -106,8 +106,8 @@ class GuidaSicuraScreen extends StatelessWidget {
             ]),
             sezione('Consigli', const [
               'Monta il telefono su un supporto: mai in mano',
-              'Gli annunci vocali di Lenny si regolano da '
-                  'Impostazioni > Guida',
+              'Per andare a una tappa usa il tasto NAVIGA sulla riga: '
+                  'Google Maps parte gia\' in navigazione',
               'Se devi scrivere, fermati: nessuna consegna vale una multa '
                   'o un incidente',
             ]),

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:driver/logic/navigazione_esterna.dart';
 import 'package:driver/logic/regole_home.dart';
 import 'package:driver/models/order.dart';
-import 'package:driver/services/tts_service.dart';
 import 'package:driver/widgets/azione_card.dart';
 
 /// Ordine di prova costruito dal JSON dell'API, cosi' il test passa anche
@@ -143,15 +143,70 @@ void main() {
     });
   });
 
-  group('Fascia pronunciata dalla voce', () {
-    test('legge solo inizio fascia, senza trattino ne seconda ora', () {
-      expect(TtsService.fasciaParlata('19:30 - 20:00'), '19 e 30');
-      expect(TtsService.fasciaParlata('12:00 - 12:30'), '12');
-      expect(TtsService.fasciaParlata('09:05 - 09:35'), '9 e 5');
+  group('Numero d ordine da mostrare', () {
+    test('e il numero lenny-app quando l API lo manda', () {
+      final o = Order.fromJson({'id': 19634, 'numero_ordine': '131234'});
+      expect(o.numeroOrdine, '131234');
+      expect(o.id, 19634, reason: 'l id resta la chiave delle chiamate');
     });
 
-    test('fascia illeggibile: si dice quello che c e, senza rompere', () {
-      expect(TtsService.fasciaParlata('prima possibile'), 'prima possibile');
+    test('senza numero esterno (o vuoto) si mostra l id', () {
+      expect(Order.fromJson({'id': 19634}).numeroOrdine, '19634');
+      expect(
+        Order.fromJson({'id': 19634, 'numero_ordine': ' '}).numeroOrdine,
+        '19634',
+      );
+    });
+
+    test('i prodotti portano extra e nota', () {
+      final o = Order.fromJson({
+        'id': 1,
+        'products': [
+          {
+            'name': 'Pizza',
+            'quantity': 2,
+            'price': '8.00',
+            'total': '16.00',
+            'extras': ['senza cipolla', ''],
+            'note': ' ben cotta ',
+          },
+        ],
+      });
+      expect(o.products.single.extras, ['senza cipolla']);
+      expect(o.products.single.note, 'ben cotta');
+    });
+  });
+
+  group('Destinazione per Google Maps', () {
+    test('con le coordinate si naviga sul punto', () {
+      expect(
+        NavigazioneEsterna.destinazione(43.9394, 12.4468, 'Via Roma 1'),
+        '43.939400,12.446800',
+      );
+    });
+
+    test('senza coordinate (0,0) si usa l indirizzo, mai il mare', () {
+      expect(
+        NavigazioneEsterna.destinazione(0, 0, ' Via Roma 1, Serravalle '),
+        'Via Roma 1, Serravalle',
+      );
+      expect(NavigazioneEsterna.destinazione(0, 0, ''), '');
+    });
+
+    test('gli URL partono gia in navigazione e codificano l indirizzo', () {
+      final dest = 'Via Roma 1, Serravalle';
+      expect(
+        NavigazioneEsterna.androidNavigazione(dest).toString(),
+        'google.navigation:q=Via%20Roma%201%2C%20Serravalle&mode=d',
+      );
+      expect(
+        NavigazioneEsterna.iosGoogleMaps(dest).toString(),
+        'comgooglemaps://?daddr=Via%20Roma%201%2C%20Serravalle&directionsmode=driving',
+      );
+      expect(
+        NavigazioneEsterna.linkUniversale('43.9,12.4').toString(),
+        'https://www.google.com/maps/dir/?api=1&destination=43.9%2C12.4&travelmode=driving',
+      );
     });
   });
 

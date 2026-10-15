@@ -33,6 +33,12 @@ class RouteStop {
 /// Model per un ordine assegnato al driver
 class Order {
   final int id;
+
+  /// Numero d'ordine DA MOSTRARE: e' quello che hanno il cliente e il
+  /// ristorante sullo scontrino (numero lenny-app se importato, altrimenti
+  /// l'id). Al banco con 4-5 sacchetti il driver cerca QUESTO numero. L'id
+  /// resta la chiave delle chiamate API, mai questo.
+  final String numeroOrdine;
   final String dateOrder;
   final int timeSlotId;
   final int restaurantId;
@@ -79,6 +85,7 @@ class Order {
 
   Order({
     required this.id,
+    String? numeroOrdine,
     required this.dateOrder,
     required this.timeSlotId,
     required this.restaurantId,
@@ -111,7 +118,9 @@ class Order {
     this.routeSteps = const [],
     this.reassignedCount = 0,
     this.tapToPay = true,
-  });
+  }) : numeroOrdine = (numeroOrdine == null || numeroOrdine.trim().isEmpty)
+           ? '$id'
+           : numeroOrdine.trim();
 
   factory Order.fromJson(Map<String, dynamic> json) {
     List<OrderProduct> productsList = [];
@@ -146,6 +155,7 @@ class Order {
 
     return Order(
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      numeroOrdine: json['numero_ordine']?.toString(),
       dateOrder: json['date_order'] ?? '',
       timeSlotId: int.tryParse(json['time_slot_id']?.toString() ?? '0') ?? 0,
       restaurantId: int.tryParse(json['restaurant_id']?.toString() ?? '0') ?? 0,
@@ -233,6 +243,7 @@ class Order {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'numero_ordine': numeroOrdine,
       'date_order': dateOrder,
       'time_slot_id': timeSlotId,
       'restaurant_id': restaurantId,
@@ -284,23 +295,45 @@ class OrderProduct {
   final double price;
   final double total;
 
+  /// Extra scelti dal cliente (solo food): "senza cipolla", "doppio
+  /// formaggio". Al banco si controllano insieme al piatto.
+  final List<String> extras;
+
+  /// Nota di riga (partner): es. "maturo" su un chilo di banane.
+  final String? note;
+
   OrderProduct({
     required this.name,
     required this.quantity,
     required this.price,
     required this.total,
+    this.extras = const [],
+    this.note,
   });
 
   factory OrderProduct.fromJson(Map<String, dynamic> json) {
+    final extras = json['extras'];
+    final nota = json['note']?.toString().trim() ?? '';
     return OrderProduct(
       name: json['name'] ?? '',
       quantity: int.tryParse(json['quantity'].toString()) ?? 0,
       price: double.tryParse(json['price'].toString()) ?? 0.0,
       total: double.tryParse(json['total'].toString()) ?? 0.0,
+      extras: extras is List
+          ? extras.map((e) => e.toString()).where((e) => e.isNotEmpty).toList()
+          : const [],
+      note: nota.isEmpty ? null : nota,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'name': name, 'quantity': quantity, 'price': price, 'total': total};
+    return {
+      'name': name,
+      'quantity': quantity,
+      'price': price,
+      'total': total,
+      'extras': extras,
+      'note': note,
+    };
   }
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../services/theme_controller.dart';
-import '../services/tts_service.dart';
 import 'guida_sicura_screen.dart';
 
-/// SettingsScreen - Impostazioni driver (aspetto + cambio password)
+/// SettingsScreen - Impostazioni driver (aspetto, guida sicura, password)
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -22,15 +21,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Serve l'elenco delle voci installate per popolare il selettore.
-    TtsService().init().then((_) {
-      if (mounted) setState(() {});
-    });
-  }
 
   @override
   void dispose() {
@@ -176,25 +166,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// I nomi di sistema sono sigle tipo "it-it-x-kda-network": illeggibili.
-  /// Se ne mostra la sostanza — quello che cambia davvero e' se la voce e'
-  /// sintetizzata sul server (piu' umana) o sul telefono.
-  String _etichettaVoce(String nome) {
-    final n = nome.toLowerCase();
-    final sigla = RegExp(r'x-([a-z]+)').firstMatch(n)?.group(1) ?? '';
-    final variante = sigla.isEmpty ? '' : ' ${sigla.toUpperCase()}';
-    if (n.contains('network')) return 'Italiana naturale$variante';
-    if (n.contains('neural') || n.contains('wavenet')) {
-      return 'Italiana neurale$variante';
-    }
-    if (n.contains('local')) return 'Italiana sul telefono$variante';
-    return nome;
-  }
-
-
+  /// Niente piu' annunci vocali: il nuovo ordine fa solo il suo suono.
+  /// Resta la pagina che spiega come farsi leggere le notifiche dal
+  /// telefono (Assistente/Siri), che non dipende dall'app.
   Widget _buildCardGuida() {
     final temaScuro = Theme.of(context).brightness == Brightness.dark;
-    final tts = TtsService();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -216,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.chip),
                 ),
                 child: const Icon(
-                  Icons.volume_up_outlined,
+                  Icons.headset_mic_outlined,
                   color: AppColors.primary,
                   size: 24,
                 ),
@@ -231,92 +207,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          SwitchListTile(
-            value: tts.abilitato,
-            onChanged: (valore) async {
-              await tts.impostaAbilitato(valore);
-              if (valore) {
-                tts.annuncia('Annunci vocali attivi');
-              }
-              if (mounted) setState(() {});
-            },
-            title: const Text(
-              'Annunci vocali',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              'I nuovi ordini vengono letti ad alta voce',
-              style: TextStyle(
-                fontSize: 12,
-                color: temaScuro
-                    ? AppColors.nightTextSecondary
-                    : context.cTestoSec,
-              ),
-            ),
-            activeThumbColor: AppColors.primary,
-            contentPadding: EdgeInsets.zero,
-          ),
-
-          // La voce si sceglie solo ad annunci accesi, altrimenti sarebbe un
-          // comando che non fa niente. La VELOCITA' non e' regolabile: il
-          // ritmo naturale e' uno solo, dare tre scelte era rumore.
-          if (tts.abilitato) ...[
-            if (tts.vociItaliane.length > 1) ...[
-              const SizedBox(height: 8),
-              Text(
-                'VOCE',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: context.cTestoSec,
-                ),
-              ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                initialValue: tts.nomeVoce,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-                style: TextStyle(fontSize: 13, color: context.cTesto),
-                items: [
-                  for (final voce in tts.vociItaliane)
-                    DropdownMenuItem(
-                      value: voce['name'],
-                      child: Text(
-                        _etichettaVoce(voce['name'] ?? ''),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (nome) async {
-                  if (nome == null) return;
-                  final voce = tts.vociItaliane.firstWhere(
-                    (v) => v['name'] == nome,
-                  );
-                  await tts.impostaVoce(voce);
-                  await tts.prova('Nuovo ordine. Fascia delle 19 e 30');
-                  if (mounted) setState(() {});
-                },
-              ),
-            ],
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () =>
-                    tts.prova('Nuovo ordine. Fascia delle 19 e 30'),
-                icon: const Icon(Icons.play_arrow, size: 20),
-                label: const Text('Prova la voce'),
-              ),
-            ),
-          ],
-
-          const Divider(height: 8),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(
@@ -388,7 +278,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildCardAspetto(),
               const SizedBox(height: 16),
 
-              // Card guida: annunci vocali della Modalita' Guida
+              // Card guida: pagina Guida sicura (lettura notifiche di sistema)
               _buildCardGuida(),
               const SizedBox(height: 16),
 

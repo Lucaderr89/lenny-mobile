@@ -77,9 +77,5 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="google.navigation"/>
         </intent>
-        <!-- Motore di sintesi vocale (annunci Modalita' Guida) -->
-        <intent>
-            <action android:name="android.intent.action.TTS_SERVICE"/>
-        </intent>
     </queries>
 </manifest>

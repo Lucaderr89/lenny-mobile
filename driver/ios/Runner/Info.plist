@@ -97,5 +97,12 @@
 	     caricata su TestFlight. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- NAVIGA apre l'app Google Maps gia' in navigazione (schema
+	     comgooglemaps). Senza questa dichiarazione iOS risponde sempre
+	     "non apribile" e si finirebbe nel browser anche con Maps installata. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+	</array>
 </dict>
 </plist>

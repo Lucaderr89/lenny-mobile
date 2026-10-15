@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:io' show Platform;
+
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -15,7 +17,6 @@ import '../services/fcm_service.dart';
 import '../services/notification_store.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../services/overlay_bolla_service.dart';
-import '../services/tts_service.dart';
 import '../widgets/location_permission_dialog.dart';
 import '../widgets/azione_card.dart';
 import '../widgets/foglio_tap_to_pay.dart';
@@ -24,10 +25,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'notifications_screen.dart';
 import 'delivery_history_screen.dart';
-import 'navigation_screen.dart';
 import 'panel_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
+import '../logic/navigazione_esterna.dart';
 import '../logic/regole_home.dart';
 import '../services/auth_service.dart';
 import 'dart:async';
@@ -41,9 +42,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  /// Metodi di pagamento accesi nel pannello (slug). Servono al dialog
-  /// "Come ha pagato?": SMAC compare solo se abilitata. Finche' la risposta
-  /// non arriva si mostrano contanti e POS, che ci sono sempre.
+  /// Metodi di pagamento accesi nel pannello (slug). Il dialog "Come ha
+  /// pagato?" propone SOLO quelli: se nel pannello sono accesi contanti e
+  /// POS, il driver vede contanti e POS. Finche' la risposta non arriva si
+  /// resta su contanti e POS.
   Set<String> _metodiPagamentoAbilitati = {'cash', 'pos'};
 
   Future<void> _caricaMetodiPagamento() async {
@@ -113,9 +115,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     });
     NotificationStore().unreadCount.addListener(_onUnreadChanged);
-
-    // Annunci vocali: prefs lette una volta, poi il servizio e' pronto
-    TtsService().init();
 
     // Ascolta push FCM in foreground per aggiornare ordini in tempo reale
     _fcmSubscription = FcmService().onForegroundMessage.listen((message) async {
@@ -263,16 +262,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   currentStatus == 'ready_for_pickup') &&
               order.confirmedAt == null &&
               !_processedNewOrders.contains(order.id)) {
-            // Suono iniziale per nuovo ordine
+            // Suono per il nuovo ordine. Solo il suono: niente voce, in
+            // strada basta e avanza.
             _playOrderAssignedSound();
-            // UNICO annuncio vocale, corto: in strada un messaggio lungo
-            // confonde piu' di quanto aiuti. La fascia va detta a parole
-            // ("19 e 30"), non letta grezza: "19:30 - 20:00" il motore lo
-            // pronuncia col trattino e la seconda ora, e suona sbagliato.
-            TtsService().annuncia(
-              'Nuovo ordine. Fascia delle '
-              '${TtsService.fasciaParlata(order.timeSlot)}',
-            );
             // Avvia timer reminder
             _startConfirmationReminder(order.id);
             // Marca come processato
@@ -304,13 +296,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         GeofenceTrackingService().sync(hasActiveOrders: orders.isNotEmpty);
 
         // Schermo sempre acceso finche' c'e' un ordine attivo: il telefono
-        // a cruscotto e' il "navigatore Lenny", non deve spegnersi.
-        // Con la NAVIGAZIONE APERTA resta acceso comunque: questo polling
-        // gira anche sotto la schermata di navigazione, e spegnere il
-        // wakelock li' sotto addormenterebbe la mappa a fine giro.
-        WakelockPlus.toggle(
-          enable: orders.isNotEmpty || NavigationScreen.schermataAperta,
-        );
+        // a cruscotto non deve spegnersi fra una tappa e l'altra.
+        WakelockPlus.toggle(enable: orders.isNotEmpty);
 
         // Bolla overlay: segue l'ordine su cui il driver ha premuto NAVIGA
         // (vedi RegoleHome.ordinePerBolla). Se quell'ordine non e' piu' in
@@ -523,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: const Text(
-                'Aspetto, annunci vocali, guida sicura, password',
+                'Aspetto, guida sicura, password',
                 style: TextStyle(fontSize: 12),
               ),
               onTap: () {
@@ -1111,8 +1098,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final slot = giroOrders.first.timeSlot;
     final total = giroOrders.fold<double>(0, (s, o) => s + o.total);
 
-    // Cursore tappa condiviso con la navigazione (RegoleHome): stesse
-    // regole qui e nella NavigationScreen, mai due verita' diverse.
+    // Cursore tappa (RegoleHome): logica pura, coperta dai test.
     bool stepDone(RouteStop st) =>
         RegoleHome.tappaChiusa(st, orderById[st.orderId]);
 
@@ -1122,9 +1108,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final doneCount = steps.where(stepDone).length;
 
     // PROSSIMA TAPPA = prima non completata. E' il perno della card: da qui
-    // vengono il banner in testa, il bersaglio del NAVIGA e l'ordine a cui
-    // si riferisce HO UN PROBLEMA. Si sposta da sola man mano che le tappe
-    // si chiudono, esattamente come il banner della card singola.
+    // vengono il banner in testa e l'ordine a cui si riferisce HO UN
+    // PROBLEMA. Si sposta da sola man mano che le tappe si chiudono. Il
+    // NAVIGA invece sta su OGNI tappa: la sequenza e' un suggerimento, il
+    // giro lo decide il driver.
     final RouteStop? prossima = RegoleHome.prossimaTappa(steps, orderById);
     final Order? ordineProssimo = prossima == null
         ? null
@@ -1146,6 +1133,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         incasso: ritiro || ordineProssimo.isPaid
             ? null
             : 'INCASSA €${ordineProssimo.total.toStringAsFixed(2)}',
+        numero: ordineProssimo.numeroOrdine,
         colore: coloreAzione,
         icona: ritiro ? Icons.storefront : Icons.location_on,
       );
@@ -1257,25 +1245,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         stepInProgress(st),
                       );
                     }),
-                // NAVIGA grande, puntato sulla PROSSIMA tappa: sul giro
-                // serve piu' che altrove, ed e' lo stesso gesto della card
-                // singola (apre Maps gia' in navigazione e alza la bolla).
-                if (prossima != null && ordineProssimo != null) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: BottoneAzione(
-                      icona: Icons.navigation,
-                      etichetta: 'NAVIGA',
-                      colore: coloreAzione,
-                      onTap: () => _apriNavigazione(
-                        ordineProssimo,
-                        gruppo: giroOrders,
-                        tappe: steps,
-                      ),
-                    ),
-                  ),
-                ],
                 ...deliverables.map(
                   (o) => Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -1415,11 +1384,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '#${st.orderId}',
+                        'N. ${o?.numeroOrdine ?? st.orderId}',
                         style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: context.cTestoSec,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: context.cTesto,
                         ),
                       ),
                       if (inProg) ...[
@@ -1470,18 +1439,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ],
               ),
             ),
-            // Stesso tasto della card singola, sulla riga a cui appartiene:
-            // sulla tappa di ritiro chiama il ristorante, su quella di
-            // consegna chiama il cliente. La navigazione NON si ripete qui:
-            // c'e' il NAVIGA grande sulla tappa in corso, e le altre tappe
-            // si aprono col tocco sulla riga.
-            if (o != null)
+            // Stessi tasti della card singola, sulla riga a cui
+            // appartengono: sulla tappa di ritiro chiamano e portano al
+            // ristorante, su quella di consegna al cliente. Ogni tappa ha
+            // il suo NAVIGA: il driver sceglie lui in che ordine farle.
+            if (o != null) ...[
               Builder(
                 builder: (_) {
                   final tel = isPickup
                       ? (o.restaurantPhone ?? '')
                       : o.customerPhone;
-                  if (tel.isEmpty) return const SizedBox(width: 4);
+                  if (tel.isEmpty) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(left: 6),
                     child: ChiamaRiga(
@@ -1493,6 +1461,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   );
                 },
               ),
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: NavigaRiga(
+                  colore: isPickup ? AppColors.primary : AppColors.success,
+                  onTap: () => _navigaVerso(o, versoCliente: !isPickup),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1523,7 +1499,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const Icon(Icons.done_all, size: 18),
             const SizedBox(width: 8),
             Text(
-              'CONFERMA CONSEGNA #${order.id}',
+              'CONFERMA CONSEGNA N. ${order.numeroOrdine}',
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.bold,
@@ -1670,19 +1646,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildOrderCard(Order order) {
-    if (order.isPartnerOrder) return _buildPartnerOrderCard(order);
-
-    // GERARCHIA AD AZIONE: in testa alla card, GRANDE, la prossima cosa
-    // da fare. Universale: vale per qualunque combinazione di stati.
+    // UNA card per food e partner: stessi dati, stessi tasti, stesso
+    // incasso. Il partner si riconosce dal badge (SPESA / NEGOZIO /
+    // PARTNER) e dall'icona del ritiro, non da un layout a parte: prima
+    // la card partner era un'altra cosa e mancava di pezzi.
     final bool daConfermare = order.confirmedAt == null;
     final bool inConsegna = order.isInDelivery;
+    final IconData iconaRitiro = order.isSupermarket
+        ? Icons.shopping_cart
+        : order.isPartnerOrder
+        ? Icons.storefront
+        : Icons.restaurant;
 
+    // GERARCHIA AD AZIONE: in testa alla card, GRANDE, la prossima cosa
+    // da fare. Il numero d'ordine sta sempre nel banner: e' quello che il
+    // driver confronta con lo scontrino sul sacchetto.
     final AzioneProssima banner;
     if (daConfermare) {
       banner = AzioneProssima(
         verbo: 'CONFERMA RICEZIONE',
         soggetto: order.restaurantName,
         dettaglio: 'Fascia ${order.timeSlot}',
+        numero: order.numeroOrdine,
         colore: AppColors.warning,
         icona: Icons.notifications_active,
       );
@@ -1691,6 +1676,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         verbo: 'CONSEGNA A',
         soggetto: order.customerName,
         dettaglio: order.deliveryAddress,
+        numero: order.numeroOrdine,
         incasso: order.isPaid
             ? null
             : 'INCASSA €${order.total.toStringAsFixed(2)}',
@@ -1702,20 +1688,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         verbo: 'RITIRA DA',
         soggetto: order.restaurantName,
         dettaglio: '${order.timeSlot} - ${order.restaurantAddress}',
+        numero: order.numeroOrdine,
         colore: AppColors.primary,
         icona: Icons.storefront,
       );
     }
-
-    // Le chiamate NON stanno piu' fra i bottoni grandi: un solo "CHIAMA" non
-    // diceva chi stavi chiamando. Ora ogni riga ha il suo tasto — quella del
-    // ristorante chiama il ristorante, quella del cliente chiama il cliente.
-    final String telRistorante = order.restaurantPhone ?? '';
-    final Color coloreAzione = daConfermare
-        ? AppColors.warning
-        : inConsegna
-        ? AppColors.success
-        : AppColors.primary;
 
     return InkWell(
       onTap: () => _showOrderDetailsModal(order),
@@ -1738,7 +1715,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             banner,
 
-            // Riga compatta: fascia, numero ordine, totale
+            // Riga compatta: fascia, numero ordine, tipo partner, totale
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               child: Row(
@@ -1759,13 +1736,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '#${order.id}',
+                    'N. ${order.numeroOrdine}',
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: context.cTestoSec,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: context.cTesto,
                     ),
                   ),
+                  if (order.isPartnerOrder) ...[
+                    const SizedBox(width: 8),
+                    _buildPartnerTypeBadge(order),
+                  ],
                   if (order.riassegnato) ...[
                     const SizedBox(width: 8),
                     Container(
@@ -1801,136 +1782,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // Body con dettagli
+            // Body con dettagli: ogni riga ha CHIAMA e NAVIGA suoi
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Ristorante
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.restaurant,
-                          color: AppColors.primary,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'RITIRO DA',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: context.cTestoSec,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildOrderStatusBadge(order),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              order.restaurantName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: context.cTesto,
-                              ),
-                            ),
-                            Text(
-                              order.restaurantAddress,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec.withValues(alpha: 0.8),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (telRistorante.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ChiamaRiga(
-                          telefono: telRistorante,
-                          colore: AppColors.primary,
-                        ),
-                      ],
-                    ],
+                  _buildRigaTappa(
+                    icona: iconaRitiro,
+                    colore: AppColors.primary,
+                    etichetta: 'RITIRO DA',
+                    badge: _buildOrderStatusBadge(order),
+                    titolo: order.restaurantName,
+                    sottotitolo: order.restaurantAddress,
+                    telefono: order.restaurantPhone ?? '',
+                    onNaviga: () => _navigaVerso(order, versoCliente: false),
                   ),
 
                   const Divider(height: 14),
 
-                  // Cliente
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: AppColors.success,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'CONSEGNA A',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              order.customerName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: context.cTesto,
-                              ),
-                            ),
-                            Text(
-                              order.deliveryAddress,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec.withValues(alpha: 0.8),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (order.customerPhone.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ChiamaRiga(
-                          telefono: order.customerPhone,
-                          colore: AppColors.success,
-                        ),
-                      ],
-                    ],
+                  _buildRigaTappa(
+                    icona: Icons.location_on,
+                    colore: AppColors.success,
+                    etichetta: 'CONSEGNA A',
+                    numero: order.numeroOrdine,
+                    titolo: order.customerName,
+                    sottotitolo: order.deliveryAddress,
+                    telefono: order.customerPhone,
+                    onNaviga: () => _navigaVerso(order, versoCliente: true),
                   ),
 
                   if (order.deliveryNotes != null &&
@@ -1969,26 +1848,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                   const SizedBox(height: 12),
 
-                  // Bottoni GRANDI puntati sulla tappa ATTIVA: da usare col
-                  // pollice guantato, senza cercare iconcine.
-                  SizedBox(
-                    width: double.infinity,
-                    child: BottoneAzione(
-                      icona: Icons.navigation,
-                      etichetta: 'NAVIGA',
-                      colore: coloreAzione,
-                      onTap: () => _apriNavigazione(order),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Azioni
+                  // Azioni: prima la ricezione, poi la consegna. La consegna
+                  // la conferma SEMPRE il driver (pagato online compreso):
+                  // il geofencing muove ritiro e partenza, mai il consegnato.
                   if (order.confirmedAt == null)
-                    // Non ancora confermato → mostra pulsante CONFERMA RICEZIONE
                     _buildConfirmButton(order)
                   else if (order.isInDelivery)
-                    // In delivery → mostra pulsante CONFERMA CONSEGNA
                     _buildDeliverButton(order),
 
                   // Emergenze: un tocco → WhatsApp col titolare, messaggio
@@ -2023,370 +1888,140 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Card differenziata per ordini partner (supermercato, negozio, ecc.)
-  Widget _buildPartnerOrderCard(Order order) {
-    // Palette colore in base al tipo partner
-    final Color accentColor = order.isSupermarket
-        ? const Color(0xFF16A34A) // verde supermercato
-        : order.isShop
-        ? const Color(0xFF0EA5E9) // azzurro negozio (più evidente)
-        : AppColors.warning; // arancio altri partner
+  /// Riga di una tappa (ritiro o consegna) con i suoi tasti. CHIAMA e
+  /// NAVIGA appartengono alla riga: chi si chiama e dove si va lo dice la
+  /// posizione, non un'etichetta. Dati mancanti si DICONO ("non indicato")
+  /// invece di lasciare un buco: cosi' si vede subito se un ordine arriva
+  /// senza nome o senza indirizzo.
+  ///
+  /// [guida] sostituisce l'icona (es. il "1°" delle consegne di un batch);
+  /// [numero] mette il numero d'ordine accanto al nome.
+  Widget _buildRigaTappa({
+    required IconData icona,
+    required Color colore,
+    required String etichetta,
+    required String titolo,
+    required String sottotitolo,
+    required String telefono,
+    required VoidCallback onNaviga,
+    Widget? badge,
+    Widget? guida,
+    String? numero,
+    VoidCallback? onTap,
+  }) {
+    final bool senzaNome = titolo.trim().isEmpty;
+    final bool senzaIndirizzo = sottotitolo.trim().isEmpty;
 
-    final String badgeLabel = order.isSupermarket
+    final riga = Row(
+      children: [
+        guida ??
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: colore.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(icona, color: colore, size: 16),
+            ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    etichetta,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.cTestoSec,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (badge != null) ...[const SizedBox(width: 8), badge],
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      senzaNome ? 'Nome non indicato' : titolo,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        fontStyle: senzaNome
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                        color: senzaNome ? context.cTestoSec : context.cTesto,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (numero != null) ...[
+                    const SizedBox(width: 8),
+                    NumeroOrdineChip(numero: numero, colore: colore),
+                  ],
+                ],
+              ),
+              Text(
+                senzaIndirizzo ? 'Indirizzo non indicato' : sottotitolo,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontStyle: senzaIndirizzo
+                      ? FontStyle.italic
+                      : FontStyle.normal,
+                  color: context.cTestoSec.withValues(alpha: 0.8),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        if (telefono.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          ChiamaRiga(telefono: telefono, colore: colore),
+        ],
+        const SizedBox(width: 8),
+        NavigaRiga(colore: colore, onTap: onNaviga),
+      ],
+    );
+
+    if (onTap == null) return riga;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: riga,
+    );
+  }
+
+  /// Badge del tipo di partner (SPESA / NEGOZIO / PARTNER): e' l'unica
+  /// cosa che distingue a colpo d'occhio un ordine partner da uno food.
+  Widget _buildPartnerTypeBadge(Order order) {
+    final Color colore = order.isSupermarket
+        ? const Color(0xFF16A34A)
+        : order.isShop
+        ? const Color(0xFF0EA5E9)
+        : AppColors.warning;
+    final String label = order.isSupermarket
         ? 'SPESA'
         : order.isShop
         ? 'NEGOZIO'
         : 'PARTNER';
-
-    const String pickupLabel = 'RITIRO DA';
-
-    final IconData pickupIcon = order.isSupermarket
-        ? Icons.shopping_cart
-        : Icons.storefront;
-
-    final Color headerBg = order.confirmedAt == null
-        ? AppColors.warning.withValues(alpha: 0.08)
-        : accentColor.withValues(alpha: 0.06);
-
-    final Color borderColor = order.confirmedAt == null
-        ? AppColors.warning.withValues(alpha: 0.55)
-        : accentColor.withValues(alpha: 0.4);
-
-    // Stessa gerarchia ad azione delle altre card: il partner cambia il
-    // colore identitario del badge, non il modo di lavorare del driver.
-    final bool daConfermare = order.confirmedAt == null;
-    final bool inConsegna = order.isInDelivery;
-    final AzioneProssima banner;
-    final Color coloreAzione;
-    if (daConfermare) {
-      coloreAzione = AppColors.warning;
-      banner = AzioneProssima(
-        verbo: 'CONFERMA RICEZIONE',
-        soggetto: order.restaurantName,
-        dettaglio: 'Fascia ${order.timeSlot}',
-        colore: coloreAzione,
-        icona: Icons.notifications_active,
-      );
-    } else if (inConsegna) {
-      coloreAzione = AppColors.success;
-      banner = AzioneProssima(
-        verbo: 'CONSEGNA A',
-        soggetto: order.customerName,
-        dettaglio: order.deliveryAddress,
-        incasso: order.isPaid
-            ? null
-            : 'INCASSA €${order.total.toStringAsFixed(2)}',
-        colore: coloreAzione,
-        icona: Icons.location_on,
-      );
-    } else {
-      coloreAzione = accentColor;
-      banner = AzioneProssima(
-        verbo: 'RITIRA DA',
-        soggetto: order.restaurantName,
-        dettaglio: '${order.timeSlot} - ${order.restaurantAddress}',
-        colore: coloreAzione,
-        icona: pickupIcon,
-      );
-    }
-
-    return InkWell(
-      onTap: () => _showOrderDetailsModal(order),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: context.cCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: borderColor,
-            width: order.confirmedAt == null ? 2 : 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            banner,
-
-            // ── Riga di riepilogo: tipo partner, fascia, numero, totale ──
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: headerBg),
-              child: Row(
-                children: [
-                  // Badge tipo partner
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      badgeLabel,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Fascia consegna in evidenza (come la card food/giro)
-                  Text(
-                    order.timeSlot,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: order.confirmedAt == null
-                          ? AppColors.warning
-                          : context.cTesto,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  Text(
-                    '#${order.id}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: context.cTestoSec,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '€${order.total.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: context.cTesto,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Body ────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Punto di ritiro
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(pickupIcon, color: accentColor, size: 16),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  pickupLabel,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: context.cTestoSec,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildOrderStatusBadge(order),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              order.restaurantName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: context.cTesto,
-                              ),
-                            ),
-                            Text(
-                              order.restaurantAddress,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec.withValues(alpha: 0.8),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if ((order.restaurantPhone ?? '').isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ChiamaRiga(
-                          telefono: order.restaurantPhone!,
-                          colore: accentColor,
-                        ),
-                      ],
-                    ],
-                  ),
-
-                  const Divider(height: 14),
-
-                  // Cliente
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: AppColors.success,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'CONSEGNA A',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              order.customerName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: context.cTesto,
-                              ),
-                            ),
-                            Text(
-                              order.deliveryAddress,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec.withValues(alpha: 0.8),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (order.customerPhone.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ChiamaRiga(
-                          telefono: order.customerPhone,
-                          colore: AppColors.success,
-                        ),
-                      ],
-                    ],
-                  ),
-
-                  if (order.deliveryNotes != null &&
-                      order.deliveryNotes!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.warning.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.note,
-                            color: AppColors.warning,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              order.deliveryNotes!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: context.cTesto,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 16),
-
-                  // NAVIGA grande sulla tappa attiva, come nelle altre card.
-                  SizedBox(
-                    width: double.infinity,
-                    child: BottoneAzione(
-                      icona: Icons.navigation,
-                      etichetta: 'NAVIGA',
-                      colore: coloreAzione,
-                      onTap: () => _apriNavigazione(order),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Azioni — identico al food:
-                  //   !confirmed      → CONFERMA RICEZIONE (flag ufficio)
-                  //   GPS ≤50m        → auto picking_up  (geofencing backend)
-                  //   GPS >50m 120s   → auto in_delivery (geofencing backend)
-                  //   in_delivery     → CONFERMA CONSEGNA
-                  if (order.isInDelivery)
-                    _buildDeliverButton(order)
-                  else if (order.confirmedAt == null)
-                    _buildConfirmButton(order),
-
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton.icon(
-                      onPressed: () => _segnalaProblema(order),
-                      icon: const Icon(
-                        Icons.report_problem_outlined,
-                        size: 18,
-                        color: AppColors.danger,
-                      ),
-                      label: const Text(
-                        'HO UN PROBLEMA',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.danger,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colore,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -2396,7 +2031,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final firstOrder = batchOrders.first;
     final allConfirmed = batchOrders.every((o) => o.confirmedAt != null);
     final totalAmount = batchOrders.fold<double>(0, (sum, o) => sum + o.total);
-    final orderIds = batchOrders.map((o) => '#${o.id}').join(', ');
+    final numeri = batchOrders.map((o) => 'N. ${o.numeroOrdine}').join(', ');
 
     // Stessa gerarchia ad azione della card singola e della card giro:
     // in testa cosa fare ADESSO, e si sposta da solo man mano.
@@ -2408,7 +2043,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       banner = AzioneProssima(
         verbo: 'CONFERMA RICEZIONE',
         soggetto: firstOrder.restaurantName,
-        dettaglio: '${batchOrders.length} consegne - ${firstOrder.timeSlot}',
+        dettaglio:
+            '${batchOrders.length} consegne - ${firstOrder.timeSlot} - $numeri',
         colore: coloreAzione,
         icona: Icons.notifications_active,
       );
@@ -2419,6 +2055,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         verbo: 'CONSEGNA A',
         soggetto: o.customerName,
         dettaglio: o.deliveryAddress,
+        numero: o.numeroOrdine,
         incasso: o.isPaid ? null : 'INCASSA €${o.total.toStringAsFixed(2)}',
         colore: coloreAzione,
         icona: Icons.location_on,
@@ -2428,8 +2065,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       banner = AzioneProssima(
         verbo: 'RITIRA DA',
         soggetto: firstOrder.restaurantName,
-        dettaglio:
-            '${batchOrders.length} ordini - ${firstOrder.restaurantAddress}',
+        dettaglio: '${batchOrders.length} ordini: $numeri',
         colore: coloreAzione,
         icona: Icons.storefront,
       );
@@ -2483,7 +2119,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         : AppColors.primary,
                   ),
                   const SizedBox(width: 8),
-                  // Fascia in evidenza (come la card food/giro)
                   Text(
                     firstOrder.timeSlot,
                     style: TextStyle(
@@ -2495,14 +2130,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // IDs Ordini
                   Flexible(
                     child: Text(
-                      orderIds,
+                      numeri,
                       style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: context.cTestoSec,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: context.cTesto,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -2526,74 +2160,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Ristorante
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.restaurant,
-                          color: AppColors.primary,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'RITIRO DA',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: context.cTestoSec,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildBatchStatusBadge(batchOrders),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              firstOrder.restaurantName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: context.cTesto,
-                              ),
-                            ),
-                            Text(
-                              firstOrder.restaurantAddress,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: context.cTestoSec.withValues(alpha: 0.8),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if ((firstOrder.restaurantPhone ?? '').isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ChiamaRiga(
-                          telefono: firstOrder.restaurantPhone!,
-                          colore: AppColors.primary,
-                        ),
-                      ],
-                    ],
+                  _buildRigaTappa(
+                    icona: Icons.restaurant,
+                    colore: AppColors.primary,
+                    etichetta: 'RITIRO DA',
+                    badge: _buildBatchStatusBadge(batchOrders),
+                    titolo: firstOrder.restaurantName,
+                    sottotitolo: firstOrder.restaurantAddress,
+                    telefono: firstOrder.restaurantPhone ?? '',
+                    onNaviga: () =>
+                        _navigaVerso(firstOrder, versoCliente: false),
                   ),
 
                   const Divider(height: 14),
 
-                  // Consegne multiple
+                  // Consegne multiple: ognuna col suo numero, CHIAMA e
+                  // NAVIGA. L'ordine 1°, 2°... e' il piu' vicino prima,
+                  // ma il driver parte verso chi vuole. Tocco sulla riga
+                  // = dettaglio dell'ordine (prodotti).
                   Text(
                     'CONSEGNA A',
                     style: TextStyle(
@@ -2611,85 +2195,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       margin: EdgeInsets.only(
                         bottom: index < batchOrders.length - 1 ? 8 : 0,
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${index + 1}°',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.success,
-                              ),
+                      child: _buildRigaTappa(
+                        icona: Icons.location_on,
+                        colore: AppColors.success,
+                        etichetta: order.isInDelivery
+                            ? 'IN CONSEGNA'
+                            : 'CONSEGNA ${index + 1}',
+                        guida: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${index + 1}°',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.success,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  order.customerName,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: context.cTesto,
-                                  ),
-                                ),
-                                Text(
-                                  order.deliveryAddress,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: context.cTestoSec.withValues(
-                                      alpha: 0.8,
-                                    ),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (order.customerPhone.isNotEmpty) ...[
-                            const SizedBox(width: 8),
-                            ChiamaRiga(
-                              telefono: order.customerPhone,
-                              colore: AppColors.success,
-                            ),
-                          ],
-                        ],
+                        ),
+                        numero: order.numeroOrdine,
+                        titolo: order.customerName,
+                        sottotitolo: order.deliveryAddress,
+                        telefono: order.customerPhone,
+                        onNaviga: () => _navigaVerso(order, versoCliente: true),
+                        onTap: () => _showOrderDetailsModal(order),
                       ),
                     );
                   }),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                  // NAVIGA grande sulla tappa in corso: ritiro finche' non e'
-                  // partito, poi il cliente da servire.
-                  SizedBox(
-                    width: double.infinity,
-                    child: BottoneAzione(
-                      icona: Icons.navigation,
-                      etichetta: 'NAVIGA',
-                      colore: coloreAzione,
-                      onTap: () => _apriNavigazione(
-                        ordineAzione,
-                        gruppo: batchOrders,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Azioni. MANCAVA la conferma consegna: a batch confermato
-                  // il driver non aveva alcun modo di chiudere le consegne,
-                  // ne' da qui ne' dal dettaglio. Un pulsante per ciascun
-                  // ordine in consegna, come nella card giro.
+                  // Azioni: conferma ricezione del batch, poi un CONFERMA
+                  // CONSEGNA per ogni ordine in consegna (come nel giro).
                   if (!allConfirmed)
                     _buildConfirmButton(firstOrder)
                   else
@@ -2909,7 +2449,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: [
                   Expanded(
                     child: Text(
-                      'Ordine #${order.id}',
+                      'Ordine N. ${order.numeroOrdine}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -3056,101 +2596,136 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ],
 
-              // Prodotti ordinati
+              // Cosa c'e' nell'ordine: il controllo al banco si fa qui
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: context.cBordo.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.shopping_basket,
-                          color: context.cTesto,
-                          size: 18,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'PRODOTTI ORDINATI',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: context.cTestoSec,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (order.products.isEmpty)
-                      Text(
-                        'Nessun prodotto in quest\'ordine',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: context.cTestoSec,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      )
-                    else
-                      ...order.products.map(
-                        (product) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${product.quantity}x',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: context.cTesto,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '€${product.total.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.cTesto,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              _buildProdottiBox(order),
               const SizedBox(height: 20),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Elenco di cio' che c'e' nell'ordine, con extra e note di riga: serve
+  /// al driver per controllare al banco che ci sia TUTTO prima di partire.
+  /// Stessa lista per food e partner.
+  Widget _buildProdottiBox(Order order) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.cBordo.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.shopping_basket, color: context.cTesto, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'COSA C\'E\' NELL\'ORDINE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: context.cTestoSec,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${order.products.fold<int>(0, (s, p) => s + p.quantity)} pezzi',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: context.cTestoSec,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (order.products.isEmpty)
+            Text(
+              'Elenco non disponibile per quest\'ordine',
+              style: TextStyle(
+                fontSize: 13,
+                color: context.cTestoSec,
+                fontStyle: FontStyle.italic,
+              ),
+            )
+          else
+            ...order.products.map(
+              (product) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${product.quantity}x',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.name,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: context.cTesto,
+                            ),
+                          ),
+                          for (final extra in product.extras)
+                            Text(
+                              '+ $extra',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.cTestoSec,
+                              ),
+                            ),
+                          if (product.note != null)
+                            Text(
+                              product.note!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '€${product.total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: context.cTesto,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -3286,18 +2861,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               // Header
               Text(
-                'Batch: ${batchOrders.length} ordini',
+                '${batchOrders.length} ordini da ${firstOrder.restaurantName}',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: context.cTesto,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Slot: ${firstOrder.timeSlot} • Totale: €${totalAmount.toStringAsFixed(2)}',
+                'Fascia ${firstOrder.timeSlot} - Totale €${totalAmount.toStringAsFixed(2)}',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   color: context.cTestoSec.withValues(alpha: 0.8),
                 ),
               ),
@@ -3310,15 +2885,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 firstOrder.restaurantAddress,
                 Icons.restaurant,
                 AppColors.primary,
-                () => _openMaps(
-                  firstOrder.restaurantLat,
-                  firstOrder.restaurantLng,
-                  firstOrder.restaurantName,
-                ),
+                () => _navigaVerso(firstOrder, versoCliente: false),
               ),
               const SizedBox(height: 20),
 
-              // Consegne
+              // Consegne, ognuna con numero, telefono, NAVIGA e prodotti
               Text(
                 'CONSEGNE',
                 style: TextStyle(
@@ -3373,13 +2944,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  order.customerName,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: context.cTesto,
-                                  ),
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        order.customerName.trim().isEmpty
+                                            ? 'Nome non indicato'
+                                            : order.customerName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: context.cTesto,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    NumeroOrdineChip(
+                                      numero: order.numeroOrdine,
+                                      colore: AppColors.success,
+                                    ),
+                                  ],
                                 ),
                                 Text(
                                   order.customerPhone,
@@ -3393,22 +2978,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.navigation,
-                              color: AppColors.success,
-                            ),
-                            onPressed: () => _openMaps(
-                              order.deliveryLat,
-                              order.deliveryLng,
-                              order.customerName,
-                            ),
+                          const SizedBox(width: 8),
+                          NavigaRiga(
+                            colore: AppColors.success,
+                            onTap: () =>
+                                _navigaVerso(order, versoCliente: true),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        order.deliveryAddress,
+                        order.deliveryAddress.trim().isEmpty
+                            ? 'Indirizzo non indicato'
+                            : order.deliveryAddress,
                         style: TextStyle(
                           fontSize: 14,
                           color: context.cTestoSec.withValues(alpha: 0.8),
@@ -3441,14 +3023,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
                       ],
+                      const SizedBox(height: 10),
+                      _buildProdottiBox(order),
                       const SizedBox(height: 8),
-                      Text(
-                        '€${order.total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.success,
-                        ),
+                      Row(
+                        children: [
+                          _buildPaidBadge(order),
+                          const Spacer(),
+                          Text(
+                            '€${order.total.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -3543,11 +3133,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _confirmOrderDelivered(Order order) async {
-    // Se il pagamento è offline (contanti, pos, smac), mostra dialog conferma
+    // Paga alla consegna (contanti, POS, SMAC): si chiede come ha pagato.
     if (order.paymentMethodId >= 1 && order.paymentMethodId <= 3) {
       await _showPaymentConfirmationDialog(order);
     } else {
-      // Pagamento online (stripe), conferma direttamente
+      // Gia' pagato online: nessuna domanda sul metodo, ma la consegna la
+      // conferma comunque il driver con questo tocco. Il geofencing non
+      // chiude mai un ordine da solo.
       await _confirmOrderDeliveredWithPayment(order, null);
     }
   }
@@ -3588,78 +3180,73 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// NAVIGA dalla card: apre la NAVIGAZIONE INTEGRATA (mappa in-app con
-  /// percorso, tappe e avanzamento automatico) sugli ORDINI DELLA CARD
-  /// toccata — mai ricostruiti per fascia: la navigazione deve mostrare
-  /// esattamente il giro che il driver ha appena guardato. La bolla qui
-  /// non serve piu' (dentro l'app c'e' gia' tutto sotto gli occhi, e al
-  /// rientro si chiuderebbe da sola); resta viva sul percorso "Apri in
-  /// Google Maps" (vedi _navigaEsterno).
+  /// NAVIGA di una riga: porta il driver a QUEL posto con Google Maps,
+  /// gia' in navigazione. Niente navigatore interno: i driver usano Maps
+  /// e il giro lo decidono loro, tappa per tappa.
   ///
-  /// [gruppo] = ordini della card (default: solo l'ordine toccato);
-  /// [tappe] = sequenza tappe della card (default: ritiro+consegna di
-  /// ciascun ordine del gruppo, come il giro sintetico).
-  Future<void> _apriNavigazione(
-    Order order, {
-    List<Order>? gruppo,
-    List<RouteStop>? tappe,
-  }) async {
-    final ordini = (gruppo == null || gruppo.isEmpty) ? [order] : gruppo;
-    final steps = (tappe == null || tappe.isEmpty)
-        ? RegoleHome.stepsSintetici(ordini)
-        : tappe;
+  /// Su Android prima si alza la bolla sopra Maps (permesso chiesto una
+  /// volta, con spiegazione), agganciata a questo ordine e a questa tappa.
+  Future<void> _navigaVerso(Order order, {required bool versoCliente}) async {
+    final dest = versoCliente
+        ? NavigazioneEsterna.destinazione(
+            order.deliveryLat,
+            order.deliveryLng,
+            order.deliveryAddress,
+          )
+        : NavigazioneEsterna.destinazione(
+            order.restaurantLat,
+            order.restaurantLng,
+            order.restaurantAddress,
+          );
+    if (dest.isEmpty) {
+      _showToast(
+        versoCliente
+            ? 'Indirizzo del cliente mancante: chiama l\'ufficio'
+            : 'Indirizzo di ritiro mancante: chiama l\'ufficio',
+        isError: true,
+      );
+      return;
+    }
 
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => NavigationScreen(
-          ordini: ordini,
-          tappe: steps,
-          ordiniLive: _ordersNotifier,
-          onNavigaEsterno: _navigaEsterno,
-          onConsegnato: _confirmOrderDelivered,
-        ),
-      ),
-    );
-  }
-
-  /// Via di fuga verso Google Maps: prima accende la BOLLA sopra Maps
-  /// (chiedendo il permesso overlay la prima volta, con spiegazione), poi
-  /// avvia la navigazione esterna. La bolla tiene tappa, note e telefono
-  /// sempre in vista sopra l'app esterna.
-  Future<void> _navigaEsterno(
-    Order order,
-    double lat,
-    double lng,
-    String label,
-  ) async {
     // La bolla si aggancia a QUESTO ordine: e' quello verso cui il driver
     // sta partendo. Senza memoria, il refresh successivo la spostava sul
     // primo ordine "piu' avanti nel flusso", che poteva essere un altro.
     _ordineBollaId = order.id;
-    await OverlayBollaService().mostraPerOrdine(context, order);
-    await _openMaps(lat, lng, label);
+    await OverlayBollaService().mostraPerOrdine(
+      context,
+      order,
+      versoCliente: versoCliente,
+    );
+    if (!mounted) return;
+    await _apriMaps(dest);
   }
 
-  Future<void> _openMaps(double lat, double lng, String label) async {
-    // NAVIGAZIONE DIRETTA: Maps si apre col turn-by-turn GIA' avviato
-    // verso la tappa. Il vecchio link "search" mostrava un pin e chiedeva
-    // altri 3 tocchi (Indicazioni, Avvia) col motorino acceso.
-    final navUri = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
-    if (await canLaunchUrl(navUri)) {
-      await launchUrl(navUri, mode: LaunchMode.externalApplication);
-      return;
-    }
+  /// Apre Google Maps in navigazione verso [dest] ("lat,lng" o indirizzo).
+  /// Prima lo schema nativo (Android: google.navigation, iPhone: app Google
+  /// Maps), poi il link universale, che apre l'app se c'e' e altrimenti
+  /// Maps nel browser: il driver non resta mai senza indicazioni.
+  Future<void> _apriMaps(String dest) async {
+    final nativo = Platform.isIOS
+        ? NavigazioneEsterna.iosGoogleMaps(dest)
+        : NavigazioneEsterna.androidNavigazione(dest);
+    try {
+      if (await canLaunchUrl(nativo) &&
+          await launchUrl(nativo, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+    } catch (_) {/* si passa al link universale */}
 
-    // Fallback (Maps assente): pin sulla mappa web
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-    );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      _showToast('Impossibile aprire Google Maps', isError: true);
-    }
+    // Niente canLaunchUrl qui: su Android 11+ per https risponde false se
+    // il Manifest non dichiara il browser, anche quando il browser c'e'.
+    try {
+      if (await launchUrl(
+        NavigazioneEsterna.linkUniversale(dest),
+        mode: LaunchMode.externalApplication,
+      )) {
+        return;
+      }
+    } catch (_) {}
+    _showToast('Impossibile aprire Google Maps', isError: true);
   }
 
   /// "HO UN PROBLEMA": UN TOCCO e si apre la chat WhatsApp col titolare,
@@ -3669,7 +3256,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Niente "Driver: nome": il messaggio parte dal numero del driver, chi
     // scrive si vede gia' dalla chat.
     final testo = Uri.encodeComponent(
-      'Problema ordine #${order.id} '
+      'Problema ordine N. ${order.numeroOrdine} '
       '(${order.restaurantName} -> ${order.customerName})\n',
     );
     final uri = Uri.parse('https://wa.me/393346841489?text=$testo');
@@ -3921,14 +3508,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// NON INCASSATO (gli altri valori sono gli id dei metodi, tutti positivi).
   static const int _esitoNonIncassato = -1;
 
+  /// Metodi "paga alla consegna" accesi nel pannello, nell'ordine in cui
+  /// si propongono. Se il pannello non ha ancora risposto (o non ne ha
+  /// acceso nessuno) si resta su contanti e POS.
+  List<({int id, String label, IconData icona})> _metodiAllaConsegna() {
+    const tutti = [
+      (id: 1, slug: 'cash', label: 'Contanti', icona: Icons.money),
+      (id: 2, slug: 'pos', label: 'POS', icona: Icons.credit_card),
+      (id: 3, slug: 'smac', label: 'SMAC', icona: Icons.mobile_friendly),
+    ];
+    final accesi = tutti
+        .where((m) => _metodiPagamentoAbilitati.contains(m.slug))
+        .toList();
+    final scelti = accesi.isEmpty ? tutti.take(2).toList() : accesi;
+    return [for (final m in scelti) (id: m.id, label: m.label, icona: m.icona)];
+  }
+
   Future<void> _showPaymentConfirmationDialog(Order order) async {
-    int selectedPaymentMethod = [1, 2, 3].contains(order.paymentMethodId)
+    final metodi = _metodiAllaConsegna();
+    // POS sul telefono (Tap to Pay): oscurato da AppConstants.tapToPayAttivo.
+    // Con l'interruttore spento "POS" e' il POS fisico, e basta.
+    final bool tapToPay = AppConstants.tapToPayAttivo && order.tapToPay;
+    int selectedPaymentMethod =
+        metodi.any((m) => m.id == order.paymentMethodId)
         ? order.paymentMethodId
-        : 1;
-    if (selectedPaymentMethod == 3 &&
-        !_metodiPagamentoAbilitati.contains('smac')) {
-      selectedPaymentMethod = 1;
-    }
+        : metodi.first.id;
 
     final result = await showDialog<int>(
       context: context,
@@ -3963,42 +3567,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
+                'Ordine N. ${order.numeroOrdine} - '
+                '€${order.total.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: context.cTesto,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
                 'Conferma il metodo di pagamento utilizzato dal cliente:',
                 style: TextStyle(fontSize: 14, color: context.cTestoSec),
               ),
               const SizedBox(height: 16),
-              _buildPaymentMethodOption(
-                context,
-                1,
-                'Contanti',
-                Icons.money,
-                selectedPaymentMethod == 1,
-                () => setState(() => selectedPaymentMethod = 1),
-              ),
-              const SizedBox(height: 8),
-              // POS = il telefono del driver (Tap to Pay): confermando si
-              // apre il lettore. L'incasso passa da Stripe e l'ordine diventa
-              // "pagato online"; se il telefono non puo' fare da POS il foglio
-              // offre il POS fisico o i contanti. Per gli ordini COAL il
-              // telefono non si usa (pagano a COAL): POS = POS fisico.
-              _buildPaymentMethodOption(
-                context,
-                2,
-                order.tapToPay ? 'POS (carta sul mio telefono)' : 'POS',
-                order.tapToPay ? Icons.contactless_outlined : Icons.credit_card,
-                selectedPaymentMethod == 2,
-                () => setState(() => selectedPaymentMethod = 2),
-              ),
-              // SMAC solo se e' abilitata nel pannello.
-              if (_metodiPagamentoAbilitati.contains('smac')) ...[
-                const SizedBox(height: 8),
+              for (var i = 0; i < metodi.length; i++) ...[
+                if (i > 0) const SizedBox(height: 8),
                 _buildPaymentMethodOption(
                   context,
-                  3,
-                  'SMAC',
-                  Icons.mobile_friendly,
-                  selectedPaymentMethod == 3,
-                  () => setState(() => selectedPaymentMethod = 3),
+                  metodi[i].id,
+                  metodi[i].id == 2 && tapToPay
+                      ? 'POS (carta sul mio telefono)'
+                      : metodi[i].label,
+                  metodi[i].id == 2 && tapToPay
+                      ? Icons.contactless_outlined
+                      : metodi[i].icona,
+                  selectedPaymentMethod == metodi[i].id,
+                  () => setState(() => selectedPaymentMethod = metodi[i].id),
                 ),
               ],
               // Consegnato ma il cliente non ha pagato: staccato dai metodi,
@@ -4048,7 +3643,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               child: Text(
-                selectedPaymentMethod == 2 && order.tapToPay
+                selectedPaymentMethod == 2 && tapToPay
                     ? 'INCASSA COL POS'
                     : 'CONFERMA CONSEGNA',
                 style: const TextStyle(
@@ -4069,11 +3664,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    if (result == 2 && order.tapToPay) {
-      // POS: prima si incassa col telefono, poi si conferma la consegna.
+    if (result == 2 && tapToPay) {
+      // POS sul telefono: prima si incassa, poi si conferma la consegna.
       // A carta letta il server ha gia' segnato l'ordine pagato con Stripe
-      // (metodo 4): qui non si passa nessun metodo. Se il telefono non fa da
-      // POS, il foglio riporta cosa ha fatto il driver.
+      // (metodo 4): qui non si passa nessun metodo. Se il telefono non fa
+      // da POS, il foglio riporta cosa ha fatto il driver.
       final esito = await FoglioTapToPay.apri(context, order: order);
       if (!mounted || esito == null) return;
       switch (esito) {

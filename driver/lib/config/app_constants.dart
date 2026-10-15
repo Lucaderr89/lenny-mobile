@@ -13,8 +13,13 @@ class AppConstants {
   static const String updateLocationEndpoint = '$apiUrl/driver/location';
   // Tracking GPS leggero (no sessione): attivo solo quando il driver ha ordini attivi
   static const String trackLocationEndpoint = '$apiUrl/driver/track-location';
-  // Navigazione in-app: percorso GPS attuale -> tappa (geometria + istruzioni)
-  static const String routeEndpoint = '$apiUrl/driver/route';
+
+  /// POS sul telefono (Tap to Pay, Stripe Terminal). SPENTO: su iPhone serve
+  /// un permesso Apple che non c'e' e su Android si e' scelto di non usarlo.
+  /// Il codice resta tutto (FoglioTapToPay, TapToPayService): per riaccenderlo
+  /// basta mettere true. Con false il POS nel dialog di consegna e' il POS
+  /// fisico, come gli altri metodi accesi nel pannello.
+  static const bool tapToPayAttivo = false;
 
   // App Info
   static const String appName = 'Lenny Driver';

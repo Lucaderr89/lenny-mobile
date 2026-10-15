@@ -50,16 +50,11 @@ dependencies:
   # Icone vettoriali del set custom "Lenny Icons" (assets/icons_svg, condiviso con l app cliente)
   flutter_svg: ^2.0.10
 
-  # Modalita Guida: annunci vocali e schermo sempre acceso con ordini attivi
-  flutter_tts: ^4.0.2
+  # Schermo sempre acceso finche' ci sono ordini attivi
   wakelock_plus: ^1.2.8
 
   # Bolla flottante sopra Google Maps (Modalita Guida, Android)
   flutter_overlay_window: ^0.4.5
-  
-  # Maps (OpenStreetMap)
-  flutter_map: ^6.1.0
-  latlong2: ^0.9.0
   
   # URL launcher
   url_launcher: ^6.2.2
