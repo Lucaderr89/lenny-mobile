@@ -97,6 +97,13 @@ export LC_ALL="en_US.UTF-8"
 # (ITMS-90683, pagato su lane il 15/09/2026). Innocua finche' non serve.
 export AUDIO_SESSION_MICROPHONE=0
 
+# La chiave di distribuzione Apple (team 52WAK2FT2H, unica per lane e Lenny)
+# vive nel portachiavi "lane" (vedi taxi/doc/handover-mac.md). Dopo uno stop
+# del Mac il portachiavi si blocca e codesign apre una finestra di permesso
+# che da remoto nessuno vede: la build resta ferma a CPU zero (pagato il
+# 17/10/2026, due esportazioni). Lo si sblocca prima, come fa lo script di lane.
+security unlock-keychain -p lanebuild "$HOME/Library/Keychains/lane.keychain-db" 2>/dev/null || true
+
 cd "$REPO/$APP"
 
 if [[ "$MODO" == "esporta" ]]; then
