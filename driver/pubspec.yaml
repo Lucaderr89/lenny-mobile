@@ -2,7 +2,7 @@ name: driver
 description: "Lenny Driver App - App per driver di consegna"
 publish_to: 'none'
 
-version: 1.1.1+8
+version: 1.1.2+9
 
 environment:
   sdk: ^3.10.0
