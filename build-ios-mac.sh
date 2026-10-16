@@ -88,6 +88,10 @@ KEY="/Users/titanodevstudio/.appstoreconnect/private_keys/AuthKey_ZSR6KF48RK.p8"
 KID="ZSR6KF48RK"
 ISS="ed3ff578-1aa7-46bf-a803-f1a393afa2fb"
 export PATH="/Users/titanodevstudio/development/flutter/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+# upload-symbols di Crashlytics cerca Xcode tramite LaunchServices e nella
+# sessione grafica avviata da launchd non lo trova ("Unable to find a path to
+# Xcode", 17/10/2026 dopo l'aggiornamento a macOS 27): glielo si dice.
+export DEVELOPER_DIR="$(xcode-select -p 2>/dev/null || echo /Applications/Xcode.app/Contents/Developer)"
 # CocoaPods vuole un terminale UTF-8: nella sessione grafica LANG non e'
 # impostata e pod install muore dentro il SUO rapporto d'errore.
 export LANG="en_US.UTF-8"
@@ -177,8 +181,11 @@ for c in ios/Pods/FirebaseCrashlytics/upload-symbols \
   [[ -x "$c" ]] && { UPL="$c"; break; }
 done
 if [[ -n "$UPL" ]]; then
+  # Non fatale: la ipa e' gia' buona e verificata, un inciampo di Crashlytics
+  # non deve buttarla via (con set -e e pipefail succedeva: 17/10/2026).
   "$UPL" -gsp ios/Runner/GoogleService-Info.plist -p ios \
-    build/ios/archive/Runner.xcarchive/dSYMs 2>&1 | tail -3
+    build/ios/archive/Runner.xcarchive/dSYMs 2>&1 | tail -3 \
+    || echo "### simboli NON caricati (vedi sopra): la ipa resta valida"
 else
   echo "### caricatore dei simboli non trovato (Crashlytics avvisera')"
 fi
