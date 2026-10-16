@@ -253,7 +253,7 @@ class PrinterService {
 
       // --- INFO ORDINE ---
       await SunmiPrinter.printText(
-        'ORDINE #${order.id}',
+        'ORDINE #${order.numeroOrdine}',
         style: SunmiTextStyle(fontSize: 28, bold: true),
       );
       await SunmiPrinter.lineWrap(2);

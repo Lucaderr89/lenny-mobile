@@ -400,7 +400,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '#${order.id}',
+                    '#${order.numeroOrdine}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -538,7 +538,7 @@ class _HistoryOrderSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Ordine #${order.id}',
+                        'Ordine #${order.numeroOrdine}',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
@@ -741,7 +741,7 @@ class _HistoryOrderSheet extends StatelessWidget {
           SnackBar(
             content: Text(
               esito.ok
-                  ? 'Comanda #${order.id} ristampata'
+                  ? 'Comanda #${order.numeroOrdine} ristampata'
                   : (esito.motivo ?? 'Errore durante la stampa'),
             ),
             backgroundColor: esito.ok ? AppColors.success : AppColors.danger,

@@ -525,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Nuovo ordine #${order.id} - ${order.customerName}',
+                'Nuovo ordine #${order.numeroOrdine} - ${order.customerName}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -554,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (!mounted) return;
     final fallita = _stampeFallite[order.id];
     _showMessage(
-      fallita ?? 'Comanda #${order.id} stampata',
+      fallita ?? 'Comanda #${order.numeroOrdine} stampata',
       fallita == null,
     );
   }
@@ -622,7 +622,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Ordine #${order.id} - ${order.customerName}',
+                    'Ordine #${order.numeroOrdine} - ${order.customerName}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -1278,7 +1278,7 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(width: 8),
                     // ID ordine - PIÙ IN EVIDENZA
                     Text(
-                      '#${order.id}',
+                      '#${order.numeroOrdine}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1652,7 +1652,7 @@ class _OrderDetailsSheet extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Ordine #${order.id}',
+                  'Ordine #${order.numeroOrdine}',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -1850,7 +1850,7 @@ class _OrderDetailsSheet extends StatelessWidget {
             // il ristorante deve sapere se e' finita la carta.
             content: Text(
               esito.ok
-                  ? 'Comanda #${order.id} stampata'
+                  ? 'Comanda #${order.numeroOrdine} stampata'
                   : (esito.motivo ?? 'Errore durante la stampa'),
             ),
             backgroundColor: esito.ok ? AppColors.success : AppColors.danger,

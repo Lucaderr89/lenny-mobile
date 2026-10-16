@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:driver/logic/navigazione_esterna.dart';
 import 'package:driver/logic/regole_home.dart';
+import 'package:driver/models/delivery_history.dart';
 import 'package:driver/models/order.dart';
 import 'package:driver/widgets/azione_card.dart';
 
@@ -156,6 +157,25 @@ void main() {
         Order.fromJson({'id': 19634, 'numero_ordine': ' '}).numeroOrdine,
         '19634',
       );
+    });
+
+    test('anche lo storico mostra il numero dello scontrino', () {
+      Map<String, dynamic> consegna(Map<String, dynamic> extra) => {
+        'id': 20091,
+        'date_order': '2026-10-12',
+        'time_slot_id': 76,
+        'restaurant_id': 1,
+        'assigned_at': '',
+        'delivered_at': '',
+        'total': '10',
+        ...extra,
+      };
+      expect(
+        DeliveryHistory.fromJson(consegna({'numero_ordine': '131747'}))
+            .numeroOrdine,
+        '131747',
+      );
+      expect(DeliveryHistory.fromJson(consegna({})).numeroOrdine, '20091');
     });
 
     test('i prodotti portano extra e nota', () {

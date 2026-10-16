@@ -1,6 +1,9 @@
 /// Model per una consegna completata nello storico
 class DeliveryHistory {
   final int id;
+
+  /// `numero_ordine` dell'API cosi' com'e' (puo' mancare su server vecchi).
+  final String? numeroOrdineGrezzo;
   final String dateOrder;
   final int timeSlotId;
   final String timeSlot;
@@ -26,6 +29,7 @@ class DeliveryHistory {
 
   DeliveryHistory({
     required this.id,
+    this.numeroOrdineGrezzo,
     required this.dateOrder,
     required this.timeSlotId,
     required this.timeSlot,
@@ -46,9 +50,17 @@ class DeliveryHistory {
     this.products = const [],
   });
 
+  /// Numero d'ordine DA MOSTRARE: quello dello scontrino (lenny-app se
+  /// importato), altrimenti l'id. Stessa regola della home.
+  String get numeroOrdine {
+    final n = numeroOrdineGrezzo?.trim() ?? '';
+    return n.isEmpty ? '$id' : n;
+  }
+
   factory DeliveryHistory.fromJson(Map<String, dynamic> json) {
     return DeliveryHistory(
       id: int.parse(json['id'].toString()),
+      numeroOrdineGrezzo: json['numero_ordine']?.toString(),
       dateOrder: json['date_order'] ?? '',
       timeSlotId: int.parse(json['time_slot_id'].toString()),
       timeSlot: json['time_slot'] ?? '',
@@ -99,6 +111,7 @@ class DeliveryHistory {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'numero_ordine': numeroOrdine,
       'date_order': dateOrder,
       'time_slot_id': timeSlotId,
       'time_slot': timeSlot,

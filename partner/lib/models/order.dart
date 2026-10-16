@@ -1,6 +1,10 @@
 /// Model per un ordine nel sistema partner
 class Order {
   final int id;
+
+  /// `numero_ordine` dell'API cosi' com'e' (puo' mancare su server vecchi).
+  /// E' il numero dello scontrino: quello del cliente e del driver.
+  final String? numeroOrdineGrezzo;
   final String status;
   final String statusLabel;
   final String customerName;
@@ -28,6 +32,7 @@ class Order {
 
   Order({
     required this.id,
+    this.numeroOrdineGrezzo,
     required this.status,
     required this.statusLabel,
     required this.customerName,
@@ -123,6 +128,15 @@ class Order {
   static double _num(dynamic v) =>
       double.tryParse(v?.toString() ?? '0') ?? 0.0;
 
+  /// Numero d'ordine DA MOSTRARE e da stampare sulla comanda: e' lo stesso
+  /// che hanno il cliente nell'app e il driver sulla sua card (numero
+  /// lenny-app se l'ordine e' importato, altrimenti l'id). L'id resta la
+  /// chiave delle chiamate API e dei log di stampa.
+  String get numeroOrdine {
+    final n = numeroOrdineGrezzo?.trim() ?? '';
+    return n.isEmpty ? '$id' : n;
+  }
+
   factory Order.fromJson(Map<String, dynamic> json) {
     final items = (json['items'] is List)
         ? (json['items'] as List<dynamic>)
@@ -143,6 +157,7 @@ class Order {
       discountAmount: _num(json['discount_amount']),
       appCreditsUsed: _num(json['app_credits_used']),
       id: json['id'] ?? 0,
+      numeroOrdineGrezzo: json['numero_ordine']?.toString(),
       status: json['status_name'] ?? 'pending',
       statusLabel: json['status_label'] ?? 'Nuovo',
       customerName: json['customer_name'] ?? 'Cliente',

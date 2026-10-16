@@ -665,7 +665,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '#${delivery.id}',
+                  '#${delivery.numeroOrdine}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -831,7 +831,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Ordine #${delivery.id}',
+                    'Ordine #${delivery.numeroOrdine}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
