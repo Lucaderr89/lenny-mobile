@@ -103,12 +103,39 @@ class PrinterService {
     }
   }
 
+  /// Dimensione del testo corrente; i titoli e gli importi chiave sono piu'
+  /// grandi, niente va sotto.
+  static const int _corpo = 24;
+
+  /// Stampa una riga di testo. Tutto il testo della carta esce in GRASSETTO e
+  /// mai sotto i 24 punti: sulla carta termica il tratto sottile del testo
+  /// normale esce grigio e a volte illeggibile (segnalato da Giulietti KM0 il
+  /// 26/10/2026: articoli, aggiunte e importi sbiaditi, titoli in grassetto
+  /// perfetti). La densita' di stampa non si puo' alzare dall'app: l'SDK
+  /// Sunmi la legge soltanto, quindi la leggibilita' passa da qui.
+  Future<void> _testo(
+    String testo, {
+    int fontSize = _corpo,
+    SunmiPrintAlign align = SunmiPrintAlign.LEFT,
+    bool reverse = false,
+  }) async {
+    await SunmiPrinter.printText(
+      testo,
+      style: SunmiTextStyle(
+        fontSize: fontSize,
+        bold: true,
+        align: align,
+        reverse: reverse,
+      ),
+    );
+  }
+
   /// Riga del riepilogo importi: etichetta a sinistra, cifra a destra.
   Future<void> _riga(String etichetta, double importo) async {
-    await SunmiPrinter.printText(etichetta, style: SunmiTextStyle(fontSize: 20));
-    await SunmiPrinter.printText(
+    await _testo(etichetta);
+    await _testo(
       'EUR ${importo.toStringAsFixed(2)}',
-      style: SunmiTextStyle(fontSize: 20, align: SunmiPrintAlign.RIGHT),
+      align: SunmiPrintAlign.RIGHT,
     );
   }
 
@@ -227,149 +254,107 @@ class PrinterService {
       }
 
       // --- HEADER ---
-      await SunmiPrinter.printText(
-        restaurantName,
-        style: SunmiTextStyle(
-          fontSize: 32,
-          bold: true,
-          align: SunmiPrintAlign.CENTER,
-        ),
-      );
+      await _testo(restaurantName, fontSize: 32, align: SunmiPrintAlign.CENTER);
       await SunmiPrinter.lineWrap(1);
 
       // Data e ora
       final dateFormatter = DateFormat('dd/MM/yyyy');
       final now = DateTime.now();
-      await SunmiPrinter.printText(
+      await _testo(
         '${dateFormatter.format(now)} - ${DateFormat('HH:mm').format(now)}',
-        style: SunmiTextStyle(fontSize: 20, align: SunmiPrintAlign.CENTER),
+        align: SunmiPrintAlign.CENTER,
       );
 
-      await SunmiPrinter.printText(
+      await _testo(
         '================================',
-        style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
+        align: SunmiPrintAlign.CENTER,
       );
       await SunmiPrinter.lineWrap(1);
 
       // --- INFO ORDINE ---
-      await SunmiPrinter.printText(
-        'ORDINE #${order.numeroOrdine}',
-        style: SunmiTextStyle(fontSize: 28, bold: true),
-      );
+      await _testo('ORDINE #${order.numeroOrdine}', fontSize: 28);
       await SunmiPrinter.lineWrap(2);
 
       // Tipo ordine - BEN IN EVIDENZA (bianco su nero)
       final orderType = order.isDelivery ? '  CONSEGNA  ' : '  ASPORTO  ';
 
-      await SunmiPrinter.printText(
+      await _testo(
         orderType,
-        style: SunmiTextStyle(
-          fontSize: 40,
-          bold: true,
-          align: SunmiPrintAlign.CENTER,
-          reverse: true,
-        ),
+        fontSize: 40,
+        align: SunmiPrintAlign.CENTER,
+        reverse: true,
       );
       await SunmiPrinter.lineWrap(1);
 
       // Data ordine - BEN IN EVIDENZA
-      await SunmiPrinter.printText(
+      await _testo(
         order.formattedDate,
-        style: SunmiTextStyle(
-          fontSize: 60,
-          bold: true,
-          align: SunmiPrintAlign.CENTER,
-        ),
+        fontSize: 60,
+        align: SunmiPrintAlign.CENTER,
       );
       await SunmiPrinter.lineWrap(1);
 
       // Orario consegna/ritiro - BEN IN EVIDENZA
-      await SunmiPrinter.printText(
-        order.timeSlot,
-        style: SunmiTextStyle(
-          fontSize: 60,
-          bold: true,
-          align: SunmiPrintAlign.CENTER,
-        ),
-      );
+      await _testo(order.timeSlot, fontSize: 60, align: SunmiPrintAlign.CENTER);
       await SunmiPrinter.lineWrap(2);
 
       // Pagamento - evidenziato in negativo (sfondo nero)
       final String paymentText = (order.paymentStatus == 'paid')
           ? '  PAGATO  '
           : '  DA PAGARE  ';
-      await SunmiPrinter.printText(
+      await _testo(
         paymentText,
-        style: SunmiTextStyle(
-          fontSize: 40,
-          bold: true,
-          align: SunmiPrintAlign.CENTER,
-          reverse: true,
-        ),
+        fontSize: 40,
+        align: SunmiPrintAlign.CENTER,
+        reverse: true,
       );
       // Metodo di pagamento: per la cassa "DA PAGARE" da solo non basta,
       // contanti e bancomat si gestiscono in modo diverso.
       final metodoPagamento = (order.paymentMethodName ?? '').trim();
       if (metodoPagamento.isNotEmpty) {
-        await SunmiPrinter.printText(
+        await _testo(
           metodoPagamento,
-          style: SunmiTextStyle(
-            fontSize: 28,
-            bold: true,
-            align: SunmiPrintAlign.CENTER,
-          ),
+          fontSize: 28,
+          align: SunmiPrintAlign.CENTER,
         );
       }
       await SunmiPrinter.lineWrap(1);
 
-      await SunmiPrinter.printText('--------------------------------');
+      await _testo('--------------------------------');
 
       // --- CLIENTE ---
-      await SunmiPrinter.printText(
-        'CLIENTE',
-        style: SunmiTextStyle(bold: true),
-      );
-      await SunmiPrinter.printText('Nome: ${order.customerName}');
+      await _testo('CLIENTE');
+      await _testo('Nome: ${order.customerName}');
       if (order.customerPhone.isNotEmpty) {
-        await SunmiPrinter.printText('Tel: ${order.customerPhone}');
+        await _testo('Tel: ${order.customerPhone}');
       }
       // Sugli asporti l'indirizzo non c'e': non si stampa un'etichetta vuota.
       if (order.isDelivery && order.deliveryAddress.trim().isNotEmpty) {
-        await SunmiPrinter.printText('Indirizzo: ${order.deliveryAddress}');
+        await _testo('Indirizzo: ${order.deliveryAddress}');
       }
       await SunmiPrinter.lineWrap(1);
 
-      await SunmiPrinter.printText('--------------------------------');
+      await _testo('--------------------------------');
 
       // --- ARTICOLI ---
-      await SunmiPrinter.printText(
-        'ARTICOLI',
-        style: SunmiTextStyle(bold: true, fontSize: 24),
-      );
+      await _testo('ARTICOLI');
       await SunmiPrinter.lineWrap(1);
 
       for (final item in order.items) {
         // Quantita' e nome, poi l'importo DELLA RIGA allineato a destra.
         // Stampare il prezzo unitario da solo si legge come importo di riga:
         // con 4 pezzi da 3,10 la riga vale 12,40, non 3,10.
-        await SunmiPrinter.printText(
-          '${item.quantity}x ${item.name}',
-          style: SunmiTextStyle(fontSize: 22),
-        );
-        await SunmiPrinter.printText(
+        await _testo('${item.quantity}x ${item.name}');
+        await _testo(
           'EUR ${item.lineTotal.toStringAsFixed(2)}',
-          style: SunmiTextStyle(
-            fontSize: 22,
-            bold: true,
-            align: SunmiPrintAlign.RIGHT,
-          ),
+          align: SunmiPrintAlign.RIGHT,
         );
         // Il prezzo unitario si mostra solo quando puo' servire, cioe' con piu'
-        // di un pezzo, e in piccolo per non confonderlo con l'importo di riga.
+        // di un pezzo, e tra parentesi per non confonderlo con l'importo di riga.
         if (item.quantity > 1) {
-          await SunmiPrinter.printText(
+          await _testo(
             '(${item.quantity} x EUR ${item.price.toStringAsFixed(2)})',
-            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+            align: SunmiPrintAlign.RIGHT,
           );
         }
 
@@ -389,31 +374,22 @@ class PrinterService {
           // prezzo unitario, quindi non va stampato accanto: sembrerebbe da
           // sommare una seconda volta.
           for (var entry in grouped.entries) {
-            await SunmiPrinter.printText(
-              '  ${entry.key}:',
-              style: SunmiTextStyle(fontSize: 20),
-            );
+            await _testo('  ${entry.key}:');
             for (var extra in entry.value) {
-              await SunmiPrinter.printText(
-                '    + ${extra.name}',
-                style: SunmiTextStyle(fontSize: 20),
-              );
+              await _testo('    + ${extra.name}');
             }
           }
         }
 
         // Note prodotto
         if (item.notes != null && item.notes!.isNotEmpty) {
-          await SunmiPrinter.printText(
-            '  Note: ${item.notes}',
-            style: SunmiTextStyle(fontSize: 20),
-          );
+          await _testo('  Note: ${item.notes}');
         }
 
         await SunmiPrinter.lineWrap(1);
       }
 
-      await SunmiPrinter.printText('--------------------------------');
+      await _testo('--------------------------------');
 
       // --- RIEPILOGO IMPORTI ---
       // Il totale dell'ordine comprende consegna, commissione e sconti: senza
@@ -437,44 +413,32 @@ class PrinterService {
       if (order.altreVoci.abs() >= 0.01) {
         await _riga('Altre voci', order.altreVoci);
       }
-      await SunmiPrinter.printText('--------------------------------');
-      await SunmiPrinter.printText(
+      await _testo('--------------------------------');
+      await _testo(
         order.isDelivery ? 'TOTALE CLIENTE' : 'TOTALE DA INCASSARE',
-        style: SunmiTextStyle(bold: true, fontSize: 28),
+        fontSize: 28,
       );
-      await SunmiPrinter.printText(
+      await _testo(
         'EUR ${order.total.toStringAsFixed(2)}',
-        style: SunmiTextStyle(
-          bold: true,
-          fontSize: 32,
-          align: SunmiPrintAlign.RIGHT,
-        ),
+        fontSize: 32,
+        align: SunmiPrintAlign.RIGHT,
       );
 
       await SunmiPrinter.lineWrap(1);
-      await SunmiPrinter.printText('================================');
+      await _testo('================================');
 
       // --- NOTE ---
       if (order.note != null && order.note!.isNotEmpty) {
         await SunmiPrinter.lineWrap(1);
-        await SunmiPrinter.printText(
-          'NOTE CLIENTE:',
-          style: SunmiTextStyle(bold: true),
-        );
-        await SunmiPrinter.printText(
-          order.note!,
-          style: SunmiTextStyle(fontSize: 24),
-        );
+        await _testo('NOTE CLIENTE:');
+        await _testo(order.note!);
         await SunmiPrinter.lineWrap(1);
-        await SunmiPrinter.printText('================================');
+        await _testo('================================');
       }
 
       // --- FOOTER ---
       await SunmiPrinter.lineWrap(2);
-      await SunmiPrinter.printText(
-        'Grazie per la tua scelta!',
-        style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 24),
-      );
+      await _testo('Grazie per la tua scelta!', align: SunmiPrintAlign.CENTER);
       await SunmiPrinter.lineWrap(1);
 
       // QR Code per tracciamento
@@ -536,55 +500,31 @@ class PrinterService {
         }
       }
 
-      await SunmiPrinter.printText(
+      await _testo(
         'CHIUSURA GIORNATA',
-        style: SunmiTextStyle(
-          bold: true,
-          fontSize: 28,
-          align: SunmiPrintAlign.CENTER,
-        ),
+        fontSize: 28,
+        align: SunmiPrintAlign.CENTER,
       );
-      await SunmiPrinter.printText(
-        c.ristorante,
-        style: SunmiTextStyle(fontSize: 24, align: SunmiPrintAlign.CENTER),
-      );
-      await SunmiPrinter.printText(
+      await _testo(c.ristorante, align: SunmiPrintAlign.CENTER);
+      await _testo(
         c.dataFormattata,
-        style: SunmiTextStyle(
-          bold: true,
-          fontSize: 28,
-          align: SunmiPrintAlign.CENTER,
-        ),
+        fontSize: 28,
+        align: SunmiPrintAlign.CENTER,
       );
       await SunmiPrinter.lineWrap(1);
-      await SunmiPrinter.printText('================================');
+      await _testo('================================');
 
       // --- CONTEGGI ---
-      await SunmiPrinter.printText(
-        'ORDINI: ${c.ordini}',
-        style: SunmiTextStyle(bold: true, fontSize: 26),
-      );
-      await SunmiPrinter.printText(
-        'A domicilio: ${c.domicilio}   Asporto: ${c.asporto}',
-        style: SunmiTextStyle(fontSize: 22),
-      );
+      await _testo('ORDINI: ${c.ordini}', fontSize: 26);
+      await _testo('A domicilio: ${c.domicilio}   Asporto: ${c.asporto}');
       if (c.inCorso > 0) {
-        await SunmiPrinter.printText(
-          'Non ancora consegnati: ${c.inCorso}',
-          style: SunmiTextStyle(fontSize: 22),
-        );
+        await _testo('Non ancora consegnati: ${c.inCorso}');
       }
       if (c.annullati > 0) {
-        await SunmiPrinter.printText(
-          'Annullati (esclusi): ${c.annullati}',
-          style: SunmiTextStyle(fontSize: 22),
-        );
+        await _testo('Annullati (esclusi): ${c.annullati}');
       }
-      await SunmiPrinter.printText(
-        'Voci: ${c.voci}   Pezzi: ${c.pezzi}',
-        style: SunmiTextStyle(fontSize: 22),
-      );
-      await SunmiPrinter.printText('--------------------------------');
+      await _testo('Voci: ${c.voci}   Pezzi: ${c.pezzi}');
+      await _testo('--------------------------------');
 
       // --- IMPORTI, le stesse voci del pannello Lenny Platform ---
       await SunmiPrinter.lineWrap(1);
@@ -595,25 +535,19 @@ class PrinterService {
       if (c.sconto > 0) {
         await _riga('Sconti', -c.sconto);
       }
-      await SunmiPrinter.printText('--------------------------------');
-      await SunmiPrinter.printText(
-        'TOTALE',
-        style: SunmiTextStyle(bold: true, fontSize: 28),
-      );
-      await SunmiPrinter.printText(
+      await _testo('--------------------------------');
+      await _testo('TOTALE', fontSize: 28);
+      await _testo(
         'EUR ${c.totale.toStringAsFixed(2)}',
-        style: SunmiTextStyle(
-          bold: true,
-          fontSize: 32,
-          align: SunmiPrintAlign.RIGHT,
-        ),
+        fontSize: 32,
+        align: SunmiPrintAlign.RIGHT,
       );
       await SunmiPrinter.lineWrap(1);
-      await SunmiPrinter.printText('================================');
+      await _testo('================================');
       await SunmiPrinter.lineWrap(1);
-      await SunmiPrinter.printText(
+      await _testo(
         'Totali calcolati il ${c.generatoFormattato}',
-        style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 20),
+        align: SunmiPrintAlign.CENTER,
       );
 
       await SunmiPrinter.lineWrap(3);
@@ -629,62 +563,58 @@ class PrinterService {
     }
   }
 
-  /// Stampa un test per verificare la stampante
+  /// Stampa di prova: una comanda finta completa, stampata con lo stesso
+  /// codice delle comande vere, cosi' quello che si controlla (leggibilita',
+  /// righe che vanno a capo) e' esattamente quello che arriva in cucina.
+  /// Non passa dalla traccia sul server: non e' un ordine.
   Future<bool> printTest() async {
-    try {
-      final available = await isPrinterAvailable();
-      if (!available) return false;
+    // Il tasto si preme a schermo acceso: se il logo non era pronto
+    // all'avvio, qui si puo' ancora preparare.
+    await precaricaLogo();
+    final esito = await _stampaComanda(_ordineDiProva(), 'PROVA DI STAMPA');
+    return esito.ok;
+  }
 
-      // Stampa logo
-      try {
-        final ByteData data = await rootBundle.load(
-          'assets/images/logo_lenny.png',
-        );
-        final Uint8List originalBytes = data.buffer.asUint8List();
-
-        // Ridimensiona per stampante 55mm (200px larghezza)
-        final Uint8List? resizedBytes = await _resizeImageForPrinter(
-          originalBytes,
-          200,
-        );
-
-        if (resizedBytes != null) {
-          await SunmiPrinter.printImage(resizedBytes);
-          await SunmiPrinter.lineWrap(1);
-        }
-      } catch (e) {
-        debugPrint('Impossibile stampare logo: $e');
-      }
-
-      await SunmiPrinter.printText(
-        'TEST STAMPANTE',
-        style: SunmiTextStyle(
-          fontSize: 32,
-          bold: true,
-          align: SunmiPrintAlign.CENTER,
+  /// Ordine finto per la stampa di prova, con dentro ogni parte della
+  /// comanda: aggiunte, nota sul piatto, piu' pezzi, riepilogo importi e
+  /// note del cliente. Gli importi quadrano come in un ordine vero.
+  static Order _ordineDiProva() {
+    return Order(
+      id: 0,
+      numeroOrdineGrezzo: 'PROVA',
+      status: 'pending',
+      statusLabel: 'Prova',
+      customerName: 'Mario Rossi',
+      customerPhone: '3331234567',
+      deliveryAddress: 'Strada del Lavoro, 73, 47890, San Marino',
+      total: 30.30,
+      note: 'Citofono Rossi, secondo piano',
+      timeSlotStart: '19:30:00',
+      timeSlotEnd: '20:00:00',
+      dateOrder: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      pickupDelivery: 'delivery',
+      paymentStatus: 'pending',
+      paymentMethodName: 'Contanti',
+      items: [
+        OrderItem(
+          id: 1,
+          name: 'Cheese Bacon Burger',
+          quantity: 1,
+          price: 9.80,
+          extras: [OrderExtra(id: 1, name: 'Doppio cheddar', price: 0)],
         ),
-      );
-      await SunmiPrinter.lineWrap(1);
-
-      await SunmiPrinter.printText(
-        'La stampante funziona correttamente!',
-        style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-      );
-      await SunmiPrinter.lineWrap(2);
-
-      final now = DateTime.now();
-      await SunmiPrinter.printText(
-        DateFormat('dd/MM/yyyy HH:mm:ss').format(now),
-        style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 20),
-      );
-
-      await SunmiPrinter.lineWrap(3);
-      await SunmiPrinter.cutPaper();
-
-      return true;
-    } catch (e) {
-      debugPrint('Errore test stampante: $e');
-      return false;
-    }
+        OrderItem(
+          id: 2,
+          name: 'Mozzarelline (8pz)',
+          quantity: 2,
+          price: 5.00,
+          notes: 'Ben cotte',
+        ),
+        OrderItem(id: 3, name: 'Patate fritte', quantity: 1, price: 4.50),
+      ],
+      itemsTotal: 24.30,
+      deliveryFee: 4.90,
+      orderFee: 1.10,
+    );
   }
 }
